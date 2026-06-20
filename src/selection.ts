@@ -97,8 +97,11 @@ export function select(
   const rewardOf = (s: SpecimenId) => rewardByName.get(s) ?? 0;
 
   const ranking = rankByVotes(passers, votes, rewardOf);
+  // GRPO advantage is computed across the WHOLE specimen group (F8: "across
+  // the slice's specimen group"), including gate-eliminated specimens — so the
+  // pressure log can weight which *losers'* diffs are most informative (F9).
   const advantages: Advantage[] = groupRelativeAdvantage(
-    passers.map((s) => ({ specimen: s, reward: rewardOf(s) })),
+    results.map((r) => ({ specimen: r.specimen, reward: rewardOf(r.specimen) })),
   );
 
   const judgment: Judgment = {

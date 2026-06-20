@@ -25,10 +25,10 @@ Run: `npm test` (66 tests) and `npm run typecheck`.
 | **F14** | Bounded escalation: 1 retry → 1 replan → halt (ceiling) | `escalation.ts` | `escalation.test.ts` — **"CEILING HOLDS"**, "halt is absorbing"; `orchestrator.test.ts` — "retry → replan → halt", exactly 3 rounds |
 | **F15** | Adaptive complexity→budget + calibration | `budget.ts` | `budget.test.ts` (monotonic, pool cap, calibrate) |
 | **F16** | state.json checkpoint + crash recovery | `state.ts` | `state.test.ts` — save/load, `resumePhase` interrupted/pending/complete/halted |
-| **F17** | `npx stz init` distribution | `cli.ts`, `bin/stz.mjs` | manual CLI demo (init + run) — see below |
+| **F17** | `npx stz init` distribution | `cli.ts`, `bin/stz.mjs` | manual: `node bin/stz.mjs init/run` (real shim) verified — see below |
 | **N1** | Auditability: full tree replayable | `taxonomy.ts`, `state.ts`, orchestrator | `orchestrator.test.ts` — "materializes the full audit tree" (10 artifacts) |
 | **N2** | Progressive disclosure: frontmatter summaries | `taxonomy.ts` | `taxonomy.test.ts` — summary invariant |
-| **N5** | Cost governance: hard per-slice cap | `budget.ts`, `cost-tracker.ts`, orchestrator | `budget.test.ts` `wouldExceed`; `orchestrator.test.ts` — "spend within cap" |
+| **N5** | Cost governance: hard per-slice cap (enforced) | `budget.ts`, `cost-tracker.ts`, orchestrator `charge()` | `budget.test.ts` `wouldExceed`; `orchestrator.test.ts` — "spend within cap" **and** "tiny pool trips the kill-switch" (throws `BudgetExceededError`) |
 | **N6** | Determinism / replayability | `cost-tracker.ts`, all pure modules | `cost-pressure.test.ts` JSONL round-trip; `orchestrator.test.ts` — "identical config → identical winner" |
 | **N12** | Zoo vocabulary discipline | `cli.ts` AGENTS.md, `pressure.ts` | manual: AGENTS.md vocabulary table |
 

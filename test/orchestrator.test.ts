@@ -3,7 +3,7 @@ import { mkdtemp, rm, readFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { runSlice } from "../src/orchestrator.js";
+import { runSlice, BudgetExceededError } from "../src/orchestrator.js";
 import { MockModelLayer, defaultMockConfig, alwaysFailConfig } from "../src/llm/mock.js";
 import { loadState } from "../src/state.js";
 import { PHASES, type SliceManifest } from "../src/types.js";
@@ -43,8 +43,9 @@ describe("F1 full pipeline — success path (e2e against mock model layer)", () 
 
     // F7: winner is a gate passer; ranking excludes the hacky/failed specimen d.
     expect(result.judgment!.ranking).not.toContain("d");
-    // F8: GRPO advantages reported for every passer.
-    expect(result.judgment!.advantages.length).toBe(result.judgment!.ranking.length);
+    // F8/F9: GRPO advantage spans the whole specimen group (4), incl. the
+    // gate-eliminated hacker `d`, so losers' diffs can be weighted by |advantage|.
+    expect(result.judgment!.advantages.map((a) => a.specimen).sort()).toEqual(["a", "b", "c", "d"]);
   });
 
   it("every phase ends 'done' and state.json is checkpointed", async () => {
@@ -75,6 +76,14 @@ describe("F1 full pipeline — success path (e2e against mock model layer)", () 
     const state = await loadState(root, "slice-01");
     expect(state.budget.tokensSpent).toBeLessThanOrEqual(state.budget.tokenCap);
     expect(state.callCount).toBeGreaterThan(0);
+  });
+
+  it("N5/R3: a tiny token pool trips the hard cap kill-switch (enforced, not just tracked)", async () => {
+    const model = new MockModelLayer(defaultMockConfig());
+    // poolRemaining caps the per-slice budget below what the pipeline needs.
+    await expect(
+      runSlice({ root, manifest, model, n: 4, poolRemaining: 3_000 }),
+    ).rejects.toBeInstanceOf(BudgetExceededError);
   });
 
   it("F7: V=8 votes recorded per pair in the ledger", async () => {

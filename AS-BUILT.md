@@ -21,14 +21,18 @@ spine that every other component depends on beats a broad layer of hollow stubs.
   disclosure. Round-trip + scaffold tested.
 - **GRPO advantage** (F8): exact `(rᵢ−μ)/(σ+ε)`, ε-guard on the all-equal edge.
 - **Two-stage selection** (F7): eval-gate elimination → pairwise win-count
-  ranking (the plain deterministic aggregation, V votes/pair), GRPO reported
-  alongside. Tie-breaks fully deterministic.
+  ranking (the plain deterministic aggregation, V votes/pair). GRPO advantage is
+  computed over the **whole specimen group** (incl. gate-eliminated specimens)
+  so the pressure log can weight losers' diffs (F8/F9). Tie-breaks deterministic.
 - **Hack-pattern detector** (F10/L3): line-scan for test-skip, assertion
   mutation, network-bypass, fixture-keyed branching, hardcoded sentinels — with
   remediation strings re-injected on replan. No-false-positive tested.
 - **Bounded escalation FSM** (F14, the R1 headline mitigation): 1 retry → 1
   replan → halt. The ceiling is proven to hold and halt is absorbing.
 - **Complexity→budget allocator + calibration** (F15/N5): monotonic, pool-capped.
+  The hard per-slice cap is **enforced** at the one metering point (`charge()`):
+  a would-be overrun throws `BudgetExceededError` (R3 kill-switch), not merely
+  tracked. Tested by running a slice against a deliberately tiny pool.
 - **Cost/call ledger** (N5/N6): JSONL, replay round-trip.
 - **State checkpoint + crash recovery** (F16): resume the interrupted phase.
 - **Pressure log + PDR top-K refinement** (F9).

@@ -85,8 +85,9 @@ describe("F7+F8 select() end-to-end", () => {
     ];
     const { judgment } = select(results, votes);
     expect(judgment.winner).toBe("a");
-    expect(judgment.ranking).toEqual(["a", "b"]); // c eliminated
-    expect(judgment.advantages).toHaveLength(2);
+    expect(judgment.ranking).toEqual(["a", "b"]); // c eliminated from ranking
+    // advantage spans the whole group (incl. eliminated c) per F8/F9
+    expect(judgment.advantages.map((a) => a.specimen).sort()).toEqual(["a", "b", "c"]);
   });
 
   it("no passers → null winner, empty ranking", () => {

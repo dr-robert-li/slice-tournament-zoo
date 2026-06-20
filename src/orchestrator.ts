@@ -31,7 +31,7 @@ import {
   setPhaseStatus,
   appendEvent,
 } from "./state.js";
-import { allocateBudget } from "./budget.js";
+import { allocateBudget, wouldExceed } from "./budget.js";
 import { scaffold, writeDoc, stzPath } from "./taxonomy.js";
 import { select, pairings, evalReward } from "./selection.js";
 import { votePair, type ModelLayer, type SpecimenOutput } from "./llm/interfaces.js";
@@ -74,6 +74,14 @@ export interface SliceResult {
 /** Synthetic per-call token charge so the ledger/budget are exercised (N5). */
 const TOKENS_PER_CALL = { prompt: 1200, completion: 800 };
 
+/** Raised when a slice would breach its hard token cap (N5/R3 kill-switch). */
+export class BudgetExceededError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "BudgetExceededError";
+  }
+}
+
 export async function runSlice(opts: OrchestratorOptions): Promise<SliceResult> {
   const { root, manifest, model } = opts;
   const n = opts.n ?? 4;
@@ -88,6 +96,16 @@ export async function runSlice(opts: OrchestratorOptions): Promise<SliceResult> 
   let state = freshState(manifest.id, manifest.complexity, opts.poolRemaining ?? 5_000_000);
 
   const charge = (phase: Phase, role: Parameters<CostTracker["record"]>[0]["role"]) => {
+    const cost = TOKENS_PER_CALL.prompt + TOKENS_PER_CALL.completion;
+    // N5 hard per-slice token cap / R3 kill-switch: refuse to proceed past the
+    // cap rather than silently overrunning. The cap is enforced here, the one
+    // place every model call is metered.
+    if (wouldExceed(state.budget, cost)) {
+      throw new BudgetExceededError(
+        `${manifest.id}: token cap ${state.budget.tokenCap} would be exceeded ` +
+          `(spent ${state.budget.tokensSpent} + ${cost} in ${phase}/${role}).`,
+      );
+    }
     const rec = tracker.record({
       id: `${manifest.id}-${role}-${tracker.count()}`,
       phase,
