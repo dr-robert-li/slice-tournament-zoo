@@ -1,0 +1,181 @@
+/**
+ * STZ domain types — the data model that the whole harness reads/writes.
+ *
+ * Design anchor: N1 (auditability) + N6 (determinism/replay). Every decision
+ * the harness makes must be reconstructible from the markdown tree + git +
+ * the `state.json` event sequence. These types are the schema for that state.
+ */
+
+/** The 8 phases of the per-slice pipeline (F1). Order is significant. */
+export const PHASES = [
+  "elicitation",
+  "research",
+  "ground-truth-validation",
+  "standards",
+  "test-authoring",
+  "planning",
+  "tournament",
+  "judgment",
+] as const;
+
+export type Phase = (typeof PHASES)[number];
+
+/** Lifecycle status of a single phase within a slice. */
+export type PhaseStatus = "pending" | "running" | "done" | "failed";
+
+/** Where the bounded failure-escalation FSM (F14) currently sits. */
+export type EscalationStage =
+  | "normal"
+  | "grpo-retry"
+  | "replan"
+  | "halted";
+
+/** Specimen identifiers default to a..d for N=4 (F6). */
+export type SpecimenId = string;
+
+/**
+ * A machine-checkable success predicate (F2). Elicitation may not exit until
+ * every quantitative success criterion is expressed as one of these — no
+ * prose-only acceptance.
+ */
+export interface DonePredicate {
+  /** Stable id, e.g. "p95_latency". */
+  id: string;
+  /** The predicate expression, e.g. "p95_latency_ms < 200". */
+  expr: string;
+  /** How it is checked: a sealed test, a metric threshold, a schema match. */
+  kind: "test" | "metric" | "schema";
+}
+
+/** Trace tier declared per slice (F11). */
+export type TraceTier = "minimal" | "otel";
+
+/**
+ * Per-slice manifest frontmatter (F5). The orchestrator loads this summary,
+ * never the full slice body (N2 progressive disclosure).
+ */
+export interface SliceManifest {
+  id: string; // "slice-01"
+  name: string; // "elicitation-subagent"
+  /** Interface contract the slice implements (F4). Prose/signature surface. */
+  contract: string;
+  donePredicates: DonePredicate[];
+  traceTier: TraceTier;
+  /** Complexity estimate 1..5 (F15) — drives budgeting. */
+  complexity: number;
+  /** Slice ids this one depends on (DAG ordering, F5). */
+  dependsOn: string[];
+  /** Judge config (F7): votes per pairwise comparison. */
+  judge: { votesPerPair: number };
+  /** ~200-token summary for progressive disclosure (N2). */
+  summary: string;
+}
+
+/** Result of running one specimen through the eval-gate (F7 stage 1). */
+export interface EvalResult {
+  specimen: SpecimenId;
+  /** Did it pass the sealed held-out suite? Gate failures are eliminated. */
+  passedGate: boolean;
+  /** 0..1 fraction of sealed tests passed. */
+  testPassRate: number;
+  /** 0..1 code coverage (F11). */
+  coverage: number;
+  /** 0..1 mutation survival rate; lower is better (F11). */
+  mutationScore: number;
+  /** Hack-pattern findings (F10/L3). Non-empty ⇒ disqualified. */
+  hackFindings: HackFinding[];
+}
+
+/** A single anti-reward-hacking finding (F10 / L3). */
+export interface HackFinding {
+  specimen: SpecimenId;
+  pattern: HackPattern;
+  /** File + line where the pattern was detected. */
+  location: string;
+  /** Remediation context re-injected into the next prompt on replan (F14). */
+  remediation: string;
+}
+
+export type HackPattern =
+  | "hardcoded-test-input"
+  | "assertion-mutation"
+  | "test-skip"
+  | "fixture-keyed-branch"
+  | "network-bypass";
+
+/** A single pairwise judge vote (F7 stage 2). */
+export interface PairwiseVote {
+  a: SpecimenId;
+  b: SpecimenId;
+  /** Winner of this vote. */
+  winner: SpecimenId;
+}
+
+/** GRPO group-relative advantage for one specimen (F8). */
+export interface Advantage {
+  specimen: SpecimenId;
+  reward: number;
+  advantage: number;
+}
+
+/** Final ranking output of the judgment phase. */
+export interface Judgment {
+  /** Specimens ordered best→worst among gate-passers. */
+  ranking: SpecimenId[];
+  winner: SpecimenId | null;
+  advantages: Advantage[];
+  votes: PairwiseVote[];
+}
+
+/** One persisted LLM/subagent call for replay (N6). */
+export interface CallRecord {
+  id: string;
+  phase: Phase;
+  role: "specimen" | "judge" | "test-author" | "documenter" | "elicitor" | "researcher" | "planner";
+  model: string;
+  temperature: number;
+  seed: number | null;
+  promptTokens: number;
+  completionTokens: number;
+  /** Monotonic sequence index for deterministic replay ordering. */
+  seq: number;
+}
+
+/** Per-slice budget derived from complexity (F15, N5). */
+export interface Budget {
+  tokenCap: number;
+  wallClockMs: number;
+  tokensSpent: number;
+}
+
+/** A structured state-transition event (N1: replayable event sequence). */
+export interface StateEvent {
+  seq: number;
+  phase: Phase | "lifecycle";
+  kind: string;
+  detail: string;
+}
+
+/**
+ * `state.json` — the per-slice durable checkpoint (F16). Combined with git and
+ * the markdown tree it is sufficient to replay any decision (N1) and to resume
+ * after a crash from the last committed phase.
+ */
+export interface SliceState {
+  schemaVersion: 1;
+  sliceId: string;
+  currentPhase: Phase;
+  phaseStatus: Record<Phase, PhaseStatus>;
+  escalation: EscalationStage;
+  /** How many GRPO retries / replans consumed (ceiling enforced by F14). */
+  retryCount: number;
+  replanCount: number;
+  activeSpecimens: SpecimenId[];
+  budget: Budget;
+  /** Append-only event log — the replay spine. */
+  events: StateEvent[];
+  /** Accumulated call ledger pointers (full records under 90-audit/calls). */
+  callCount: number;
+  /** Set when escalation reaches "halted". */
+  failureReport: string | null;
+}
