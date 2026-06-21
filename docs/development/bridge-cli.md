@@ -19,4 +19,14 @@ stz bridge finalize     --root . --slice slice-01 --intent intent.json --asbuilt
 stz bridge project-set-config --root . --config run-config.json  # persist run config (validated, clamped)
 stz bridge project-config     --root .                           # read it back (defaults if unset)
 stz bridge project-status     --root .                           # DAG + phase status + runConfig
+
+# sealed held-out suite integrity (L1/F10) — freeze before the tournament
+stz bridge seal        --root .                       # sha256 the held-out suite into SEAL.json
+stz bridge seal-verify --root .                       # re-hash vs SEAL.json; exit 1 on drift (gate before judging)
+stz bridge seal-amend  --root . --reason "<why>"      # sanctioned post-freeze change: records from→to + reason
 ```
+
+The sealed-suite trio backs the anti-hacking freeze: `seal` after the test-author's
+suite passes the smoke gate against its reference; `seal-verify` immediately before
+the eval/gate so a frozen-suite edit can't slip in mid-tournament; `seal-amend` as
+the only audited way to change a sealed file once frozen.

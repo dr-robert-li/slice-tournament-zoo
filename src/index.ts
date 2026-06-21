@@ -11,6 +11,7 @@ export * from "./state.js";
 export * from "./project.js";
 export * from "./pressure.js";
 export * from "./specdiff.js";
+export * from "./seal.js";
 export * from "./mock/orchestrator.js";
 export * as llm from "./mock/interfaces.js";
 export { MockModelLayer, defaultMockConfig, alwaysFailConfig } from "./mock/mock.js";

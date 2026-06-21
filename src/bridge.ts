@@ -56,6 +56,7 @@ import {
 import { detectHacks } from "./hack-detector.js";
 import { evalGate, select, pairings } from "./selection.js";
 import { diffSpecs, renderSpecDiff, isFaithful, unmatchedIntentIds, mismatchedAsBuiltIds, type Spec } from "./specdiff.js";
+import { seal, verifySeal, amendSeal, heldOutFiles } from "./seal.js";
 import { renderPressureLog, refinementContext, type CulledSpecimen } from "./pressure.js";
 import { fullEval } from "./eval-runner.js";
 
@@ -616,6 +617,54 @@ async function summaryCmd(args: Record<string, string>): Promise<void> {
   print({ slices: rows, done, halted, pending });
 }
 
+// ── sealed held-out suite integrity (L1/F10) ────────────────────────────────
+
+/** seal: freeze the held-out suite into SEAL.json (run after the smoke gate is green). */
+async function sealCmd(args: Record<string, string>): Promise<void> {
+  const root = args.root!;
+  const res = await seal(root);
+  if (!res.sealed) {
+    process.stderr.write(
+      `refusing to re-seal: already-sealed file(s) changed [${[...res.drifted, ...res.removed].join(", ")}]. Use seal-amend --reason to record a sanctioned change.\n`,
+    );
+    process.exitCode = 1;
+  }
+  print(res);
+}
+
+/** seal-verify: re-hash held-out vs SEAL.json; exit 1 on drift (gates the tournament). */
+function sealVerify(args: Record<string, string>): void {
+  const root = args.root!;
+  const res = verifySeal(root);
+  if (!res.sealed) {
+    process.stderr.write("no SEAL.json — the held-out suite was never sealed; run `seal` first.\n");
+    process.exitCode = 1;
+  } else if (!res.ok) {
+    process.stderr.write(
+      `SEAL DRIFT — the frozen held-out suite changed since sealing: ${res.drift.map((d) => `${d.file} (${d.status})`).join(", ")}. This breaks the anti-hacking seal; investigate before judging. Use seal-amend --reason for a sanctioned fix.\n`,
+    );
+    process.exitCode = 1;
+  }
+  print({ ...res, files: heldOutFiles(root).length });
+}
+
+/** seal-amend: the only sanctioned way to change a sealed file — records from→to + reason. */
+async function sealAmend(args: Record<string, string>): Promise<void> {
+  const root = args.root!;
+  const reason = args.reason;
+  if (!reason || reason === "true") {
+    process.stderr.write("seal-amend requires --reason \"<why this sealed-suite change is legitimate>\".\n");
+    process.exitCode = 1;
+    return;
+  }
+  const res = await amendSeal(root, reason);
+  if (!res.amended) {
+    process.stderr.write("nothing to amend: held-out suite matches SEAL.json (or it was never sealed).\n");
+    process.exitCode = 1;
+  }
+  print({ ...res, reason });
+}
+
 export async function runBridge(argv: string[]): Promise<void> {
   const [sub, ...rest] = argv;
   const args = parseArgs(rest);
@@ -637,6 +686,9 @@ export async function runBridge(argv: string[]): Promise<void> {
     case "project-seed-slices": await projectSeedSlices(args); break;
     case "project-status": await projectStatus(args); break;
     case "summary": await summaryCmd(args); break;
+    case "seal": await sealCmd(args); break;
+    case "seal-verify": sealVerify(args); break;
+    case "seal-amend": await sealAmend(args); break;
     default:
       process.stderr.write(`unknown bridge subcommand: ${sub}\n`);
       process.exitCode = 1;

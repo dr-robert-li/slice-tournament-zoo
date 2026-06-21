@@ -6,6 +6,37 @@ and the project aims to follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.3.3]
+
+Hardening of sealed-suite creation (L1/F10), prompted by a run where the
+test-author emitted a held-out suite that did not compile and encoded a
+fragile invariant (alien identity keyed on mutable `(row,col)`, which broke
+under legitimate formation movement) — and the only recovery was editing the
+*frozen* suite mid-tournament, undermining the anti-hacking seal. Note: this
+adds a three-command bridge surface, so it is more than a pure bugfix.
+
+### Added
+- **Immutable sealed manifest + audited amend flow** (`src/seal.ts`, three new
+  bridge commands). `seal` sha256-hashes every held-out file (suite + reference)
+  into a byte-stable, timestamp-free `30-tests/held-out/SEAL.json` (the file
+  excludes itself). `seal-verify` re-hashes and exits non-zero on any drift —
+  `/stz:run` runs it immediately before the eval/gate, so a frozen-suite edit
+  can't slip in mid-tournament. `seal-amend --reason` is the only sanctioned way
+  to change a sealed file: it records per-file from→to hashes + the reason into
+  the manifest's amendment log and re-freezes; a silent edit then fails verify.
+- **Pre-freeze smoke gate.** `stz-test-author` now also writes a minimal correct
+  **reference implementation** (sealed, never specimen-visible — it is a full
+  solution). `/stz:run` compiles the suite and runs it against the reference in a
+  scratch dir; it must be green before `seal`. Catches non-compiling and
+  unsatisfiable suites before specimens run. (It does not catch a fragile
+  invariant the reference shares — that is the prompt hardening's job.)
+
+### Changed
+- **`stz-test-author` prompt hardened** with anti-fragile-test rules: the suite
+  must compile; never key entity identity on mutable state (position/index of a
+  thing that moves); assert movement-invariant aggregates (counts, totals) over
+  per-element position snapshots.
+
 ## [0.3.2]
 
 ### Fixed

@@ -51,10 +51,21 @@ on prose-only acceptance (F2).
 1. **Begin.** `$STZ bridge begin --root . --manifest .stz/40-slices/$1/manifest.json`.
    Note `votesPerPair` and the prototype dir root from the JSON.
 
-2. **Author the sealed suite (frozen).** Spawn ONE `stz-test-author` subagent
-   (model: `runConfig.models.testing`). It writes the held-out tests to
-   `.stz/30-tests/held-out/` and returns the path + a one-line summary.
-   Implementers never see its contents.
+2. **Author the sealed suite, smoke-test it, then freeze it (frozen).** Spawn ONE
+   `stz-test-author` subagent (model: `runConfig.models.testing`). It writes the
+   held-out tests to `.stz/30-tests/held-out/` AND a minimal correct reference
+   implementation under `.stz/30-tests/held-out/reference/`. Implementers never
+   see either.
+   - **Smoke gate (before sealing).** In a scratch dir (NOT a prototype dir), copy
+     the suite + the reference, compile, and run the suite against the reference.
+     It MUST be green. If it does not compile or the reference fails it, the suite
+     is buggy — send it back to `stz-test-author` to fix and re-run. This catches
+     non-compiling and unsatisfiable suites before specimens ever run. (It does
+     NOT catch a suite that encodes a fragile invariant the reference shares —
+     that is what the test-author's hard rules are for.)
+   - **Freeze.** Once green, `$STZ bridge seal --root .` — this sha256-hashes
+     every held-out file (suite + reference) into `30-tests/held-out/SEAL.json`.
+     The suite is now frozen; do not edit it by hand.
 
 3. **Plan (intent spec).** Write `.stz/40-slices/$1/intent.json` as
    `{ "claims": [ {"id":"c1","text":"…"}, {"id":"c2","text":"…"}, … ] }` — the
@@ -72,6 +83,16 @@ on prose-only acceptance (F2).
    `prototypes/specimen-<id>/` directory and returns a path + summary, NOT file
    contents. They run concurrently and the turn blocks until all finish — that
    barrier is exactly the tournament boundary.
+
+4b. **Verify the seal (gate the tournament).** Before any eval, run
+    `$STZ bridge seal-verify --root .`. It re-hashes the held-out suite against
+    SEAL.json and **exits non-zero on any drift** — a frozen-suite change between
+    sealing and judging breaks the anti-hacking guarantee. If it reports drift,
+    STOP and investigate; do not eval against a tampered suite. If you genuinely
+    must change the sealed suite (e.g. a real bug only now surfaced), do it
+    through `$STZ bridge seal-amend --root . --reason "<why>"` — never an ad-hoc
+    edit — which records the per-file change + reason into SEAL.json's audit log
+    and re-freezes, then re-run `seal-verify`.
 
 5. **Eval each specimen (real, executed).** For each specimen, call:
    `$STZ bridge eval --root . --slice $1 --specimen <id> --sealed
