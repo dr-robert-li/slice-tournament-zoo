@@ -1,7 +1,7 @@
 {
   "name": "slice-tournament-zoo",
-  "version": "0.1.0",
-  "description": "STZ — a contract-bounded slice pipeline that implements each slice adversarially via an N-specimen tournament with frozen sealed tests, GRPO-style selection, layered anti-reward-hacking, and a replayable markdown audit trail.",
+  "version": "0.2.1",
+  "description": "STZ: a contract-bounded slice pipeline that implements each slice adversarially via an N-specimen tournament with frozen sealed tests, GRPO-style selection, layered anti-reward-hacking, and a replayable markdown audit trail.",
   "license": "Apache-2.0",
   "type": "module",
   "bin": {
@@ -24,9 +24,11 @@
   "engines": {
     "node": ">=20"
   },
+  "dependencies": {
+    "tsx": "^4.19.0"
+  },
   "devDependencies": {
     "@types/node": "^22.10.0",
-    "tsx": "^4.19.0",
     "typescript": "^5.7.0",
     "vitest": "^2.1.0"
   }

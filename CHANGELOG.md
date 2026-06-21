@@ -13,6 +13,14 @@ and the project aims to follow [Semantic Versioning](https://semver.org/).
 - `docs/` folder for reference material (`AS-BUILT.md`, `TESTPLAN.md`, and the
   design pattern, kept locally as `docs/CLAUDE.md`).
 
+### Added
+- ASCII-art logo in the README header, the `stz` CLI banner (`stz help` / no-arg),
+  and the SessionStart hook.
+- npm install path: `npm i -g slice-tournament-zoo` (or
+  `npm i -g dr-robert-li/slice-tournament-zoo` straight from GitHub), mirroring
+  the get-shit-done install UX. `tsx` is now a runtime dependency so the global
+  CLI works offline after install; `package.json` bumped to 0.2.1.
+
 ### Changed
 - Treated the repository as production-ready: isolated the no-network mock demo
   into `src/mock/` (the orchestrator, the model-layer seam, and the deterministic

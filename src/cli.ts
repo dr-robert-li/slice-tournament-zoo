@@ -70,13 +70,27 @@ async function cmdRun(dir: string): Promise<void> {
   console.log(`artifacts: ${result.artifacts.length} under ${STZ_DIR}/`);
 }
 
+const LOGO = String.raw`
+  ██████╗  ████████╗ ███████╗
+ ██╔════╝  ╚══██╔══╝ ╚══███╔╝
+ ╚█████╗      ██║      ███╔╝
+  ╚═══██╗     ██║     ███╔╝
+ ██████╔╝     ██║    ███████╗
+ ╚═════╝      ╚═╝    ╚══════╝
+`;
+
 function cmdHelp(): void {
-  console.log(`stz — slice-tournament-zoo
+  console.log(LOGO);
+  console.log(`slice-tournament-zoo: adversarial slice tournaments with a replayable audit trail
 
 Usage:
-  stz init [dir]   scaffold the .stz/ taxonomy + AGENTS.md (default: cwd)
-  stz run  [dir]   run the bundled demo slice through the mock pipeline
-  stz help         show this help
+  stz init [dir]       scaffold the .stz/ taxonomy + AGENTS.md (default: cwd)
+  stz run  [dir]       run the bundled demo slice through the mock pipeline
+  stz bridge <cmd>     deterministic orchestration bridge (used by the /stz:* commands)
+  stz help             show this help
+
+In Claude Code, install the plugin and drive the full pipeline with /stz:new,
+/stz:research, /stz:slice, /stz:pipeline, and friends. See the README.
 `);
 }
 

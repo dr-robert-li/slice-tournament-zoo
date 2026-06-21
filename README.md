@@ -1,5 +1,14 @@
 # Slice Tournament Zoo (STZ)
 
+```text
+  ██████╗  ████████╗ ███████╗
+ ██╔════╝  ╚══██╔══╝ ╚══███╔╝
+ ╚█████╗      ██║      ███╔╝ 
+  ╚═══██╗     ██║     ███╔╝  
+ ██████╔╝     ██║    ███████╗
+ ╚═════╝      ╚═╝    ╚══════╝
+```
+
 [![CI](https://github.com/dr-robert-li/slice-tournament-zoo/actions/workflows/ci.yml/badge.svg)](https://github.com/dr-robert-li/slice-tournament-zoo/actions/workflows/ci.yml)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](./LICENSE)
 [![Node](https://img.shields.io/badge/node-%3E%3D20-brightgreen.svg)](./package.json)
@@ -43,6 +52,24 @@ Task subagents** driven by the `/stz:run` command.
 
 ## Install
 
+STZ installs two ways: as a global CLI via **npm**, or as a **Claude Code
+plugin**. They are complementary — the plugin drives the in-session `/stz:*`
+commands, and the npm CLI gives you `stz init`, `stz run`, and direct
+`stz bridge` access. Installing the npm CLI also satisfies the plugin's bridge
+dependency without any `${CLAUDE_PLUGIN_ROOT}` fallback.
+
+### Via npm (global CLI)
+
+```bash
+npm i -g slice-tournament-zoo               # from npm
+# or install straight from GitHub (no npm publish needed):
+npm i -g dr-robert-li/slice-tournament-zoo
+```
+
+This puts `stz` on your `PATH` (`stz`, `stz init`, `stz run`, `stz bridge …`)
+and bundles its `tsx` runtime, so it works offline after install. Requires
+Node.js 20+. Run `stz` with no arguments to see the banner and commands.
+
 ### As a Claude Code plugin (the real harness)
 
 From inside Claude Code, add the marketplace and install the plugin:
@@ -59,20 +86,11 @@ plus the project-level researcher, validator, conventions, test-planner, slicer,
 summarizer), and a SessionStart hook that announces STZ when a project contains a
 `.stz/` tree. Restart the session (or reload) so the definitions load.
 
-The plugin calls a bundled `stz bridge` CLI for every deterministic decision.
-The commands resolve it automatically from the installed plugin (via
-`${CLAUDE_PLUGIN_ROOT}`), so no `PATH` setup is needed; the only requirement is
-Node.js 20+ on the machine. The bundled CLI runs through `tsx` (fetched on first
-use by `npx`), so the first bridge call in a fresh environment needs network.
-
-Optionally, expose a global `stz` for manual CLI use outside the plugin:
-
-```bash
-git clone https://github.com/dr-robert-li/slice-tournament-zoo
-cd slice-tournament-zoo
-npm install
-npm link        # exposes `stz` globally; or call `node bin/stz.mjs ...`
-```
+The plugin calls a bundled `stz bridge` CLI for every deterministic decision. If
+you installed the npm CLI above, the commands use that `stz` directly. Otherwise
+they resolve the bundled copy via `${CLAUDE_PLUGIN_ROOT}`, with no `PATH` setup
+needed (Node.js 20+ is the only requirement; the bundled copy fetches `tsx` via
+`npx` on first use, so that first call needs network).
 
 ### As a library / local CLI only
 

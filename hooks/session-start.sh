@@ -7,6 +7,14 @@ set -euo pipefail
 # Only speak up if this project actually uses STZ (a .stz tree or the plugin).
 if [ -d ".stz" ] || [ -f ".claude-plugin/plugin.json" ]; then
   cat <<'CTX'
+```
+  ██████╗  ████████╗ ███████╗
+ ██╔════╝  ╚══██╔══╝ ╚══███╔╝
+ ╚█████╗      ██║      ███╔╝
+  ╚═══██╗     ██║     ███╔╝
+ ██████╔╝     ██║    ███████╗
+ ╚═════╝      ╚═╝    ╚══════╝
+```
 # slice-tournament-zoo (STZ) is active
 
 Run a slice as an in-session tournament with: /stz:run [slice-id]
