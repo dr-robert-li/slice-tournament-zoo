@@ -8,7 +8,7 @@
  * The model layer is injected (ModelLayer), so this runs identically against
  * the deterministic mock and a future live Claude Code / Codex implementation.
  *
- * STUBBED vs the full design (logged via the `log` sink, surfaced in AS-BUILT):
+ * STUBBED vs the full design (logged via the `log` sink, surfaced in ROADMAP):
  *   - git worktrees per specimen → prototypes/specimen-X/ directories instead.
  *   - per-worktree ephemeral observability stacks → not spun up.
  *   - live Python eval drivers / mutation / PBT → mock EvalRunner.

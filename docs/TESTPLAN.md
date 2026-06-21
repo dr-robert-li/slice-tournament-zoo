@@ -4,9 +4,9 @@ Definition-of-done for this implementation: **every implemented requirement maps
 to a deterministic `vitest` test, and the whole suite + typecheck pass.** The
 deterministic spine is tested for real; the LLM layer is tested at the
 interface-contract + mock-e2e level (it is explicitly *not* a live-tournament
-result — see `AS-BUILT.md`).
+result — see `ROADMAP.md`).
 
-Run: `npm test` (131 tests) and `npm run typecheck`.
+Run: `npm test` (163 tests) and `npm run typecheck`.
 
 ## Requirement → test map
 
@@ -22,7 +22,7 @@ Run: `npm test` (131 tests) and `npm run typecheck`.
 | **F10/L3** | Anti-reward-hacking: hack-pattern detection ⇒ disqualification | `hack-detector.ts` | `hack-detector.test.ts` (11 patterns + no-false-positive + locations); integration in `selection.test.ts` + `orchestrator.test.ts` ("a hacky specimen never wins") |
 | **F11** | Coverage + mutation captured per specimen | `types.ts` `EvalResult`, `selection.ts` `evalReward` | `selection.test.ts` reward bounds |
 | **F13** | Intent vs as-built spec diff | `specdiff.ts` | `specdiff.test.ts`; `orchestrator.test.ts` spec-diff.md materialized |
-| **F14** | Bounded escalation: 1 retry → 1 replan → halt (ceiling) | `escalation.ts` | `escalation.test.ts` — **"CEILING HOLDS"**, "halt is absorbing"; `orchestrator.test.ts` — "retry → replan → halt", exactly 3 rounds |
+| **F14** | Bounded escalation: 1 retry → 1 replan → halt (ceiling) | `escalation.ts`, `bridge.ts` `escalate` | `escalation.test.ts` — **"CEILING HOLDS"**, "halt is absorbing"; `orchestrator.test.ts` — "retry → replan → halt", exactly 3 rounds; `bridge.test.ts` — `escalate` persists the FSM over `state.json` across rounds + ceiling fail-safe (the command-driven path, 0.7.0) |
 | **F15** | Adaptive complexity→budget + calibration | `budget.ts` | `budget.test.ts` (monotonic, pool cap, calibrate) |
 | **F16** | state.json checkpoint + crash recovery | `state.ts` | `state.test.ts` — save/load, `resumePhase` interrupted/pending/complete/halted |
 | **F17** | `npx stz init` distribution | `cli.ts`, `bin/stz.mjs` | manual: `node bin/stz.mjs init/run` (real shim) verified — see below |
@@ -39,7 +39,7 @@ Run: `npm test` (131 tests) and `npm run typecheck`.
 | Deterministic bridge (begin→eval→gate→votes→select→finalize) | `src/bridge.ts` | `bridge.test.ts` — full sequence, planted hack disqualified |
 | Real eval runner: executed tests + V8 coverage + mutation | `src/eval-runner.ts` | `eval-runner.test.ts` — passRate, coverage in (0,1], mutation kills, **comment-mutation guard** |
 | Parallel in-session subagents | `commands/stz-run.md` + Agent tool | executed run in `examples/clamp-tournament/` (4 specimens parallel, 6 judges, hacker culled, GRPO non-flat) |
-| Plugin packaging | `.claude-plugin/{plugin,marketplace}.json` | JSON validity asserted; install/restart cycle not run (see AS-BUILT) |
+| Plugin packaging | `.claude-plugin/{plugin,marketplace}.json` | JSON validity asserted; install/restart cycle not run (see ROADMAP) |
 | SessionStart activation | `hooks/` | hook script executed, emits context when `.stz/` present |
 | Human winner gate | `commands/stz-run.md` step 8b | command-level (AskUserQuestion) |
 | Run config + dark-factory toggle (0.3.0 / 0.4.0) | `src/project.ts`, `src/bridge.ts` | `project.test.ts` — set-config round-trip, clamp/validate, load-modify-save toggle preserves sibling fields |
@@ -47,6 +47,7 @@ Run: `npm test` (131 tests) and `npm run typecheck`.
 | Cross-family reference: `seal-crosscheck` (0.5.0) | `src/eval-runner.ts`, `src/bridge.ts` | `eval-runner.test.ts` (both-pass/divergent/both-fail on a real boundary pair); `bridge.test.ts` exit codes + audit doc |
 | Cross-slice merge integrity: `merge-validate` (0.5.2) | `src/merge.ts`, `src/bridge.ts` | `merge.test.ts` — four verdict buckets on the slice-03/slice-05 fixture + propose→approve→retire lifecycle with exit codes |
 | Tabulated pipeline dashboard (0.5.4) | `src/bridge.ts` `project-status` | `project.test.ts` — computed `progress` totals + enriched slice rows (winner/faithful) |
+| Update/upgrade pathway: `stz update` / `migrate` (0.6.0, F19) | `src/version.ts`, `src/update.ts`, `src/migrate.ts` | `version.test.ts` — version sourced from package.json + 3-manifest drift guard; `update.test.ts` — semver compare, verdict/commands, injectable registry check (offline); `migrate.test.ts` — additive backed-up `.stz/` schema upgrade, idempotent |
 
 ## Manual / CLI acceptance
 

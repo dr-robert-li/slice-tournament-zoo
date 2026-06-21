@@ -6,6 +6,32 @@ and the project aims to follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.7.1]
+
+Docs-only. Reframes the as-built note as a **living roadmap** and records the
+near-term direction. No harness change.
+
+### Changed
+
+- **`docs/AS-BUILT.md` → `docs/ROADMAP.md`.** Same built/deferred record, now a
+  continuously-updated document: shipped features move from *Planned* into *What
+  was built* each cycle. README, `src/README`, `TESTPLAN`, and the mock
+  orchestrator comment point at the new path; the README "Documentation" entry is
+  relabelled "Roadmap — what is built, deferred, and planned next".
+
+### Docs
+
+- **Roadmap direction added.** Additional agentic-coding **runtimes** (OpenAI
+  Codex CLI — also closing the cross-family specimen/judge gap — plus Pi and
+  OpenCode), and a **distinct STZ-native harness** that runs the tournament on
+  **BYO LLM**: a generic OpenAI/Anthropic-compatible API, LiteLLM routing, and
+  local servers (vLLM, Ollama) for no-egress runs.
+- **`docs/JOURNAL.md` brought current** (0.3.1 → 0.7.1) in the author's
+  working-log voice (humanizer pass, no em dashes).
+- **Staleness sweep.** `TESTPLAN.md` test count corrected (131 → 163) with rows
+  added for the F19 update pathway and the F14 command-driven escalation; lingering
+  `AS-BUILT` path references updated across README, `src/README`, and `TESTPLAN`.
+
 ## [0.7.0]
 
 Resolves the AS-BUILT gap: **cross-round escalation is now driven by the real

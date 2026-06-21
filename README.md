@@ -399,7 +399,8 @@ For contributors and anyone going past day-to-day operation:
 - **Sealed-suite integrity** — the guide-vs-sensor contract behind the frozen
   held-out suite: [`docs/development/sealed-suite.md`](https://github.com/dr-robert-li/slice-tournament-zoo/blob/main/docs/development/sealed-suite.md).
 - **Requirement-to-test mapping** — [`docs/TESTPLAN.md`](https://github.com/dr-robert-li/slice-tournament-zoo/blob/main/docs/TESTPLAN.md).
-- **What is real versus deferred** — [`docs/AS-BUILT.md`](https://github.com/dr-robert-li/slice-tournament-zoo/blob/main/docs/AS-BUILT.md).
+- **Roadmap — what is built, deferred, and planned next** —
+  [`docs/ROADMAP.md`](https://github.com/dr-robert-li/slice-tournament-zoo/blob/main/docs/ROADMAP.md).
 
 ## License
 

@@ -1,8 +1,10 @@
-# STZ As-Built Note
+# STZ Roadmap
 
-A self-contained record of what this project set out to be, what was actually
-built, the features that resulted, the gaps that remain, and the difference
-between intent and delivery.
+A living record of what STZ set out to be, what is **built today**, what is **not
+yet built**, and where the project is **going next**. It is updated every release
+cycle: shipped features move from *Planned* into *What was built*, and new
+direction lands in *Planned*. (This document was formerly `AS-BUILT.md`; it now
+carries the forward roadmap as well as the as-built record.)
 
 ## Original intent
 
@@ -134,7 +136,7 @@ and 22, with a `prepublishOnly` (typecheck + test) guard before any npm publish.
   single `src/version.ts` seam sources the version from `package.json` and a test
   guards against the three version manifests drifting apart.
 
-## Gaps
+## Not yet built (current gaps)
 
 - **Cross-family *specimens and judge*** (OpenAI / Codex / Gemini) are not wired;
   the seam accepts any subagent, but only Claude Code subagents are connected.
@@ -172,5 +174,57 @@ and 22, with a `prepublishOnly` (typecheck + test) guard before any npm publish.
   (autonomous end-to-end), the cross-family reference + `seal-crosscheck` against
   the sealed suite, cross-slice merge integrity (`merge-validate` + the audited
   supersession-compat manifest), the tabulated pipeline dashboard, the
-  deterministic mock harness, the two worked example runs, the CI pipeline, and
-  the npm CLI distribution.
+  deterministic mock harness, the two worked example runs, the CI pipeline, the
+  npm CLI distribution, and the sustainable update/migrate pathway (`stz update`,
+  `stz migrate`, versioned `.stz/manifest.json`).
+
+## Planned (roadmap)
+
+Direction for upcoming cycles. These are intent, not yet built; each moves into
+*What was built* when it ships. Ordered roughly by dependency, not date.
+
+### Additional agentic-coding runtimes
+
+Today STZ drives its specimens/judge/test-author as **Claude Code** in-session
+subagents. The model seam already accepts any subagent, so the work is adapter +
+command wiring per host, not a redesign. Targets:
+
+- **OpenAI Codex CLI** — the prior-art harness STZ borrows from (AGENTS.md table
+  of contents, per-worktree observability). Run specimens/judges as Codex agents;
+  enables genuine **cross-family** tournaments and a cross-family quorum judge
+  (closes the "cross-family specimens and judge" gap above).
+- **Pi** — drive the pipeline from Pi as an alternate host.
+- **OpenCode** — run STZ under the OpenCode agent runtime.
+
+Each runtime needs: a bridge resolver entry (like the existing
+`CLAUDE_PLUGIN_ROOT` fallback), a host-native way to spawn N parallel specimens
+and collect pointers, and the per-role model map honored against that host's
+model catalog. The deterministic bridge is unchanged — it is host-agnostic by
+construction.
+
+### A distinct STZ-native harness (BYO LLM)
+
+Beyond riding inside an existing agent host, STZ should be able to run as its
+**own harness** — a standalone runner that owns the spawn-and-collect loop and
+talks to models directly, so the tournament is not bound to any one vendor's CLI.
+Bring-your-own-LLM via:
+
+- **A generic API provider** — any OpenAI-/Anthropic-compatible HTTP endpoint,
+  model + base-URL + key supplied by the operator.
+- **LiteLLM** — as the provider-routing layer, so one config reaches 100+
+  hosted models behind a single API shape.
+- **Local inference servers** — **vLLM** and **Ollama** for fully local,
+  no-egress runs (matching N5/sustainability and the air-gapped use case).
+
+This is the largest item: it needs a real spawn/concurrency layer (the worktrees
++ per-specimen observability stack currently stubbed), a provider abstraction
+over the model seam, and budget/cost tracking against per-provider token pricing.
+It also unlocks heterogeneous specimens (one vLLM-served model vs one hosted)
+without depending on a third-party agent CLI.
+
+### Supporting hardening (already noted as gaps)
+
+Prerequisites or natural companions to the above: per-specimen **git worktrees +
+ephemeral observability**, a prebuilt **`dist/`** to drop the runtime `tsx`
+dependency, **OS-level sealing** of the held-out suite, Python eval drivers, and
+cross-slice RAG/embeddings.

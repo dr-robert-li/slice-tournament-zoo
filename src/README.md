@@ -14,6 +14,6 @@ the production path — see [`mock/`](https://github.com/dr-robert-li/slice-tour
 ## Further reading
 
 - The requirement-to-test mapping is in [`docs/TESTPLAN.md`](https://github.com/dr-robert-li/slice-tournament-zoo/blob/main/docs/TESTPLAN.md).
-- What is real versus deferred is in [`docs/AS-BUILT.md`](https://github.com/dr-robert-li/slice-tournament-zoo/blob/main/docs/AS-BUILT.md).
+- What is built, deferred, and planned next is in [`docs/ROADMAP.md`](https://github.com/dr-robert-li/slice-tournament-zoo/blob/main/docs/ROADMAP.md).
 - Running the engine locally / in CI: [`docs/development/local-and-testing.md`](https://github.com/dr-robert-li/slice-tournament-zoo/blob/main/docs/development/local-and-testing.md).
 - The deterministic bridge CLI: [`docs/development/bridge-cli.md`](https://github.com/dr-robert-li/slice-tournament-zoo/blob/main/docs/development/bridge-cli.md).
