@@ -6,6 +6,35 @@ and the project aims to follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.3.4]
+
+### Changed
+- **Made the sealed-suite contract explicit (guides vs sensors), not just
+  implicit in the code.** The harness now states plainly, in the command, the
+  agent, and a dedicated doc, that responsibilities are bifurcated:
+  - **Prompt hardening is the GUIDE** that owns semantic robustness (the
+    fragile-invariant class) — and it is the *only* control for it, because the
+    smoke gate's reference is authored by the same agent and shares its blind
+    spot.
+  - **The smoke gate is a SENSOR** that owns mechanical validity only. A green
+    gate means exactly "compiles and is satisfiable against the sealed
+    reference" — explicitly **not** "semantically robust". `/stz:run` now names
+    the compile-only primitive (`cargo test --no-run`, `tsc --noEmit`) and runs
+    the reference strictly in a throwaway scratch dir, never a specimen-visible
+    path.
+- **Error handling now classifies failures by which control should have caught
+  them.** A compile/unsatisfiable failure is a *gate (sensor) failure* → loop the
+  exact stderr back to `stz-test-author`. A fragile invariant found later (the
+  sealed suite failing identically across all correct specimens at eval) is an
+  *authoring (guide) failure, not a gate miss* → fix via an audited `seal-amend`
+  and strengthen the author guidance, rather than treating it as a gate bug.
+
+### Added
+- `docs/development/sealed-suite.md` — the integrity contract: the guide/sensor
+  split, the four phases (author → gate → seal → amend), where the full-solution
+  reference lives, and the failure-classification rules. Linked from the README
+  and the bridge-CLI doc.
+
 ## [0.3.3]
 
 Hardening of sealed-suite creation (L1/F10), prompted by a run where the

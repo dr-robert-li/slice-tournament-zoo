@@ -25,8 +25,13 @@ gaming:
 
 ## Write tests that survive a CORRECT implementation (hard rules)
 
-A test that fails against every correct specimen is a *test* bug, and it
-surfaces mid-tournament where it is expensive. Hold to these:
+These rules are the harness's **guide** for semantic robustness — and they are
+the *only* control for it. The downstream smoke gate is a mechanical sensor
+(compile + satisfiable-against-the-reference); it cannot catch a fragile
+invariant, because the reference is written by you and shares your blind spot.
+So a test that fails against every correct specimen is a *test* bug that only
+these rules prevent — and it surfaces mid-tournament where it is expensive. Hold
+to these:
 
 - **It must compile/parse.** Before returning, build the suite (against your
   reference, below). A suite that does not compile is not done.

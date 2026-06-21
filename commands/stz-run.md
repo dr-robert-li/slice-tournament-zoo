@@ -56,13 +56,20 @@ on prose-only acceptance (F2).
    held-out tests to `.stz/30-tests/held-out/` AND a minimal correct reference
    implementation under `.stz/30-tests/held-out/reference/`. Implementers never
    see either.
-   - **Smoke gate (before sealing).** In a scratch dir (NOT a prototype dir), copy
-     the suite + the reference, compile, and run the suite against the reference.
-     It MUST be green. If it does not compile or the reference fails it, the suite
-     is buggy — send it back to `stz-test-author` to fix and re-run. This catches
-     non-compiling and unsatisfiable suites before specimens ever run. (It does
-     NOT catch a suite that encodes a fragile invariant the reference shares —
-     that is what the test-author's hard rules are for.)
+   - **Smoke gate (before sealing) — a mechanical SENSOR, nothing more.** In a
+     scratch dir (NOT a prototype dir, NOT a specimen-visible path; discard it
+     after), copy the suite + the reference, compile (compile-only first where the
+     language supports it — `cargo test --no-run` for Rust, `tsc --noEmit` for TS),
+     then run the suite against the reference. A green gate means exactly
+     **"compiles and is satisfiable against the sealed reference"** — it does NOT
+     mean the suite is semantically robust. The fragile-invariant class (identity
+     keyed on mutable position, snapshot diffs that break under legitimate change)
+     is owned UPSTREAM by the test-author's hard rules (a GUIDE), because the
+     reference shares the author's blind spot and the gate cannot see it.
+   - **On gate failure** (won't compile / reference fails it): classify as a
+     **gate failure** and loop — send the exact compiler/test stderr back to
+     `stz-test-author` to rewrite, then re-run the gate. Do not hand-patch the
+     suite yourself.
    - **Freeze.** Once green, `$STZ bridge seal --root .` — this sha256-hashes
      every held-out file (suite + reference) into `30-tests/held-out/SEAL.json`.
      The suite is now frozen; do not edit it by hand.
@@ -104,6 +111,14 @@ on prose-only acceptance (F2).
    (If an external eval runner already produced metrics, the alternate path is
    `$STZ bridge record-eval --root . --slice $1 --specimen <id> --metrics
    <metrics.json> --fixtures <...>`.)
+
+   **If the sealed suite fails identically across ALL specimens** (and the
+   specimens look correct), suspect the suite, not the field — this is the
+   fragile-invariant class. Classify it as an **authoring (GUIDE) failure, not a
+   gate miss**: the smoke gate was never able to catch it (the reference shared
+   the blind spot). Fix it through `$STZ bridge seal-amend --root . --reason
+   "<why>"` (never an ad-hoc edit), re-run `seal-verify`, and treat it as a signal
+   to strengthen the `stz-test-author` guidance — not as a bug in the gate.
 
 6. **Gate.** `$STZ bridge gate --root . --slice $1`. Read `passers`,
    `eliminated`, and the `pairings` schedule.

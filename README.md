@@ -319,6 +319,8 @@ For contributors and anyone going past day-to-day operation:
   pipeline, CI checks: [`docs/development/local-and-testing.md`](./docs/development/local-and-testing.md).
 - **The bridge CLI** — the deterministic `stz bridge` subcommands:
   [`docs/development/bridge-cli.md`](./docs/development/bridge-cli.md).
+- **Sealed-suite integrity** — the guide-vs-sensor contract behind the frozen
+  held-out suite: [`docs/development/sealed-suite.md`](./docs/development/sealed-suite.md).
 - **Requirement-to-test mapping** — [`docs/TESTPLAN.md`](./docs/TESTPLAN.md).
 - **What is real versus deferred** — [`docs/AS-BUILT.md`](./docs/AS-BUILT.md).
 

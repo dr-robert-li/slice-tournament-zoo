@@ -29,4 +29,7 @@ stz bridge seal-amend  --root . --reason "<why>"      # sanctioned post-freeze c
 The sealed-suite trio backs the anti-hacking freeze: `seal` after the test-author's
 suite passes the smoke gate against its reference; `seal-verify` immediately before
 the eval/gate so a frozen-suite edit can't slip in mid-tournament; `seal-amend` as
-the only audited way to change a sealed file once frozen.
+the only audited way to change a sealed file once frozen. The guide-vs-sensor
+contract behind it (what the smoke gate does and does NOT catch, where the
+reference lives, how failures are classified) is in
+[`sealed-suite.md`](./sealed-suite.md).
