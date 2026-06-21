@@ -28,6 +28,9 @@ Version bumped to 0.3.0 to open this feature cycle. Scope, not yet implemented:
   the model map to the per-role subagents, and strictness to `/stz:standards` and
   `/stz:tests`.
 
+### Changed
+- Moved `JOURNAL.md` to `docs/JOURNAL.md` and ran a light humanizing pass over it.
+
 ## [0.2.2]
 
 ### Added
