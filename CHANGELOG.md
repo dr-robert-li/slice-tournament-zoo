@@ -6,6 +6,30 @@ and the project aims to follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.3.1]
+
+### Fixed
+- **Spec-diff faithfulness was meaningless on real runs.** The intent-vs-as-built
+  diff (F13) matched claims by exact normalized string, but the planner and the
+  documenter are different agents that word the same behaviour differently — so
+  every real run reported `kept=0, missing=all, faithful=false`. Claims now carry
+  a stable `id`: the planner emits `{id, text}`, and the documenter **adjudicates
+  each intent claim by id** (`{id, satisfied, evidence}`, plus `x*` extras for
+  behaviour beyond the plan). `diffSpecs` matches on id (falling back to
+  normalized text for legacy/bare-string claims, so old artifacts and the mock
+  still work). `faithful` now reflects real coverage, not wording.
+- **Mis-keyed verdicts no longer miscount silently.** A documenter that fumbles
+  an id would turn a constant failure into an intermittent one (a false `missing`
+  plus a false `added`). `finalize` now validates the verdicts and surfaces
+  `unmatchedIntentIds` / `mismatchedAsBuiltIds` (plus a stderr warning); `/stz:run`
+  re-spawns the documenter with the exact id list rather than trusting the diff.
+  Malformed claim objects are parsed defensively and cannot crash `finalize`.
+
+### Added
+- Documentation reorganized for operators: `docs/development/` (local-and-testing,
+  bridge-cli), `src/README.md` (module map), and a `CONTRIBUTING.md`. The README
+  keeps a slim Documentation pointer section.
+
 ## [0.3.0]
 
 ### Added

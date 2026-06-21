@@ -29,6 +29,7 @@
 - [Uninstall](#uninstall)
 - [The pipeline](#the-pipeline-two-levels)
 - [The audit tree](#the-stz-audit-tree)
+- [Documentation](#documentation)
 - [License](#license)
 
 ## Requirements
@@ -80,17 +81,8 @@ they resolve the bundled copy via `${CLAUDE_PLUGIN_ROOT}`, with no `PATH` setup
 needed (Node.js 20+ is the only requirement; the bundled copy fetches `tsx` via
 `npx` on first use, so that first call needs network).
 
-### As a library / local CLI only
-
-If you only want the deterministic engine and the mock pipeline:
-
-```bash
-git clone https://github.com/dr-robert-li/slice-tournament-zoo
-cd slice-tournament-zoo
-npm install
-npm test            # 93 deterministic tests
-npm run typecheck
-```
+> Developing STZ itself, or running the engine without Claude Code? See
+> [`docs/development/local-and-testing.md`](./docs/development/local-and-testing.md).
 
 ## Use
 
@@ -192,38 +184,6 @@ You, the session, become the orchestrator. The command:
 
 Every exact decision is made by the CLI, never by the agent's own arithmetic.
 
-### Mock run (testing only, no network)
-
-A self-contained mock drives the whole pipeline with no API keys, network, or
-subagents — handy as a fast smoke test of the deterministic spine. It is a
-testing aid, not the production path. See [`src/mock/`](./src/mock).
-
-```bash
-stz run <dir>       # drive the demo slice end to end against the mock model
-```
-
-### The bridge CLI directly
-
-The deterministic half is scriptable on its own:
-
-```bash
-stz bridge begin        --root . --manifest .stz/40-slices/slice-01/manifest.json
-stz bridge eval         --root . --slice slice-01 --specimen a \
-                        --sealed .stz/30-tests/held-out/<file> \
-                        --impl   .stz/40-slices/slice-01/prototypes/specimen-a/<file>
-stz bridge gate         --root . --slice slice-01
-stz bridge record-votes --root . --slice slice-01 --votes votes.json
-stz bridge select       --root . --slice slice-01
-stz bridge finalize     --root . --slice slice-01 --intent intent.json --asbuilt asbuilt.json
-
-# project-level driver (multi-slice)
-stz bridge project-set-config --root . --config run-config.json  # persist run config (validated, clamped)
-stz bridge project-config     --root .                           # read it back (defaults if unset)
-stz bridge project-status     --root .                           # DAG + phase status + runConfig
-```
-
-Each subcommand prints one JSON object and writes its artifacts under `.stz/`.
-
 ## Example commands and workflows
 
 ### A whole project (the full pipeline)
@@ -278,12 +238,6 @@ cat examples/full-pipeline/stz-tree/90-audit/SUMMARY.md
 cheater passes all 304 sealed checks but is disqualified at the gate; the winner
 is chosen by six judge votes and the highest GRPO advantage. `full-pipeline`: the
 project phases run for a `slugify` library through to a seeded slice DAG.
-
-### CI-style local check (no Claude Code)
-
-```bash
-npm test && npm run typecheck && stz run /tmp/stz-smoke
-```
 
 ## Uninstall
 
@@ -354,21 +308,19 @@ split above is the real in-session flow.
 | `50-pressure/` | culled specimens' diffs and critiques (the pressure log) |
 | `90-audit/` | project state, journal, call ledger, cost, completion report, SUMMARY |
 
-## Module map (`src/`)
+## Documentation
 
-Production spine: `types.ts` (schema), `taxonomy.ts` (tree and frontmatter),
-`state.ts` (checkpoint and recovery), `grpo.ts`, `selection.ts`,
-`hack-detector.ts`, `escalation.ts`, `budget.ts`, `cost-tracker.ts`,
-`pressure.ts`, `specdiff.ts`, `eval-runner.ts` (real tests, coverage, mutation),
-`project.ts` (the project DAG driver), and `bridge.ts` (the in-session CLI,
-per-slice and project subcommands).
+For contributors and anyone going past day-to-day operation:
 
-The `mock/` subfolder is the no-network testing harness (the `stz run` demo):
-its orchestrator, the model-layer seam, and the deterministic mock. Not part of
-the production path — see [`src/mock/`](./src/mock).
-
-The requirement-to-test mapping is in [`docs/TESTPLAN.md`](./docs/TESTPLAN.md).
-What is real versus deferred is in [`docs/AS-BUILT.md`](./docs/AS-BUILT.md).
+- **Contributing** — setup, the architecture rule, the quality bar:
+  [`CONTRIBUTING.md`](./CONTRIBUTING.md).
+- **Source layout** — the `src/` module map: [`src/README.md`](./src/README.md).
+- **Local development & testing** — run the engine without Claude Code, the mock
+  pipeline, CI checks: [`docs/development/local-and-testing.md`](./docs/development/local-and-testing.md).
+- **The bridge CLI** — the deterministic `stz bridge` subcommands:
+  [`docs/development/bridge-cli.md`](./docs/development/bridge-cli.md).
+- **Requirement-to-test mapping** — [`docs/TESTPLAN.md`](./docs/TESTPLAN.md).
+- **What is real versus deferred** — [`docs/AS-BUILT.md`](./docs/AS-BUILT.md).
 
 ## License
 

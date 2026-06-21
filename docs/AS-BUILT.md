@@ -106,10 +106,11 @@ and 22.
   mutation are executed in JavaScript via V8 and source mutators.
 - **Per-specimen git worktrees and observability stacks** are not built; distinct
   `prototypes/specimen-X/` directories stand in for worktrees.
-- **Cross-slice RAG / embeddings** are not built. A visible consequence: the
-  spec-diff matches claims literally, so intent (the what) and as-built (the how)
-  read as divergent and the diff over-flags for human review. Conservative, not
-  wrong; semantic matching is the fix.
+- **Cross-slice RAG / embeddings** are not built — no semantic lookup across the
+  markdown tree. (The spec-diff's old literal over-flagging is fixed: claims now
+  carry stable ids and the documenter adjudicates each intent claim by id, so
+  reworded as-built claims match. `faithful` reflects real coverage, not wording.
+  Fully semantic, id-free matching would still need embeddings.)
 - **OS-level sealing** of the held-out suite (git read-only attributes plus a
   pre-commit hook) is not applied; only the prompts withhold it from implementers.
 - **The bundled bridge runs the TypeScript CLI through `tsx`**, fetched by `npx`

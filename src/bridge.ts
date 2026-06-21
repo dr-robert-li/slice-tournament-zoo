@@ -55,7 +55,7 @@ import {
 } from "./project.js";
 import { detectHacks } from "./hack-detector.js";
 import { evalGate, select, pairings } from "./selection.js";
-import { diffSpecs, renderSpecDiff, isFaithful, type Spec } from "./specdiff.js";
+import { diffSpecs, renderSpecDiff, isFaithful, unmatchedIntentIds, mismatchedAsBuiltIds, type Spec } from "./specdiff.js";
 import { renderPressureLog, refinementContext, type CulledSpecimen } from "./pressure.js";
 import { fullEval } from "./eval-runner.js";
 
@@ -287,10 +287,20 @@ async function finalize(args: Record<string, string>): Promise<void> {
     });
   }
 
-  // Spec-diff (F13).
+  // Spec-diff (F13). Claims are matched by id (or normalized text); the
+  // documenter adjudicates each intent claim, so wording differences no longer
+  // read as drift. A mis-keyed verdict would, though — surface it rather than
+  // let it silently miscount.
   const intent = readJSON<Spec>(args.intent!);
   const asBuilt = readJSON<Spec>(args.asbuilt!);
   const sdiff = diffSpecs(intent, asBuilt);
+  const unmatched = unmatchedIntentIds(intent, asBuilt);
+  const mismatched = mismatchedAsBuiltIds(intent, asBuilt);
+  if (mismatched.length) {
+    process.stderr.write(
+      `warning: as-built claim id(s) [${mismatched.join(", ")}] assert satisfied but match no intent claim — likely a documenter mis-key, counted as 'added'.\n`,
+    );
+  }
   await writeDoc(root, join(sliceRel(slice), "spec-diff.md"), {
     frontmatter: {
       summary: `Spec diff ${slice}: ${sdiff.missing.length} missing, ${sdiff.added.length} added, ${sdiff.kept.length} kept.`,
@@ -313,6 +323,8 @@ async function finalize(args: Record<string, string>): Promise<void> {
     faithful: isFaithful(sdiff),
     specDiff: { missing: sdiff.missing.length, added: sdiff.added.length, kept: sdiff.kept.length },
     culled: culled.length,
+    unmatchedIntentIds: unmatched.length ? unmatched : undefined,
+    mismatchedAsBuiltIds: mismatched.length ? mismatched : undefined,
   });
 }
 

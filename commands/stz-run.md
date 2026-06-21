@@ -57,8 +57,12 @@ on prose-only acceptance (F2).
    Implementers never see its contents.
 
 3. **Plan (intent spec).** Write `.stz/40-slices/$1/intent.json` as
-   `{ "claims": [ ... ] }` — the behavioural claims the slice should satisfy
-   (leave *how* open; that is the specimens' job, R5).
+   `{ "claims": [ {"id":"c1","text":"…"}, {"id":"c2","text":"…"}, … ] }` — the
+   behavioural claims the slice should satisfy, each with a stable `id` (`c1`,
+   `c2`, …). Leave *how* open (that is the specimens' job, R5). The ids are what
+   the spec-diff matches against, so the documenter (step 9) adjudicates each one
+   by id rather than by re-describing the code — that is why wording differences
+   no longer read as drift.
 
 4. **Spawn N specimens IN PARALLEL.** In a SINGLE message, emit N `stz-specimen`
    Agent calls — N is `runConfig.fanout` from step 0 (default 4), each with
@@ -101,10 +105,16 @@ on prose-only acceptance (F2).
     this gate only if the run was explicitly launched as non-interactive.
 
 9. **Document + finalize.** Spawn ONE `stz-documenter` subagent on the winner's
-   dir; it returns `{claims:[...]}` → write `asbuilt.json`. Then
-   `$STZ bridge finalize --root . --slice $1 --intent intent.json --asbuilt
-   asbuilt.json`. This writes the pressure log, the spec-diff, and the audit
-   journal.
+   dir, and **pass it the intent claims from `intent.json` (ids and text)**. It
+   adjudicates each intent claim by id and returns
+   `{claims:[{id,satisfied,evidence}, …, {id:"x1",text:"…extra"}]}` → write
+   `asbuilt.json`. Then `$STZ bridge finalize --root . --slice $1 --intent
+   intent.json --asbuilt asbuilt.json`. This writes the pressure log, the
+   spec-diff, and the audit journal. The bridge matches as-built verdicts to
+   intent claims by id, so `faithful` reflects real coverage, not wording. If
+   finalize prints `mismatchedAsBuiltIds` (or warns on stderr), the documenter
+   mis-keyed a verdict — re-spawn it with the exact intent id list and re-run
+   finalize rather than trusting the diff.
 
 10. **Report.** Show the user: winner, ranking, whether the build is faithful
     (no planned-but-missing claims), and any disqualified specimens with their
