@@ -31,6 +31,7 @@ import { detectHacks } from "./hack-detector.js";
 import { evalGate, select, pairings } from "./selection.js";
 import { diffSpecs, renderSpecDiff, isFaithful, type Spec } from "./specdiff.js";
 import { renderPressureLog, refinementContext, type CulledSpecimen } from "./pressure.js";
+import { fullEval } from "./eval-runner.js";
 
 // ── small arg parser ──────────────────────────────────────────────────────
 
@@ -129,11 +130,16 @@ async function begin(args: Record<string, string>): Promise<void> {
  * metrics (testPassRate/coverage/mutation) are supplied by the eval runner the
  * command invoked, so the gate decision is deterministic given those inputs.
  */
-function recordEval(args: Record<string, string>): void {
-  const { root, slice, specimen } = args as { root: string; slice: string; specimen: string };
-  const metrics = readJSON<{ testPassRate: number; coverage: number; mutationScore: number }>(args.metrics!);
+/** Build, persist, and print an EvalResult from already-measured metrics. */
+function commitEval(
+  root: string,
+  slice: string,
+  specimen: string,
+  metrics: { testPassRate: number; coverage: number; mutationScore: number },
+  fixtureNames: string[],
+  extra: Record<string, unknown> = {},
+): void {
   const files = readSpecimenFiles(root, slice, specimen);
-  const fixtureNames = args.fixtures ? args.fixtures.split(",") : [];
   const hackFindings = detectHacks(specimen, files, { fixtureNames });
   const result: EvalResult = {
     specimen,
@@ -146,7 +152,32 @@ function recordEval(args: Record<string, string>): void {
   const out = evalResultPath(root, slice, specimen);
   mkdirSync(join(out, ".."), { recursive: true });
   writeFileSync(out, JSON.stringify(result, null, 2) + "\n", "utf8");
-  print(result);
+  print({ ...result, ...extra });
+}
+
+/** record-eval: metrics supplied by the caller (an external eval runner). */
+function recordEval(args: Record<string, string>): void {
+  const { root, slice, specimen } = args as { root: string; slice: string; specimen: string };
+  const metrics = readJSON<{ testPassRate: number; coverage: number; mutationScore: number }>(args.metrics!);
+  commitEval(root, slice, specimen, metrics, args.fixtures ? args.fixtures.split(",") : []);
+}
+
+/**
+ * eval: run the REAL eval runner (sealed suite + V8 coverage + mutation) over a
+ * specimen and record the result. This is the un-stubbed path — testPassRate,
+ * coverage, and mutationScore are all genuinely executed, no caller trust.
+ */
+function evalCmd(args: Record<string, string>): void {
+  const { root, slice, specimen } = args as { root: string; slice: string; specimen: string };
+  const e = fullEval(args.sealed!, args.impl!);
+  commitEval(
+    root,
+    slice,
+    specimen,
+    { testPassRate: e.testPassRate, coverage: e.coverage, mutationScore: e.mutationScore },
+    args.fixtures ? args.fixtures.split(",") : [],
+    { measured: { passed: e.passed, total: e.total, mutants: e.mutants, survivors: e.survivors } },
+  );
 }
 
 function loadEvals(root: string, slice: string): EvalResult[] {
@@ -265,6 +296,7 @@ export async function runBridge(argv: string[]): Promise<void> {
   switch (sub) {
     case "begin": await begin(args); break;
     case "record-eval": recordEval(args); break;
+    case "eval": evalCmd(args); break;
     case "gate": gate(args); break;
     case "record-votes": recordVotes(args); break;
     case "select": await selectCmd(args); break;

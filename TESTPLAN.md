@@ -32,6 +32,17 @@ Run: `npm test` (66 tests) and `npm run typecheck`.
 | **N6** | Determinism / replayability | `cost-tracker.ts`, all pure modules | `cost-pressure.test.ts` JSONL round-trip; `orchestrator.test.ts` — "identical config → identical winner" |
 | **N12** | Zoo vocabulary discipline | `cli.ts` AGENTS.md, `pressure.ts` | manual: AGENTS.md vocabulary table |
 
+## In-session harness (steps 1–5)
+
+| Capability | Where | Test / proof |
+|---|---|---|
+| Deterministic bridge (begin→eval→gate→votes→select→finalize) | `src/bridge.ts` | `bridge.test.ts` — full sequence, planted hack disqualified |
+| Real eval runner: executed tests + V8 coverage + mutation | `src/eval-runner.ts` | `eval-runner.test.ts` — passRate, coverage in (0,1], mutation kills, **comment-mutation guard** |
+| Parallel in-session subagents | `commands/stz-run.md` + Agent tool | executed run in `examples/clamp-tournament/` (4 specimens parallel, 6 judges, hacker culled, GRPO non-flat) |
+| Plugin packaging | `.claude-plugin/{plugin,marketplace}.json` | JSON validity asserted; install/restart cycle not run (see AS-BUILT) |
+| SessionStart activation | `hooks/` | hook script executed, emits context when `.stz/` present |
+| Human winner gate | `commands/stz-run.md` step 8b | command-level (AskUserQuestion) |
+
 ## Manual / CLI acceptance
 
 ```

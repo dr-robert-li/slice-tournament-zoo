@@ -39,6 +39,12 @@
       "phase": "judgment",
       "kind": "phase-done",
       "detail": "judgment → done"
+    },
+    {
+      "seq": 3,
+      "phase": "judgment",
+      "kind": "winner",
+      "detail": "winner=a, ranking=[a,b,c]"
     }
   ],
   "callCount": 0,

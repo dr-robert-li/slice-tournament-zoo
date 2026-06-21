@@ -1,0 +1,21 @@
+{
+  "name": "stz-marketplace",
+  "owner": {
+    "name": "Robert Li",
+    "email": "dr.robert.li.au@gmail.com"
+  },
+  "metadata": {
+    "description": "Slice-tournament-zoo and related agentic harness plugins.",
+    "version": "0.1.0"
+  },
+  "plugins": [
+    {
+      "name": "stz",
+      "source": "./",
+      "description": "Run each slice as an in-session adversarial tournament with sealed tests, layered anti-reward-hacking, GRPO selection, and a replayable audit trail.",
+      "version": "0.1.0",
+      "category": "development",
+      "strict": false
+    }
+  ]
+}

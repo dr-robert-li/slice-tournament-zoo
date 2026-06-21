@@ -9,7 +9,7 @@ summary: "Tournament slice-01: winner specimen-a, 3 passer(s)."
 - **votes:** 6
 
 ## GRPO advantages (whole group)
-- specimen-a: reward=0.938 advantage=0.000
-- specimen-b: reward=0.938 advantage=0.000
-- specimen-c: reward=0.938 advantage=0.000
-- specimen-d: reward=0.938 advantage=0.000
+- specimen-a: reward=1.000 advantage=1.732
+- specimen-b: reward=0.833 advantage=-0.577
+- specimen-c: reward=0.833 advantage=-0.577
+- specimen-d: reward=0.833 advantage=-0.577

@@ -8,23 +8,23 @@
   "advantages": [
     {
       "specimen": "a",
-      "reward": 0.9375,
-      "advantage": 0
+      "reward": 1,
+      "advantage": 1.7320505675689093
     },
     {
       "specimen": "b",
-      "reward": 0.9375,
-      "advantage": 0
+      "reward": 0.8333333333333334,
+      "advantage": -0.577350189189638
     },
     {
       "specimen": "c",
-      "reward": 0.9375,
-      "advantage": 0
+      "reward": 0.8333333333333334,
+      "advantage": -0.577350189189638
     },
     {
       "specimen": "d",
-      "reward": 0.9375,
-      "advantage": 0
+      "reward": 0.8333333333333334,
+      "advantage": -0.577350189189638
     }
   ],
   "votes": [

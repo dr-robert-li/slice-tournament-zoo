@@ -68,6 +68,12 @@ on prose-only acceptance (F2).
 8. **Select.** `stz bridge select --root . --slice $1`. The bridge runs the
    two-stage selection + GRPO and returns `{winner, ranking, advantages}`.
 
+8b. **Winner approval gate (human-in-the-loop).** Before merging, show the user
+    the winner, the ranking, the GRPO advantages, and any disqualified specimens
+    with their hack findings. Ask (AskUserQuestion) whether to accept the winner,
+    pick a different survivor, or halt. Only proceed once the user accepts. Skip
+    this gate only if the run was explicitly launched as non-interactive.
+
 9. **Document + finalize.** Spawn ONE `stz-documenter` subagent on the winner's
    dir; it returns `{claims:[...]}` → write `asbuilt.json`. Then
    `stz bridge finalize --root . --slice $1 --intent intent.json --asbuilt

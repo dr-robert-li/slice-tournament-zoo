@@ -43,31 +43,62 @@ spine that every other component depends on beats a broad layer of hollow stubs.
   (no passers → retry → replan → halt + structured failure report).
 - **CLI** (F17): `stz init` / `stz run`.
 
-## Behind interfaces, mocked (not built — see `src/llm/interfaces.ts`)
+## Now real: the in-session Claude Code harness (steps 1–5)
 
-These are faithful seams with a deterministic mock; a live impl drops in without
-touching the tested spine. The mock EvalRunner still runs the **real**
-hack-detector, so the anti-hacking layer is exercised for real.
+The model layer is no longer only a mock. STZ runs inside a Claude Code session:
 
-- Live Claude Code / Codex **specimen / judge / test-author / documenter**
-  subagent calls (§3 Generative AI Layer).
-- **Python eval drivers**: Hypothesis property-based generators, mutation
-  testing (mutmut/Stryker), coverage (F7/F11) — `EvalResult` is real, the runner
-  that produces it is mocked.
-- **git worktrees** per specimen (F6) → stood in by `prototypes/specimen-X/`
-  directories. Per-worktree **ephemeral observability stacks** — not spun up.
-- **Local embeddings / cross-slice RAG** (N2/R4) — not built.
+- **Orchestration bridge** (`src/bridge.ts`, `stz bridge`): the deterministic
+  half as a JSON-in/out CLI the command calls between subagent spawns
+  (begin → record-eval/eval → gate → record-votes → select → finalize).
+- **Invocation surface**: `/stz:run` command + four subagent definitions
+  (`agents/stz-{specimen,judge,test-author,documenter}.md`) carrying frozen
+  prompts and inoculation framing (F10/L4).
+- **Real parallel subagents**: specimens are spawned as concurrent Task/Agent
+  calls (the canonical programmatic primitive; multiple calls in one message =
+  parallel batch with a blocking barrier = the tournament boundary). Proven by
+  an executed run in `examples/clamp-tournament/`.
+- **Real eval runner** (`src/eval-runner.ts`): testPassRate (executed sealed
+  suite), coverage (V8 `NODE_V8_COVERAGE`), and mutation survival (source
+  mutators re-run against the suite) — all genuinely executed, no test library
+  dependency. This is what makes GRPO advantage non-flat.
+- **Packaging + activation**: `.claude-plugin/{plugin,marketplace}.json` and a
+  SessionStart hook (`hooks/`).
+
+## Still behind interfaces / deferred (honest gaps)
+
+- **Codex CLI / OpenAI specimens** for cross-family heterogeneity — the seam
+  takes any subagent; only Claude Code subagents are wired so far.
+- **Python eval drivers** specifically (Hypothesis generators, mutmut/Stryker):
+  the eval runner is real but JS-only. Coverage and mutation are executed via
+  V8 + source mutators, not the named Python libraries. Property-based test
+  *authoring* happens in the sealed suite when the test-author chooses it.
+- **git worktrees** per specimen (F6) → still stood in by `prototypes/specimen-X/`
+  directories (distinct paths, no collision). Per-worktree **ephemeral
+  observability stacks** — not spun up.
+- **Local embeddings / cross-slice RAG** (N2/R4) — not built. Consequence seen
+  in the live run: the spec-diff matches claims literally, so intent (the *what*)
+  and as-built (the *how*) read as divergent and the diff over-flags for human
+  review. Conservative, not wrong; semantic matching is the fix.
 - **L1/L2 enforcement** via git read-only attributes + pre-commit hook — the
-  sealed suite is written to `30-tests/held-out/` and only loaded by the judge
-  seam, but OS-level read-only attribution is not applied.
-- Inoculation prompting text (F10/L4) — belongs in live system prompts; n/a to mock.
+  sealed suite is written to `30-tests/held-out/` and only the judge is told to
+  read it, but OS-level read-only attribution is not applied.
+- **Plugin install, end to end**: the manifests are valid and the layout is
+  conventional, but a full `/plugin install` + restart cycle was not executed
+  from the build session. Custom agent defs load at session start, so the live
+  acceptance run spawned general-purpose agents carrying the same prompts inline.
+- **Bounded escalation in `/stz:run`**: a single command invocation halts on
+  no-passers; the retry → replan → halt loop lives in the mock orchestrator and
+  is not yet driven by the command across rounds.
 
-## Honest spec-diff for this kernel
+## Honest spec-diff for this build
 
-- **Delivered as planned:** the entire deterministic spine + 8-phase orchestration
-  + CLI + audit trail, all tested.
-- **Planned but deferred (documented, not missing-by-accident):** the live model
-  layer and the Python/observability/RAG/worktree infrastructure above — every
-  one has a real interface seam.
-- **Built beyond the literal plan:** a deterministic mock model layer and a
-  66-test suite that proves the spine, plus this audit note.
+- **Delivered as planned:** the deterministic spine + 8-phase orchestration +
+  the in-session harness (bridge, command, agents, real eval runner, packaging,
+  gates), proven by an executed tournament and 75 tests.
+- **Planned but deferred (documented, not missing-by-accident):** the gaps above
+  — cross-family specimens, Python PBT/mutation libraries, worktrees + obs
+  stacks, embeddings/RAG, git-attribute sealing, and the end-to-end plugin
+  install cycle.
+- **Built beyond the literal plan:** the `stz bridge` JSON contract, a real
+  dependency-free eval runner (V8 coverage + source-mutation), a deterministic
+  mock layer, the worked `examples/clamp-tournament/` run, and this audit note.
