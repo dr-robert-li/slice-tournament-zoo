@@ -115,9 +115,27 @@ completion report, one command per phase (a get-shit-done-style UX):
 
 `/stz:pipeline` is a dashboard: it shows project-phase and per-slice status, then
 dispatches the recommended next step (and can run independent slices in
-parallel). Every command accepts `--auto` to chain to the next phase, pausing
-only at the two human gates: confirming a done-predicate in `/stz:new` and
-approving the slice breakdown in `/stz:slice`.
+parallel).
+
+`--auto` means different things by scope, so keep the mental model straight:
+
+- `/stz:run slice-01` runs that one slice's tournament and nothing else.
+- `/stz:run slice-01 --auto` runs that one slice with no approval pause (it skips
+  the human winner-approval gate). It does **not** cascade to other slices.
+- The project phase commands (`/stz:new --auto`, `/stz:research --auto`, …) each
+  chain to the next phase.
+- `/stz:pipeline --auto` runs everything: it walks the DAG in dependency order,
+  fires `/stz:run` for each runnable slice (independent slices in the frontier in
+  parallel), and continues through to `/stz:summary`. This is the entry point for
+  "do the whole project automatically."
+
+Two human gates remain even in full auto: confirming a done-predicate in
+`/stz:new`, and approving the slice breakdown in `/stz:slice`.
+
+The DAG ordering and per-slice seeding are backed by the deterministic
+`stz bridge project-status` (which computes the runnable frontier). The `--auto`
+chaining itself is orchestration the agent follows from the command markdown, not
+a hard-coded loop.
 
 Each project-level phase writes its own `.stz/` tier and is settled once, before
 any slice runs. When `/stz:slice` seeds the DAG, each slice inherits those early
@@ -196,8 +214,10 @@ dependency order:
 ```
 
 You do not hand-author slice manifests or run `/stz:run` by hand here. `/stz:slice`
-creates the manifests and `/stz:pipeline` sequences the tournaments. Each command
-also takes `--auto` to chain to the next phase.
+creates the manifests and `/stz:pipeline` sequences the tournaments. To run the
+whole thing automatically, `/stz:pipeline --auto` walks the DAG and dispatches
+each slice through to the summary. (Note: `/stz:run --auto` is single-slice only;
+it just skips that slice's winner-approval pause and does not cascade.)
 
 ### A single slice, standalone (no project)
 
