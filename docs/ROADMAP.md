@@ -228,3 +228,247 @@ Prerequisites or natural companions to the above: per-specimen **git worktrees +
 ephemeral observability**, a prebuilt **`dist/`** to drop the runtime `tsx`
 dependency, **OS-level sealing** of the held-out suite, Python eval drivers, and
 cross-slice RAG/embeddings.
+
+### Multi-round convergence: iterative selection-pressure → design-feedback loop (0.6.0)
+
+#### Background and framing
+
+STZ's existing tournament is a single-round adversarial selection: N specimens
+are generated independently from the contract, scored, and the winner is
+promoted. This is structurally equivalent to **best-of-N sampling** — a
+well-understood strategy whose ceiling is bounded by the strategy space
+accessible in a single generation pass.
+
+The planned 0.6.0 architecture introduces a **multi-round convergence loop**:
+after each round's winner is selected, a natural-language *pressure log*
+summarising why losers failed is injected into the next round's generation
+context. New specimens are generated independently (preserving diversity), but
+informed by the accumulated strategic failure analysis of all prior rounds. The
+loop runs until a convergence criterion is met or `maxRounds` is exhausted.
+
+This is the **in-context analogue of GRPO** applied to software engineering:
+
+| GRPO (training) | STZ 0.6.0 (SDLC) |
+|---|---|
+| Group of completions sampled from policy π | Round of N specimens generated from contract |
+| Reward signal per completion | Sealed suite score per specimen |
+| Group-relative advantage A_i = (r_i − μ) / σ | Specimen score minus round mean (already in `grpo.ts`) |
+| Policy update via gradient step | Context update via pressure log (natural-language policy steering) |
+| KL penalty to prevent policy collapse | Interface-hash constraint + independent specimen seeding |
+| Convergence = policy stabilises | Convergence = inter-round reward delta < threshold for K rounds |
+
+The critical distinction from training: the "policy update" is a readable
+markdown pressure log in `.stz/50-pressure/`, not an opaque weight change. Every
+"update" is auditable by a human engineer. The in-context policy shift persists
+for the lifetime of the project (each project is an independent optimisation
+trajectory) but does not generalise across projects — which is correct, since
+each project has its own contract, invariants, and strategic context.
+
+This also resolves a structural identity question: STZ is not purely
+**spec-driven** (the sealed suite is a selection mechanism, not a specification
+language) nor purely **test-driven** (implementations are not revising against
+public test failures). The multi-round loop makes it more precise: **iterative
+adversarial tournament with strategic memory**, an instance of **in-context
+reinforcement learning (ICRL)** applied to code generation with a deterministic
+reward function.
+
+#### Architecture
+
+**The loop:**
+
+```
+ROUND 0
+  Generate N specimens (from contract only, independent seeds)
+  Eval-gate → disqualify hackers and gate-failures
+  GRPO group-relative advantage over survivors
+  Pairwise judge → winner₀ selected
+  Pressure log for round 0 written (strategic failure analysis, not raw test output)
+  interfaceHash pinned to winner₀'s exported interface
+
+ROUND R (R = 1..maxRounds-1)
+  Generate N specimens (from contract + all prior pressure logs + winner_{R-1})
+    — specimens may diverge from or improve on the prior winner; they are not revising it
+  Eval-gate → disqualify
+  GRPO advantage computed; convergenceRate checked against prior round
+  If convergenceRate < convergenceThreshold for plateauRounds consecutive rounds → CONVERGED, halt
+  Pairwise judge → winner_R candidate
+  interfaceHash verified: if mismatch → winner_R disqualified, contract drift escalated to /stz:slice
+  assembled-crate merge-validate: if fails → round rejected, merge defect surfaced
+  If both pass: winner_R promoted, RoundSnapshot appended to state.json, proceed to R+1
+
+FINAL
+  winner_{last} is the slice winner
+  Held-out adversarial suite fired once (never used mid-loop as convergence criterion)
+```
+
+**Key invariants:**
+- The pressure log encodes *strategic failure analysis* (why an approach failed,
+  what failure modes it hit), never raw test output. Raw test output is
+  information the specimens are not permitted to see (sealed-suite integrity).
+- Round-0 locks the interface boundary (`interfaceHash`). Subsequent rounds may
+  only improve the implementation, never change exported types, function
+  signatures, or observable side effects that downstream slices depend on.
+- A winner whose reward regresses vs. the prior round is never promoted. In
+  training, loss can temporarily spike and recover; in discrete selection there
+  is no gradient descent to recover — so regression is a hard block.
+- Multi-round convergence on slices with downstream dependents in the DAG
+  requires assembled-crate `merge-validate` after each promotion (not just
+  in-slice sealed-suite pass). This is not optional: a round winner that improves
+  in isolation but breaks a downstream slice's invariants must be rejected.
+- `maxRounds = 1` (default) reproduces existing single-round behaviour exactly.
+  The feature is fully backward-compatible.
+
+#### Merge logic for multi-round loops
+
+The existing `merge.ts` `validateMerge` handles *cross-slice supersession*:
+when slice-B's winner legitimately breaks slice-A's sealed suite because the
+invariants evolved. This is unchanged.
+
+Multi-round convergence introduces a second, distinct merge problem: each round's
+winner replaces the prior round's winner for the *same slice*. The round-R winner
+may be superior in isolation but:
+
+1. Break downstream slices co-designed with the round-0 winner's interface
+2. Reintroduce bugs the prior winner happened to avoid
+3. Drift from the contract in ways the sealed suite does not catch
+
+The resolution is a three-condition promotion gate enforced by the new
+`round-promote` bridge command:
+
+1. **Interface hash parity** — `interfaceHash` in `state.json` must match the
+   candidate winner's exported interface. A mismatch means the round exposed a
+   contract ambiguity; escalate to `/stz:slice` for re-planning, do not promote.
+2. **Assembled-crate `merge-validate` pass** — run the full cross-slice merge
+   validation (existing `merge.ts` logic) against the assembled crate with the
+   candidate winner substituted for the prior round winner. Any unsanctioned
+   failures block promotion.
+3. **No reward regression** — candidate `topReward` must be ≥ prior round
+   `topReward`. Regression is a hard block; the prior winner is retained.
+
+Only if all three pass is the round winner promoted and a `RoundSnapshot`
+appended to `state.json`.
+
+The interface hash acts as the mechanical KL constraint: the "policy" (in-context
+GRPO loop) is free to improve implementation strategy but cannot collapse the
+interface boundary — analogous to GRPO's KL penalty preventing policy collapse
+onto reward-maximising but degenerate outputs.
+
+#### Convergence signal: the operator-visible loss curve
+
+Without a visible convergence signal, `maxRounds` is a blind hard stop rather
+than a tuning knob. The planned convergence metrics are derived from existing
+`grpo.ts` primitives and stored in the per-round `RoundSnapshot`:
+
+- **`rewardDelta`** (Δ_R): top reward this round minus top reward prior round.
+  Null for round 0.
+- **`convergenceRate`**: Δ_R divided by the prior round's group standard
+  deviation (+ ε). Range approximately [0, 1] in practice. Null for round 0.
+  When this trends toward 0, the in-context policy has exhausted its improvement
+  capacity.
+- **`groupStddev`**: standard deviation of the round's specimen group rewards.
+  Collapsing stddev signals diversity death — all specimens have converged to the
+  same strategy.
+
+Halt condition: `convergenceRate < convergenceThreshold` for `plateauRounds`
+consecutive rounds.
+
+The `stz bridge round-status` command renders the full convergence curve as a
+table (round, topReward, groupMean, groupStd, Δ, convergenceRate, status) so
+the operator can inspect it without opening JSON. This is the training loss curve
+equivalent for the SDLC context.
+
+#### `RunConfig` additions (`00-intent/run-config.json`)
+
+A new `convergence` key is added to `RunConfig` (types.ts). All fields have
+defaults; existing configs without the key behave identically to today.
+
+```typescript
+export interface ConvergenceConfig {
+  /** Hard ceiling on rounds per slice. Default: 1 (current single-round behaviour). */
+  maxRounds: number;
+  /** Halt when convergenceRate < this for plateauRounds consecutive rounds.
+   *  Range [0,1]. Default: 0.05. */
+  convergenceThreshold: number;
+  /** Consecutive below-threshold rounds required to trigger halt. Default: 2. */
+  plateauRounds: number;
+  /** Feed pressure log into next round (ICRL loop). False = independent re-draws.
+   *  Default: true. */
+  feedPressureLog: boolean;
+}
+```
+
+Suggested operator presets offered at `/stz:new` elicitation (Area F):
+
+| Preset | `maxRounds` | `convergenceThreshold` | `plateauRounds` | `feedPressureLog` | Use when |
+|---|---|---|---|---|---|
+| **Single** (default) | 1 | — | — | — | Backward compat; simple slices |
+| **Standard** | 3 | 0.05 | 2 | true | Most slices; balanced cost/quality |
+| **Deep** | 5 | 0.03 | 2 | true | High-complexity or safety-critical slices |
+| **Survey** | 4 | 0.05 | 1 | false | Diversity sampling; no learning signal |
+
+#### `SliceState` additions (`state.json`)
+
+```typescript
+/** Immutable snapshot of one completed tournament round. */
+export interface RoundSnapshot {
+  round: number;                  // 0-based
+  winnerSpecimen: SpecimenId;
+  groupMeanReward: number;
+  groupStddev: number;
+  topReward: number;
+  advantages: Advantage[];
+  rewardDelta: number | null;     // null for round 0
+  convergenceRate: number | null; // null for round 0
+  interfaceHashMatch: boolean;
+  tokenCost: { input: number; output: number };
+  completedAt: string;            // ISO 8601
+}
+```
+
+Two new optional fields on `SliceState`:
+- `roundHistory?: RoundSnapshot[]` — the full convergence curve; append-only
+- `currentRound?: number` — 0-based index of the active round
+
+#### New bridge commands
+
+- **`stz bridge round-promote`** — accepts a round winner candidate; verifies
+  interface hash parity, runs `merge-validate` against the assembled crate,
+  checks for reward regression; promotes only if all three pass; appends
+  `RoundSnapshot` to `state.json`; archives prior winner alongside culled
+  specimens in `50-pressure/`.
+- **`stz bridge round-status`** — renders the convergence curve table for a
+  given slice; JSON and human-readable table output modes.
+
+Both commands follow the existing bridge contract: JSON in, JSON out, all
+decisions made by the CLI rather than the orchestrator agent.
+
+#### `/stz:new` elicitation additions (Area F)
+
+A new batched question area added to `/stz:new` for convergence tuning:
+
+```
+Area F — Convergence tuning
+  F1. How many rounds per slice? (1 = single-round default; 2–5 for complex slices)
+  F2. Stop early when improvement stalls? (yes/no; default yes)
+  F3. Convergence sensitivity: conservative (3 rounds) / standard (2) / aggressive (1)
+  F4. Feed pressure log into next round? (yes = ICRL loop; no = independent re-draws)
+```
+
+#### What the operator can tune
+
+| Signal | Interpretation | Response |
+|---|---|---|
+| `convergenceRate` drops fast (by round 2) | Shallow strategy space | Reduce `maxRounds`; save tokens |
+| `convergenceRate` stays high through round 4 | Rich strategy space | Increase `maxRounds` |
+| `groupStddev` collapses early | Diversity death; pressure log over-constraining | Set `feedPressureLog: false` |
+| `rewardDelta` is negative | Round winner regressed | Hard block; prior winner retained |
+| `interfaceHashMatch: false` | Contract ambiguous; implementations diverged on interface | Escalate to `/stz:slice` for re-planning |
+
+#### Token budget note
+
+Multi-round loops multiply token cost non-linearly: R rounds × N specimens × judge
+calls ≈ R × (N × generation + O(N²) judge). With R=3, N=4, approximately 3–5×
+the cost of a single-round run. The `ConvergenceConfig` presets are calibrated
+to converge before hitting `maxRounds` on typical tasks; the `budget` cap in
+`SliceState` still applies and `round-promote` will hard-fail if the per-slice
+token ceiling is exhausted before convergence.
