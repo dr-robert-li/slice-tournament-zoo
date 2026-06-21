@@ -58,5 +58,5 @@ refinement context, call ledger (jsonl), cost, journal, and per-slice state.json
 
 Live LLM/subagent calls; real Python eval drivers / Hypothesis / mutation
 testing; git worktrees; per-worktree observability; cross-slice RAG. These have
-real interfaces (`src/llm/interfaces.ts`) and deterministic mocks, so a live
+real interfaces (`src/mock/interfaces.ts`) and deterministic mocks, so a live
 implementation drops in without touching the tested spine.

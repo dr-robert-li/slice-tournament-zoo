@@ -149,14 +149,15 @@ You, the session, become the orchestrator. The command:
 
 Every exact decision is made by the CLI, never by the agent's own arithmetic.
 
-### Run the mock pipeline (no network, no subagents)
+### Mock run (testing only, no network)
+
+A self-contained mock drives the whole pipeline with no API keys, network, or
+subagents — handy as a fast smoke test of the deterministic spine. It is a
+testing aid, not the production path. See [`src/mock/`](./src/mock).
 
 ```bash
-stz run .           # drive the demo slice end to end against the mock model
+stz run <dir>       # drive the demo slice end to end against the mock model
 ```
-
-Useful for a fast smoke test of the whole eight-phase flow, including a
-disqualified hacker and a GRPO-weighted winner, with no API calls.
 
 ### The bridge CLI directly
 
@@ -305,13 +306,16 @@ split above is the real in-session flow.
 
 ## Module map (`src/`)
 
-`types.ts` (schema), `taxonomy.ts` (tree and frontmatter), `state.ts`
-(checkpoint and recovery), `grpo.ts`, `selection.ts`, `hack-detector.ts`,
-`escalation.ts`, `budget.ts`, `cost-tracker.ts`, `pressure.ts`, `specdiff.ts`,
-`orchestrator.ts` (mock pipeline), `project.ts` (the project DAG driver),
-`bridge.ts` (the in-session CLI, per-slice and project subcommands),
-`eval-runner.ts` (real tests, coverage, mutation), and `llm/` (the model seam
-plus the deterministic mock).
+Production spine: `types.ts` (schema), `taxonomy.ts` (tree and frontmatter),
+`state.ts` (checkpoint and recovery), `grpo.ts`, `selection.ts`,
+`hack-detector.ts`, `escalation.ts`, `budget.ts`, `cost-tracker.ts`,
+`pressure.ts`, `specdiff.ts`, `eval-runner.ts` (real tests, coverage, mutation),
+`project.ts` (the project DAG driver), and `bridge.ts` (the in-session CLI,
+per-slice and project subcommands).
+
+The `mock/` subfolder is the no-network testing harness (the `stz run` demo):
+its orchestrator, the model-layer seam, and the deterministic mock. Not part of
+the production path — see [`src/mock/`](./src/mock).
 
 The requirement-to-test mapping is in [`docs/TESTPLAN.md`](./docs/TESTPLAN.md).
 What is real versus deferred is in [`docs/AS-BUILT.md`](./docs/AS-BUILT.md).

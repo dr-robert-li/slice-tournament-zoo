@@ -13,6 +13,14 @@ and the project aims to follow [Semantic Versioning](https://semver.org/).
 - `docs/` folder for reference material (`AS-BUILT.md`, `TESTPLAN.md`, and the
   design pattern, kept locally as `docs/CLAUDE.md`).
 
+### Changed
+- Treated the repository as production-ready: isolated the no-network mock demo
+  into `src/mock/` (the orchestrator, the model-layer seam, and the deterministic
+  mock), with its own README. The production spine (`bridge.ts`, `project.ts`,
+  commands, agents) does not depend on it. Removed `src/llm/`. Trimmed the
+  README's mock sections to a pointer and split the module map into production
+  spine versus the mock harness.
+
 ## [0.2.1]
 
 ### Fixed

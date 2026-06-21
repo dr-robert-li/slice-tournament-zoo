@@ -9,9 +9,9 @@ import { join } from "node:path";
 import { writeFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { scaffold, writeDoc, STZ_DIR, TIERS } from "./taxonomy.js";
-import { runSlice } from "./orchestrator.js";
+import { runSlice } from "./mock/orchestrator.js";
 import { runBridge } from "./bridge.js";
-import { MockModelLayer, defaultMockConfig } from "./llm/mock.js";
+import { MockModelLayer, defaultMockConfig } from "./mock/mock.js";
 import type { SliceManifest } from "./types.js";
 
 const AGENTS_MD = `# AGENTS.md — STZ table of contents

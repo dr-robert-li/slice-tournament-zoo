@@ -22,31 +22,31 @@ import type {
   SliceManifest,
   SliceState,
   SpecimenId,
-} from "./types.js";
-import { PHASES } from "./types.js";
-import { CostTracker } from "./cost-tracker.js";
+} from "../types.js";
+import { PHASES } from "../types.js";
+import { CostTracker } from "../cost-tracker.js";
 import {
   freshState,
   saveState,
   setPhaseStatus,
   appendEvent,
-} from "./state.js";
-import { allocateBudget, wouldExceed } from "./budget.js";
-import { scaffold, writeDoc, stzPath } from "./taxonomy.js";
-import { select, pairings, evalReward } from "./selection.js";
-import { votePair, type ModelLayer, type SpecimenOutput } from "./llm/interfaces.js";
+} from "../state.js";
+import { allocateBudget, wouldExceed } from "../budget.js";
+import { scaffold, writeDoc, stzPath } from "../taxonomy.js";
+import { select, pairings, evalReward } from "../selection.js";
+import { votePair, type ModelLayer, type SpecimenOutput } from "./interfaces.js";
 import {
   onNoPassers,
   initialEscalation,
   type EscalationState,
-} from "./escalation.js";
+} from "../escalation.js";
 import {
   renderPressureLog,
   refinementContext,
   type CulledSpecimen,
   type PressureLog,
-} from "./pressure.js";
-import { diffSpecs, renderSpecDiff, isFaithful, type Spec } from "./specdiff.js";
+} from "../pressure.js";
+import { diffSpecs, renderSpecDiff, isFaithful, type Spec } from "../specdiff.js";
 
 export interface OrchestratorOptions {
   root: string;
