@@ -28,6 +28,7 @@
 
 - [Requirements](#requirements)
 - [Install](#install)
+- [Updating](#updating)
 - [Use](#use)
 - [Example commands and workflows](#example-commands-and-workflows)
 - [Uninstall](#uninstall)
@@ -42,6 +43,16 @@
 - For the in-session harness: Claude Code (the CLI, desktop, or web app).
 - No database, no vector service, no API keys beyond what Claude Code already
   uses for its subagents.
+
+> **Token cost.** A tournament is deliberately redundant: every slice runs *N*
+> specimens in parallel, a judge casts multiple votes per pair, and a multi-slice
+> GRPO project repeats that across the DAG. That buys selection pressure and an
+> auditable trail — but it is **token-intensive**, far more than a single-agent
+> run. Budget accordingly (tune `n`, `votesPerPair`, and `traceTier` down for
+> cheaper runs), and consider installing token-efficiency companion plugins
+> alongside STZ: **Caveman** (compressed responses), **RTK** (token-optimized CLI
+> proxy), **Headroom**, and **CodeSight**. They reduce the per-call overhead the
+> tournament multiplies.
 
 ## Install
 
@@ -88,6 +99,44 @@ needed (Node.js 20+ is the only requirement; the bundled copy fetches `tsx` via
 
 > Developing STZ itself, or running the engine without Claude Code? See
 > [`docs/development/local-and-testing.md`](https://github.com/dr-robert-li/slice-tournament-zoo/blob/main/docs/development/local-and-testing.md).
+
+## Updating
+
+STZ ships through two channels that update independently — the **npm CLI** and
+the **Claude Code plugin**. Keep them on the same version so the `/stz:*`
+commands and the `stz` you call by hand agree.
+
+```bash
+stz --version          # what you have
+stz update             # check npm for a newer release + plugin/CLI drift
+stz update --check     # same, as JSON (CI-friendly; exits non-zero if action needed)
+```
+
+`stz update` does not self-install (it never runs `npm`/`/plugin` behind your
+back); it checks the npm registry, compares against your installed version, and
+prints the exact commands to run. When a plugin manifest is reachable — i.e.
+`CLAUDE_PLUGIN_ROOT` is set (as in a Claude Code session) or you run from a repo
+checkout — it also reports **drift** between the CLI and the plugin's bundled
+engine:
+
+```bash
+npm i -g slice-tournament-zoo@latest      # update the CLI
+/plugin update stz                        # update the plugin (inside Claude Code)
+```
+
+After updating the engine, bring an **existing project's `.stz/` tree** up to the
+current taxonomy schema. Engine updates never touch a scaffolded project on their
+own, so a tree created by an older STZ can fall behind:
+
+```bash
+stz migrate            # additive + backed-up; no-op if already current
+```
+
+`migrate` is safe by construction: it only *creates* missing tiers (never
+deletes or renames), and copies the prior tree to a `.stz.bak-schema<N>/` sibling
+before any change. Each `.stz/` carries a `manifest.json` stamped with the STZ
+version and schema version so drift is detectable. Pass `--no-backup` to skip the
+copy.
 
 ## Use
 

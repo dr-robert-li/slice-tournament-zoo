@@ -6,6 +6,52 @@ and the project aims to follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.6.0]
+
+A sustainable **update/upgrade pathway** (F19). STZ ships through two channels
+that drift independently — the npm CLI and the Claude Code plugin — and a
+scaffolded project's `.stz/` tree never moved when the engine did. This release
+gives operators a way to see staleness, detect channel drift, and migrate an old
+project tree safely. Minor (not patch): `stz update`/`stz migrate` are new
+surface, and the `.stz/` tree now carries a versioned manifest.
+
+> The 0.5.6→0.5.7 split had already left `package.json` and the plugin manifests
+> on different versions — the exact drift this release makes detectable. All three
+> version sources (`package.json`, `.claude-plugin/plugin.json`,
+> `.claude-plugin/marketplace.json`) are unified at 0.6.0 and guarded by a test.
+
+### Added
+
+- **`stz --version`** — prints the installed version (sourced from
+  `package.json`, never a hardcoded literal).
+- **`stz update [--check]`** — checks the npm registry for a newer release,
+  compares against the installed version, and prints the exact remediation
+  commands. Does not self-install. When a plugin manifest is reachable
+  (`CLAUDE_PLUGIN_ROOT` set, as in a Claude Code session, or run from a repo
+  checkout) it also reports **drift** between the CLI and the plugin's bundled
+  engine. `--check` emits JSON and exits non-zero when action is needed. The
+  registry fetch is injectable, so the verdict logic is unit-tested offline.
+- **`stz migrate [dir] [--no-backup]`** — brings an existing `.stz/` tree up to
+  the current taxonomy schema. Additive only (creates missing tiers, never
+  deletes/renames) and backs the prior tree up to `.stz.bak-schema<N>/` first.
+  Idempotent: a no-op when already current.
+- **`stz bridge version`** — reports `{version, schemaVersion, packageName}` as
+  JSON so the plugin / a SessionStart hook can detect drift deterministically.
+- **`.stz/manifest.json`** — every scaffold is now stamped with the STZ version
+  and schema version. A new `src/version.ts` is the single version-identity seam
+  (package name as a code constant; version read from `package.json`).
+
+### Changed
+
+- Unified all three version sources to 0.6.0; a `version.test.ts` drift guard
+  fails CI if they diverge again.
+
+### Docs
+
+- README gains an **Updating** section and a **token-cost** note recommending
+  token-efficiency companion plugins (Caveman, RTK, Headroom, CodeSight) for the
+  inherently token-intensive tournament/GRPO runs.
+
 ## [0.5.7]
 
 Fix npm README rendering. Relative links (`./docs/...`, `../docs/...`, `./LICENSE`)

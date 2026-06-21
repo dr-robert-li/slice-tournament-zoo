@@ -122,6 +122,13 @@ and 22, with a `prepublishOnly` (typecheck + test) guard before any npm publish.
   than ad-hoc prose.
 - **Installs as a plugin, and ships on npm.** The commands resolve the bundled
   bridge with no PATH setup; the CLI is also published to npm (`npx stz init`).
+- **Update pathway (F19).** `stz --version`, `stz update [--check]` (npm
+  staleness; prints commands, never self-installs; also reports CLI-vs-plugin
+  drift when a plugin manifest is reachable via `CLAUDE_PLUGIN_ROOT` or a repo
+  checkout), `stz migrate` (additive, backed-up `.stz/` schema upgrade), and `stz
+  bridge version`. Every `.stz/` tree carries a versioned `manifest.json`; a
+  single `src/version.ts` seam sources the version from `package.json` and a test
+  guards against the three version manifests drifting apart.
 
 ## Gaps
 

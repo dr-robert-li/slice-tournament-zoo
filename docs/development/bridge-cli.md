@@ -6,6 +6,7 @@ spawns, but it is scriptable on its own. Each subcommand prints one JSON object
 and writes its artifacts under `.stz/`.
 
 ```bash
+stz bridge version                                                 # {version, schemaVersion, packageName} — drift detection (F19)
 stz bridge begin        --root . --manifest .stz/40-slices/slice-01/manifest.json
 stz bridge eval         --root . --slice slice-01 --specimen a \
                         --sealed .stz/30-tests/held-out/<file> \

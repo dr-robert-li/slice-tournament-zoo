@@ -56,6 +56,7 @@ import {
   defaultRunConfig,
 } from "./project.js";
 import { detectHacks } from "./hack-detector.js";
+import { STZ_VERSION, SCHEMA_VERSION, PACKAGE_NAME } from "./version.js";
 import { evalGate, select, pairings } from "./selection.js";
 import { diffSpecs, renderSpecDiff, isFaithful, unmatchedIntentIds, mismatchedAsBuiltIds, type Spec } from "./specdiff.js";
 import { seal, verifySeal, amendSeal, heldOutFiles } from "./seal.js";
@@ -93,6 +94,16 @@ function readJSON<T>(path: string): T {
 
 function print(obj: unknown): void {
   process.stdout.write(JSON.stringify(obj, null, 2) + "\n");
+}
+
+/**
+ * Report the bundled engine's identity (F19). The `/stz:*` commands and a
+ * SessionStart hook call this to compare the plugin's engine against a global
+ * `stz` CLI and surface channel drift deterministically (no version parsing
+ * from prose).
+ */
+function versionCmd(): void {
+  print({ version: STZ_VERSION, schemaVersion: SCHEMA_VERSION, packageName: PACKAGE_NAME });
 }
 
 // ── paths within a slice ────────────────────────────────────────────────────
@@ -916,6 +927,7 @@ export async function runBridge(argv: string[]): Promise<void> {
   const [sub, ...rest] = argv;
   const args = parseArgs(rest);
   switch (sub) {
+    case "version": versionCmd(); break;
     case "begin": await begin(args); break;
     case "record-eval": recordEval(args); break;
     case "eval": evalCmd(args); break;
