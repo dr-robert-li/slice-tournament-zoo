@@ -27,7 +27,25 @@ stz bridge seal-verify     --root .                   # re-hash vs SEAL.json; ex
 stz bridge seal-crosscheck --root . --sealed <suite> --reference-a <impl> --reference-b <impl>
                                                      # run the suite vs two independent references; exit 1 unless both pass
 stz bridge seal-amend      --root . --reason "<why>"  # sanctioned post-freeze change: records from→to + reason
+
+# cross-slice merge integrity — superseded sealed invariants
+stz bridge merge-validate        --root . --results results.json   # adjudicate reported suite failures; exit 1 unless all sanctioned
+stz bridge merge-compat-propose  --root . --entry entry.json       # merge agent proposes a supersession (always unapproved)
+stz bridge merge-compat-approve  --root . --id <id> --by "<who/why>"  # approver blesses it (recorded)
+stz bridge merge-compat-retire   --root . --id <id> --amendment "<ref>"  # retire once the superseded suite is seal-amended
+stz bridge merge-compat-list     --root .                          # read-only dump of the manifest
 ```
+
+`merge-validate` adjudicates *reported* sealed-suite results (`{slice, passed,
+failure}`) against an audited compat manifest — it does not run the suites (the
+assembled crate may be Rust), so what is deterministic is the **rule application**
+(signature match + superseding-passes + approved), the same trust split as `eval`
+vs `record-eval`. A failing suite is sanctioned only as a signature-matched,
+approved supersession whose replacement invariant also passes; `pendingApproval` /
+`invalid` / `unsanctioned` all block. Compat entries are transitional debt retired
+by a `seal-amend`. Full contract:
+[`../../commands/stz-merge.md`](../../commands/stz-merge.md) and the cross-slice
+section of [`sealed-suite.md`](./sealed-suite.md).
 
 `project-dark-factory` is a load-modify-save toggle: it flips `darkFactory` in the
 persisted run config without touching any other field (deliberately NOT routed

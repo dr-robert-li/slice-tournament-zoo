@@ -90,6 +90,43 @@ the suite, or discard a buggy B), and it never triggers a sensor-style automatic
 rewrite. It is the R2 "cross-family quorum" idea applied to the reference rather
 than the judge.
 
+## Cross-slice merge: invariants that a later slice supersedes
+
+There is a third way a sealed suite can fail on *correct* code, distinct from a
+fragile invariant: a suite that was right **in isolation** but is obsolete **under
+composition**. When slice winners are assembled into one integrated crate, an
+earlier slice's suite may assert an invariant a later slice legitimately
+supersedes — the canonical case is slice-03's "aliens never respawn" against
+slice-05's wave-clear. The integrated crate fails slice-03's suite, and that is
+not a merge defect.
+
+The failure mode to guard against is the **orchestrator hand-waving it** ("looks
+like the expected interaction, moving on"). That is the same unaudited,
+judgment-call hole the sealed suite exists to close — just relocated to merge
+time. So STZ makes the call deterministic and audited (`stz bridge merge-validate`
++ a compat manifest), not a vibe. A superseded-invariant failure is sanctioned
+only when:
+
+1. a **signature-pinned** compat entry matches the exact panic substring (never
+   the test name alone — that would launder a real new bug in the same test);
+2. the **superseding invariant also passes** on the assembled crate (you cannot
+   claim supersession when the replacement behaviour isn't even proven there);
+3. the entry is **approved** — the merge agent may propose, but only an approver
+   blesses it, and the approval records who/why so a self-approval is an auditable
+   anomaly.
+
+This is a **deferral layer on this contract, not a parallel one**: a compat entry
+is transitional debt that points at a pending wave-aware `seal-amend`. The end
+state is the amended (composed-invariant) suite passing outright, at which point
+the entry is retired. Until then the manifest's append-only history is the
+protection — consistent with N1 (auditability over prevention). Full mechanics:
+[`../../commands/stz-merge.md`](../../commands/stz-merge.md).
+
+One inherent caveat of substring matching: a genuinely new merge bug whose panic
+*contains* the pinned substring AND whose superseding suite also passes would be
+wrongly sanctioned. Mitigation is pinning the substring tightly to the assertion
+message; the residual risk is the cost of the reported-results approach.
+
 ## Error handling follows the same split
 
 - **Compile or unsatisfiable failure** → a **gate (sensor) failure**. Feed the

@@ -6,6 +6,48 @@ and the project aims to follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.5.2]
+
+Cross-slice merge integrity — a deterministic, audited rule for the one place
+merging legitimately fails an earlier slice's sealed suite: when a later slice
+**supersedes** an invariant that was correct in isolation. The canonical case
+from the dogfood run is slice-03's "aliens never respawn" against slice-05's
+wave-clear. Previously the orchestrator hand-waved that distinction ("looks like
+the expected interaction, moving on") — exactly the unaudited, gameable judgment
+STZ exists to eliminate. Now the bridge adjudicates it.
+
+### Added
+- **`src/merge.ts` + `stz bridge merge-validate`** — adjudicates *reported*
+  sealed-suite results (`{slice, passed, failure}`) against an audited compat
+  manifest. A failing suite is sanctioned only when (1) a **signature-pinned**
+  entry matches the exact panic substring (never the test name alone), (2) the
+  **superseding invariant also passes** on the assembled crate, and (3) the entry
+  is **approved**. The verdict has four buckets — `sanctioned`, `pendingApproval`,
+  `invalid` (replacement unproven — blocks even if approved), `unsanctioned`
+  (no match — suspect a real defect) — and exits non-zero unless every failure is
+  sanctioned. It does NOT run the suites (the assembled crate may be Rust); the
+  deterministic part is the rule application, the same trust split as `eval` vs
+  `record-eval`.
+- **`merge-compat-propose` / `-approve` / `-retire` / `-list`** — the lifecycle.
+  The merge agent may *propose* (entries always land unapproved — it cannot
+  self-approve); an approver *blesses* with a recorded who/why (a self-approval is
+  then an auditable anomaly, not a silent one); entries are *retired* once the
+  superseded suite is `seal-amend`ed wave-aware. An empty `panicSubstring` (would
+  match everything) and a missing `pendingAmendment` (compat entries are
+  transitional debt) are rejected at propose time. Manifest + append-only history
+  live at `90-audit/merge-compat.json` (+ `.md` mirror).
+- **`/stz:merge` command** — assemble winners into `_assembled/`, run each
+  contributing slice's sealed suite **in an ephemeral scratch copy** (never the
+  canonical crate), feed the reported results to `merge-validate`, and handle each
+  verdict bucket. Documented in `docs/development/sealed-suite.md` (the cross-slice
+  section) and `bridge-cli.md`.
+
+### Changed
+- `docs/development/dark-factory.md` extends the deferral policy to a blocked
+  `merge-validate`: in dark-factory mode an `unsanctioned`/`invalid`/`pendingApproval`
+  merge failure halts the slice (never auto-approved), the DAG continues, and it
+  surfaces in `/stz:summary` — identical to the `seal-crosscheck` divergence seam.
+
 ## [0.5.1]
 
 ### Fixed

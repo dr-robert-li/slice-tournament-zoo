@@ -31,12 +31,19 @@ Gates that ARE skipped when `darkFactory` is on:
 A halted slice does not stall the factory: it is reported and the rest of the DAG
 continues. Every halt surfaces in the final `/stz:summary` completion report.
 
-This is also how the autonomous run handles the one decision it must not make
-alone: a `seal-crosscheck` divergence (0.5.0) is a blind-spot signal that requires
-human adjudication and must never auto-rewrite. Rather than seal on an unresolved
-signal — or block forever waiting for a human who isn't there — `/stz:run` halts
-that slice and lets the DAG continue; the divergence (already recorded in
-`30-tests/cross-reference.md`) is surfaced in the final summary for after-the-fact
+This is also how the autonomous run handles the decisions it must not make alone.
+Two human-only gates can arise mid-run:
+
+- A `seal-crosscheck` divergence (0.5.0) — a blind-spot signal that requires human
+  adjudication and must never auto-rewrite.
+- A blocked `merge-validate` (0.5.2) — an `unsanctioned`/`invalid` merge failure,
+  or a compat entry still `pendingApproval` (the merge agent proposed it but no
+  human has approved). Auto-approving would defeat the gate.
+
+In both cases, rather than act on an unresolved signal — or block forever waiting
+for a human who isn't there — the slice is **halted** and the DAG continues; the
+signal (already recorded in `30-tests/cross-reference.md` or
+`90-audit/merge-validation.md`) is surfaced in the final summary for after-the-fact
 review. The factory defers that decision; it does not guess.
 
 ## Where the flag lives, and why a dedicated toggle

@@ -61,6 +61,16 @@ import { diffSpecs, renderSpecDiff, isFaithful, unmatchedIntentIds, mismatchedAs
 import { seal, verifySeal, amendSeal, heldOutFiles } from "./seal.js";
 import { renderPressureLog, refinementContext, type CulledSpecimen } from "./pressure.js";
 import { fullEval, crossReference } from "./eval-runner.js";
+import {
+  loadCompat,
+  saveCompat,
+  proposeCompat,
+  approveCompat,
+  retireCompat,
+  validateMerge,
+  type MergeCompatEntry,
+  type SealedSuiteResult,
+} from "./merge.js";
 
 // ── small arg parser ──────────────────────────────────────────────────────
 
@@ -743,6 +753,135 @@ async function sealAmend(args: Record<string, string>): Promise<void> {
   print({ ...res, reason });
 }
 
+// ── cross-slice merge integrity (sealed-invariant supersession) ─────────────
+
+/** Render the human-readable merge-compat.md mirror of the manifest. */
+async function writeCompatDoc(root: string): Promise<void> {
+  const m = loadCompat(root);
+  const rows = m.entries.length
+    ? m.entries
+        .map(
+          (e) =>
+            `| ${e.id} | ${e.supersededSlice} | ${e.supersededBy} | ${e.replacement.slice} | \`${e.panicSubstring}\` | ${e.approved ? "✅ " + (e.approvedBy ?? "") : "⏳ pending"} | ${e.pendingAmendment} |`,
+        )
+        .join("\n")
+    : "| _none_ | | | | | | |";
+  await writeDoc(root, join("90-audit", "merge-compat.md"), {
+    frontmatter: { summary: `Merge compat: ${m.entries.length} entry(ies), ${m.entries.filter((e) => e.approved).length} approved.` },
+    body:
+      `# Merge compatibility — superseded sealed invariants\n\n` +
+      `Each entry sanctions an EARLIER slice's sealed-suite failure that a LATER\n` +
+      `slice legitimately supersedes (e.g. slice-03 "no respawn" vs slice-05\n` +
+      `wave-clear). A failure is sanctioned only when the signature matches, the\n` +
+      `replacement invariant also passes, and the entry is approved. Entries are\n` +
+      `transitional debt — retired once the superseded suite is \`seal-amend\`ed.\n\n` +
+      `| id | superseded | superseded by | replacement proof | signature | approved | pending amendment |\n` +
+      `|---|---|---|---|---|---|---|\n${rows}\n\n` +
+      `## History (append-only)\n\n` +
+      (m.history.length ? m.history.map((h) => `${h.seq}. ${h.action} ${h.id}: ${h.detail}`).join("\n") : "_none_") +
+      "\n",
+  });
+}
+
+/** merge-compat-propose: the merge agent proposes an entry (always unapproved). */
+async function mergeCompatPropose(args: Record<string, string>): Promise<void> {
+  const root = args.root!;
+  const entry = readJSON<Omit<MergeCompatEntry, "approved" | "approvedBy">>(args.entry!);
+  const m = loadCompat(root);
+  const res = proposeCompat(m, entry);
+  if (!res.ok) {
+    process.stderr.write(`${res.error}\n`);
+    process.exitCode = 1;
+    return;
+  }
+  saveCompat(root, m);
+  await writeCompatDoc(root);
+  print({ proposed: entry.id, approved: false, note: "unapproved — an approver must run merge-compat-approve before this can sanction a merge failure" });
+}
+
+/** merge-compat-approve: flip a proposed entry to approved, recording who/why. */
+async function mergeCompatApprove(args: Record<string, string>): Promise<void> {
+  const root = args.root!;
+  const by = args.by;
+  if (!by || by === "true") {
+    process.stderr.write('merge-compat-approve requires --by "<who/why>" so a self-approval is auditable.\n');
+    process.exitCode = 1;
+    return;
+  }
+  const m = loadCompat(root);
+  const res = approveCompat(m, args.id!, by);
+  if (!res.ok) {
+    process.stderr.write(`${res.error}\n`);
+    process.exitCode = 1;
+    return;
+  }
+  saveCompat(root, m);
+  await writeCompatDoc(root);
+  print({ approved: args.id, by });
+}
+
+/** merge-compat-retire: retire an entry once its superseded suite is amended. */
+async function mergeCompatRetire(args: Record<string, string>): Promise<void> {
+  const root = args.root!;
+  const ref = args.amendment;
+  if (!ref || ref === "true") {
+    process.stderr.write('merge-compat-retire requires --amendment "<seal-amend reason/ref>" linking the wave-aware fix.\n');
+    process.exitCode = 1;
+    return;
+  }
+  const m = loadCompat(root);
+  const res = retireCompat(m, args.id!, ref);
+  if (!res.ok) {
+    process.stderr.write(`${res.error}\n`);
+    process.exitCode = 1;
+    return;
+  }
+  saveCompat(root, m);
+  await writeCompatDoc(root);
+  print({ retired: args.id, amendment: ref });
+}
+
+/** merge-compat-list: READ-ONLY dump of the manifest. */
+function mergeCompatList(args: Record<string, string>): void {
+  print(loadCompat(args.root!));
+}
+
+/**
+ * merge-validate: adjudicate REPORTED sealed-suite results against the compat
+ * manifest. It does not run the suites (the assembled crate may be Rust); it
+ * deterministically classifies each reported failure. Exits non-zero unless every
+ * failure is sanctioned — pendingApproval / invalid / unsanctioned all block.
+ */
+async function mergeValidate(args: Record<string, string>): Promise<void> {
+  const root = args.root!;
+  const results = readJSON<SealedSuiteResult[]>(args.results!);
+  const manifest = loadCompat(root);
+  const verdict = validateMerge(results, manifest);
+  await writeDoc(root, join("90-audit", "merge-validation.md"), {
+    frontmatter: {
+      summary: `Merge validation: ${verdict.ok ? "OK" : "BLOCKED"} — ${verdict.sanctioned.length} sanctioned, ${verdict.pendingApproval.length} pending, ${verdict.invalid.length} invalid, ${verdict.unsanctioned.length} unsanctioned.`,
+    },
+    body:
+      `# Merge validation\n\n` +
+      `Reported sealed-suite results adjudicated against the merge-compat manifest.\n` +
+      `(Adjudication is deterministic; the suite *execution* is the caller's — run\n` +
+      `it in an ephemeral scratch copy of the assembled crate, never the canonical one.)\n\n` +
+      `- **Verdict:** ${verdict.ok ? "✅ OK — merge may proceed" : "⛔ BLOCKED"}\n` +
+      `- **Sanctioned supersessions:** ${verdict.sanctioned.map((s) => `${s.slice}←${s.supersededBy} (${s.entryId})`).join(", ") || "—"}\n` +
+      `- **Pending approval (blocks):** ${verdict.pendingApproval.map((p) => `${p.slice} (${p.entryId})`).join(", ") || "—"}\n` +
+      `- **Invalid — replacement unproven (blocks):** ${verdict.invalid.map((i) => `${i.slice}: ${i.reason}`).join("; ") || "—"}\n` +
+      `- **Unsanctioned — suspect real defect (blocks):** ${verdict.unsanctioned.map((u) => `${u.slice}: ${u.reason}`).join("; ") || "—"}\n` +
+      `- **Unused approved entries (retire candidates):** ${verdict.unused.join(", ") || "—"}\n`,
+  });
+  if (!verdict.ok) {
+    process.stderr.write(
+      `MERGE BLOCKED — ${verdict.unsanctioned.length} unsanctioned, ${verdict.invalid.length} invalid, ${verdict.pendingApproval.length} pending-approval failure(s). See 90-audit/merge-validation.md.\n`,
+    );
+    process.exitCode = 1;
+  }
+  print(verdict);
+}
+
 export async function runBridge(argv: string[]): Promise<void> {
   const [sub, ...rest] = argv;
   const args = parseArgs(rest);
@@ -769,6 +908,11 @@ export async function runBridge(argv: string[]): Promise<void> {
     case "seal-verify": sealVerify(args); break;
     case "seal-crosscheck": await sealCrosscheck(args); break;
     case "seal-amend": await sealAmend(args); break;
+    case "merge-validate": await mergeValidate(args); break;
+    case "merge-compat-propose": await mergeCompatPropose(args); break;
+    case "merge-compat-approve": await mergeCompatApprove(args); break;
+    case "merge-compat-retire": await mergeCompatRetire(args); break;
+    case "merge-compat-list": mergeCompatList(args); break;
     default:
       process.stderr.write(`unknown bridge subcommand: ${sub}\n`);
       process.exitCode = 1;
