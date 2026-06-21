@@ -13,6 +13,12 @@ and the project aims to follow [Semantic Versioning](https://semver.org/).
 - `docs/` folder for reference material (`AS-BUILT.md`, `TESTPLAN.md`, and the
   design pattern, kept locally as `docs/CLAUDE.md`).
 
+### Fixed
+- Plugin install failed with `agents: Invalid input`. The manifest declared
+  `commands`, `agents`, and `hooks` as path strings; Claude Code auto-discovers
+  `commands/`, `agents/`, and `hooks/hooks.json` and rejects those string
+  fields. Removed them and corrected the `homepage` URL.
+
 ### Changed
 - Moved `AS-BUILT.md` and `TESTPLAN.md` under `docs/`; README links updated.
 - README: corrected the pipeline description to the real two-level flow

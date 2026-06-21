@@ -6,7 +6,7 @@
     "name": "Robert Li",
     "email": "dr.robert.li.au@gmail.com"
   },
-  "homepage": "https://github.com/robert-li/slice-tournament-zoo",
+  "homepage": "https://github.com/dr-robert-li/slice-tournament-zoo",
   "license": "Apache-2.0",
   "keywords": [
     "agentic",
@@ -15,8 +15,5 @@
     "reward-hacking",
     "audit",
     "subagents"
-  ],
-  "commands": "./commands",
-  "agents": "./agents",
-  "hooks": "./hooks/hooks.json"
+  ]
 }
