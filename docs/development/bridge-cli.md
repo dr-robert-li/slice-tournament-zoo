@@ -19,7 +19,7 @@ stz bridge finalize     --root . --slice slice-01 --intent intent.json --asbuilt
 stz bridge project-set-config   --root . --config run-config.json  # persist run config (validated, clamped)
 stz bridge project-config       --root .                           # read it back (defaults if unset)
 stz bridge project-dark-factory --root . --on                      # engage autonomous mode (--off to disengage)
-stz bridge project-status       --root .                           # DAG + phase status + runConfig + darkFactory
+stz bridge project-status       --root .                           # DAG + phase status + progress totals + dashboard-ready slice rows + runConfig + darkFactory
 
 # sealed held-out suite integrity (L1/F10) — freeze before the tournament
 stz bridge seal            --root .                   # sha256 the held-out suite into SEAL.json

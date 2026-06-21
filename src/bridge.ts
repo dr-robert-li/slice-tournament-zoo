@@ -590,6 +590,34 @@ async function projectStatus(args: Record<string, string>): Promise<void> {
   }
   const sliceStatus: Record<string, string> = {};
   for (const id of topo.order) sliceStatus[id] = await deriveSliceStatus(root, id);
+
+  // Enriched, dashboard-ready rows + computed progress totals — so the pipeline
+  // dashboard renders a fixed table from data rather than the agent eyeballing
+  // counts (which drift run to run). winner/faithful are pulled the same way
+  // `summary` does, so the dashboard and the completion report never disagree.
+  const byId = new Map(slices.map((s) => [s.id, s]));
+  const tally = { done: 0, running: 0, halted: 0, pending: 0 };
+  const sliceRows: { id: string; dependsOn: string[]; status: string; winner: string | null; faithful: boolean | null }[] = [];
+  for (const id of topo.order) {
+    const status = sliceStatus[id]!;
+    if (status === "done" || status === "running" || status === "halted" || status === "pending") tally[status]++;
+    let winner: string | null = null;
+    const jp = judgmentPath(root, id);
+    if (existsSync(jp)) winner = readJSON<{ winner: string | null }>(jp).winner;
+    let faithful: boolean | null = null;
+    const sdRel = join(sliceRel(id), "spec-diff.md");
+    if (existsSync(stzPath(root, sdRel))) {
+      const sd = await readDoc(root, sdRel);
+      faithful = /0 missing/.test(String(sd.frontmatter.summary ?? ""));
+    }
+    sliceRows.push({ id, dependsOn: byId.get(id)?.dependsOn ?? [], status, winner, faithful });
+  }
+  const phasesDone = Object.values(state.phaseStatus).filter((s) => s === "done").length;
+  const progress = {
+    phases: { done: phasesDone, total: PROJECT_PHASES.length },
+    slices: { total: slices.length, ...tally },
+  };
+
   const runnable = await nextRunnable(slices, (id) => deriveSliceStatus(root, id));
   const slicingDone = state.phaseStatus["slice-disaggregation"] === "done";
   // A corrupt/hand-edited run-config.json must not brick status (and thus every
@@ -604,8 +632,10 @@ async function projectStatus(args: Record<string, string>): Promise<void> {
   }
   print({
     projectPhases: state.phaseStatus,
+    progress,
     order: topo.order,
     sliceStatus,
+    slices: sliceRows,
     frontier: slicingDone ? runnable.frontier : [],
     next: slicingDone ? runnable.next : null,
     blocked: !slicingDone,

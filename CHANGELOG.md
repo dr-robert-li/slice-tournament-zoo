@@ -6,7 +6,28 @@ and the project aims to follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
-## [0.5.3]
+## [0.5.4]
+
+A tabulated `/stz:pipeline` dashboard — at-a-glance progress instead of ad-hoc,
+run-to-run-varying prose.
+
+### Added
+- **`project-status` now emits a computed `progress` rollup and dashboard-ready
+  `slices` rows.** `progress` is `{phases:{done,total}, slices:{total,done,
+  running,halted,pending}}` — totals computed by the bridge, not eyeballed by the
+  orchestrator. Each `slices` row carries `{id, dependsOn, status, winner,
+  faithful}`, with winner/faithful pulled the same way `summary` does so the
+  dashboard and the completion report never disagree. The legacy `sliceStatus`
+  map is unchanged (back-compat).
+
+### Changed
+- **`/stz:pipeline` renders a fixed layout every tick:** a progress line
+  (`phases 6/6 · slices 1/3 done · 1 running · …`), a **phases table**, a
+  **slices table** with pinned columns (`slice · deps · status · winner ·
+  faithful`), a frontier line, and a one-line run-config — plus a worked example
+  of the exact rendered output, so every run looks the same and is consumable at a
+  glance. Status glyphs standardized: `✓ done · ▶ running/next · ○ pending ·
+  ✗ halted`.
 
 ### Fixed
 - **`merge-validate` no longer reports a never-run replacement suite as "did not

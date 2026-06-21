@@ -25,25 +25,76 @@ writes project state itself.
 
 ## Render the dashboard
 
-Run `$STZ bridge project-status --root .` and show:
+Run `$STZ bridge project-status --root .` once and render the FIXED layout below —
+same shape every tick, so the dashboard is consumable at a glance. Everything is
+computed by the bridge; do not eyeball counts or re-tally in your head.
 
-- **Project phases** with a marker each: `✓` done, `▶` next, `○` pending —
-  elicitation, research, ground-truth, standards, testing-conventions,
-  slice-disaggregation.
-- **Slices** as a table: id, dependsOn, and derived status (pending / running /
-  done / halted). For a `running` slice, you may run `$STZ bridge project-status`
-  shows its rollup; for finer detail, note its per-slice `state.json`.
-- The `next` runnable slice and the `frontier` (slices whose deps are all done —
-  these can run in parallel).
-- **Run config** (one line) from `runConfig`: granularity, fan-out N, strictness
-  (coverage/mutation/conventions), and the per-role model map. Flag whether it is
-  user-set (`runConfigSet`) or still the defaults.
-- **Dark-factory** — read the hoisted `darkFactory` field. If `true`, show a
-  banner (`🏭 dark-factory: ON — autonomous, no human gates`) and switch to the
-  autonomous behaviour below instead of prompting.
+**Render exactly these blocks, in this order:**
+
+1. **Progress line** — from `progress`:
+   `phases <progress.phases.done>/<progress.phases.total> · slices <slices.done>/<slices.total> done · <running> running · <halted> halted · <pending> pending`
+2. **Dark-factory banner** — only if the hoisted `darkFactory` is `true`:
+   `🏭 dark-factory: ON — autonomous, no human gates` (then follow the autonomous
+   section below instead of the Dispatch AUQ).
+3. **Phases table** — one row per `projectPhases` entry, in pipeline order
+   (elicitation, research, ground-truth, standards, testing-conventions,
+   slice-disaggregation). Marker: `✓` done, `▶` the first non-done phase (the
+   "next"), `○` the rest.
+
+   | phase | status |
+   |---|---|
+   | elicitation | ✓ |
+   | … | … |
+
+4. **Slices table** — one row per entry in `slices` (already in topological
+   order), pinned columns. `▶` marks the row whose id equals `next`; status is the
+   derived `status`; winner/faithful come straight from the row (blank when null).
+
+   | slice | deps | status | winner | faithful |
+   |---|---|---|---|---|
+   | slice-01 | — | ✓ done | c | yes |
+   | ▶ slice-02 | slice-01 | ○ pending | — | — |
+
+5. **Frontier line** — `next: <next>` and `frontier: [<frontier…>]` (the frontier
+   slices have all deps done and can run in parallel). If `blocked` is true, say
+   `slice execution blocked until /stz:slice completes slice-disaggregation`.
+6. **Run config line** — from `runConfig`: `granularity · N=<fanout> · cov≥<…> ·
+   mutation <…> · conventions <…> · models{planning/research/execution/testing/
+   validation/judging}`. Tag `(defaults)` when `runConfigSet` is false, or
+   `(run-config.json corrupt — using defaults)` when `runConfigBroken` is true.
+
+Status glyphs (reuse everywhere): `✓ done` · `▶ running`/next · `○ pending` ·
+`✗ halted`.
 
 If `project-status` returns `{error:"cycle"}` or `{error:"dangling"}`, surface it
 plainly and stop — the DAG must be fixed in `/stz:slice` first.
+
+### Worked example (what one render looks like)
+
+```
+phases 6/6 · slices 1/3 done · 1 running · 0 halted · 1 pending
+
+Phases
+| phase                | status |
+|----------------------|--------|
+| elicitation          | ✓      |
+| research             | ✓      |
+| ground-truth         | ✓      |
+| standards            | ✓      |
+| testing-conventions  | ✓      |
+| slice-disaggregation | ✓      |
+
+Slices
+| slice        | deps      | status     | winner | faithful |
+|--------------|-----------|------------|--------|----------|
+| slice-01     | —         | ✓ done     | c      | yes      |
+| slice-02     | slice-01  | ▶ running  | —      | —        |
+| ▶ slice-03   | slice-01  | ○ pending  | —      | —        |
+
+next: slice-03 · frontier: [slice-03]
+run config: balanced · N=4 · cov≥0.9 · mutation standard · conventions standard ·
+models{plan=sonnet research=haiku exec=sonnet test=sonnet val=sonnet judge=opus} (defaults)
+```
 
 ## Dispatch
 

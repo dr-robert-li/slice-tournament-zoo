@@ -1,17 +1,21 @@
+<div align="center">
+
 # Slice Tournament Zoo (STZ)
 
-```text
+<pre>
   ██████╗  ████████╗ ███████╗
  ██╔════╝  ╚══██╔══╝ ╚══███╔╝
  ╚█████╗      ██║      ███╔╝ 
   ╚═══██╗     ██║     ███╔╝  
  ██████╔╝     ██║    ███████╗
  ╚═════╝      ╚═╝    ╚══════╝
-```
+</pre>
 
 [![CI](https://github.com/dr-robert-li/slice-tournament-zoo/actions/workflows/ci.yml/badge.svg)](https://github.com/dr-robert-li/slice-tournament-zoo/actions/workflows/ci.yml)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](./LICENSE)
 [![Node](https://img.shields.io/badge/node-%3E%3D20-brightgreen.svg)](./package.json)
+
+</div>
 
 > An agentic-coding harness for "software-engineering dark factories with
 > auditable outputs." Each slice is one interface contract plus its

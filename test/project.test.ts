@@ -169,6 +169,32 @@ describe("project driver — multi-slice DAG (deterministic layer)", () => {
     expect(s.next).toBe("slice-01");
   });
 
+  it("project-status carries computed progress totals + dashboard-ready slice rows", async () => {
+    await initProject();
+    await add("slice-01");
+    await add("slice-02", "slice-01");
+    await runBridge(["project-phase", "--root", root, "--phase", "slice-disaggregation"]);
+    // stage slice-01 as a finished, faithful tournament with a winner
+    await mkdir(join(root, STZ_DIR, "40-slices/slice-01/tournament"), { recursive: true });
+    await writeFile(join(root, STZ_DIR, "40-slices/slice-01/tournament/judgment.json"), JSON.stringify({ winner: "c", ranking: ["c", "a"] }), "utf8");
+    await writeFile(join(root, STZ_DIR, "40-slices/slice-01/spec-diff.md"), "---\nsummary: \"Spec diff slice-01: 0 missing, 0 added, 3 kept.\"\n---\n\nbody\n", "utf8");
+    await markSlice("slice-01");
+
+    const s = await status<{
+      progress: { phases: { done: number; total: number }; slices: { total: number; done: number; running: number; halted: number; pending: number } };
+      slices: { id: string; dependsOn: string[]; status: string; winner: string | null; faithful: boolean | null }[];
+    }>();
+    // progress is computed, not eyeballed
+    expect(s.progress.slices).toEqual({ total: 2, done: 1, running: 0, halted: 0, pending: 1 });
+    expect(s.progress.phases.total).toBe(6);
+    expect(s.progress.phases.done).toBeGreaterThanOrEqual(1); // slice-disaggregation marked done
+    // enriched rows carry winner + faithful so the dashboard table renders directly
+    const row1 = s.slices.find((r) => r.id === "slice-01")!;
+    expect(row1).toMatchObject({ status: "done", winner: "c", faithful: true, dependsOn: [] });
+    const row2 = s.slices.find((r) => r.id === "slice-02")!;
+    expect(row2).toMatchObject({ status: "pending", winner: null, faithful: null, dependsOn: ["slice-01"] });
+  });
+
   it("summary aggregates winners and writes the completion report", async () => {
     await initProject();
     await add("slice-01");
