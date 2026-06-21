@@ -1,0 +1,1 @@
+{"id":"slice-01","name":"clamp","contract":"export function clamp(x:number,lo:number,hi:number):number","donePredicates":[{"id":"range","expr":"lo<=out<=hi","kind":"test"}],"traceTier":"minimal","complexity":2,"dependsOn":[],"judge":{"votesPerPair":2},"summary":"clamp a number into [lo,hi]"}

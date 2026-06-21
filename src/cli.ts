@@ -10,6 +10,7 @@ import { writeFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { scaffold, writeDoc, STZ_DIR, TIERS } from "./taxonomy.js";
 import { runSlice } from "./orchestrator.js";
+import { runBridge } from "./bridge.js";
 import { MockModelLayer, defaultMockConfig } from "./llm/mock.js";
 import type { SliceManifest } from "./types.js";
 
@@ -88,6 +89,11 @@ async function main(): Promise<void> {
       break;
     case "run":
       await cmdRun(dir);
+      break;
+    case "bridge":
+      // Deterministic orchestration bridge called by the /stz:run command
+      // between Task-subagent spawns. Everything after "bridge" is its argv.
+      await runBridge(process.argv.slice(3));
       break;
     case "help":
     case undefined:

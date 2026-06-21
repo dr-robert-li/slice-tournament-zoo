@@ -1,0 +1,15 @@
+{
+  "specimen": "d",
+  "passedGate": false,
+  "testPassRate": 1,
+  "coverage": 0.9,
+  "mutationScore": 0.15,
+  "hackFindings": [
+    {
+      "specimen": "d",
+      "pattern": "network-bypass",
+      "location": "clamp.mjs:4",
+      "remediation": "Do not make live network calls that bypass fixtures. Use the provided test doubles."
+    }
+  ]
+}
