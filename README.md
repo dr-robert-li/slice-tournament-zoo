@@ -26,7 +26,7 @@ Task subagents** driven by the `/stz:run` command.
 - [Use](#use)
 - [Example commands and workflows](#example-commands-and-workflows)
 - [Uninstall](#uninstall)
-- [The pipeline](#the-pipeline-per-slice)
+- [The pipeline](#the-pipeline-two-levels)
 - [The audit tree](#the-stz-audit-tree)
 - [License](#license)
 
@@ -43,15 +43,17 @@ Task subagents** driven by the `/stz:run` command.
 
 From inside Claude Code, add the marketplace and install the plugin:
 
-```
+```text
 /plugin marketplace add dr-robert-li/slice-tournament-zoo
 /plugin install stz
 ```
 
-This registers the `/stz:run` command, the four subagents (specimen, judge,
-test-author, documenter), and a SessionStart hook that announces STZ when a
-project contains a `.stz/` tree. Restart the session (or reload) so the agent
-definitions load.
+This registers the project commands (`/stz:new`, `/stz:research`, `/stz:validate`,
+`/stz:standards`, `/stz:tests`, `/stz:slice`, `/stz:summary`, `/stz:pipeline`) and
+`/stz:run`, the subagents (the per-slice specimen, judge, test-author, documenter
+plus the project-level researcher, validator, conventions, test-planner, slicer,
+summarizer), and a SessionStart hook that announces STZ when a project contains a
+`.stz/` tree. Restart the session (or reload) so the definitions load.
 
 The plugin shells out to the `stz bridge` CLI for every deterministic decision.
 Install the CLI on the machine so it is on `PATH`:
@@ -91,7 +93,7 @@ This writes the tiered `.stz/` tree (`00-intent` through `90-audit`) and an
 `/stz:run` handles one slice. The full pipeline takes a project from an idea to a
 completion report, one command per phase (a get-shit-done-style UX):
 
-```
+```text
 /stz:new        elicit intent + machine-checkable done-predicates (interactive Q&A)
 /stz:research   external (docs, prior art) + internal (codebase) research
 /stz:validate   ground-truth: verify each claim against reality, not recall
@@ -117,7 +119,7 @@ in [`examples/full-pipeline/`](./examples/full-pipeline).
 
 ### Run a slice as a tournament (in Claude Code)
 
-```
+```text
 /stz:run slice-01
 ```
 
@@ -166,14 +168,36 @@ Each subcommand prints one JSON object and writes its artifacts under `.stz/`.
 
 ## Example commands and workflows
 
-### A single feature slice, start to finish
+### A whole project (the full pipeline)
 
+Run the project-level phases once, let `/stz:slice` break the work into a DAG and
+seed the slices, then let `/stz:pipeline` drive each slice's tournament in
+dependency order:
+
+```text
+/stz:new          # elicit intent + done-predicates
+/stz:research     # external + internal research
+/stz:validate     # ground-truth the research
+/stz:standards    # conventions
+/stz:tests        # test strategy, before any code
+/stz:slice        # co-design the slice DAG; seeds 40-slices/<id> manifests
+/stz:pipeline     # dashboard: dispatches /stz:run for each slice in dep order
+/stz:summary      # completion report once the slices are done
 ```
+
+You do not hand-author slice manifests or run `/stz:run` by hand here. `/stz:slice`
+creates the manifests and `/stz:pipeline` sequences the tournaments. Each command
+also takes `--auto` to chain to the next phase.
+
+### A single slice, standalone (no project)
+
+For a one-off slice without the project pipeline, `/stz:run <name>` elicits its
+own contract and one done-predicate if no manifest exists, runs the tournament,
+then you read the result:
+
+```text
 /stz:run payment-validator
 ```
-
-Answer the elicitation prompts (contract, done-predicates), let four specimens
-compete, approve the winner, then read the result:
 
 ```bash
 cat .stz/40-slices/payment-validator/spec-diff.md      # intent vs as-built
@@ -181,16 +205,19 @@ cat .stz/50-pressure/payment-validator/pressure.md     # why the losers lost
 cat .stz/90-audit/journal.md                           # the replayable event log
 ```
 
-### Inspect the worked example without running anything
+### Inspect a worked example without running anything
 
 ```bash
-ls   examples/clamp-tournament/stz-tree/40-slices/slice-01
-cat  examples/clamp-tournament/stz-tree/40-slices/slice-01/tournament.md
+# a real tournament (one slice)
+cat examples/clamp-tournament/stz-tree/40-slices/slice-01/tournament.md
+# a real project front-pipeline (slugify)
+cat examples/full-pipeline/stz-tree/90-audit/SUMMARY.md
 ```
 
-Four specimens implement `clamp`; a planted network-bypass cheater passes all
-304 sealed checks but is disqualified at the gate; the winner is chosen by six
-judge votes and the highest GRPO advantage.
+`clamp-tournament`: four specimens implement `clamp`; a planted network-bypass
+cheater passes all 304 sealed checks but is disqualified at the gate; the winner
+is chosen by six judge votes and the highest GRPO advantage. `full-pipeline`: the
+project phases run for a `slugify` library through to a seeded slice DAG.
 
 ### CI-style local check (no Claude Code)
 
@@ -198,22 +225,11 @@ judge votes and the highest GRPO advantage.
 npm test && npm run typecheck && stz run /tmp/stz-smoke
 ```
 
-### A multi-slice feature
-
-Scaffold once, then run slices in dependency order, reading the spec-diff after
-each before moving on:
-
-```
-/stz:run schema
-/stz:run validator      # depends on schema
-/stz:run api-handler    # depends on validator
-```
-
 ## Uninstall
 
 ### Remove the plugin
 
-```
+```text
 /plugin uninstall stz
 /plugin marketplace remove dr-robert-li/slice-tournament-zoo
 ```
@@ -235,39 +251,56 @@ rm -rf .stz AGENTS.md
 
 Nothing else is touched. There is no external state to clean up.
 
-## The pipeline (per slice)
+## The pipeline (two levels)
 
-```
-elicit -> research -> ground-truth-validate -> conventions
-   -> test-author (frozen, sealed held-out suite)
-   -> plan (intent spec)
-   -> spawn N specimens in parallel  ->  eval-gate (sealed suite + coverage
-                                          + mutation + hack-pattern detect)
-   -> judge (pairwise votes, GRPO group-relative advantage)
-   -> winner -> merge -> as-built spec -> spec-diff
-   -> ratify conventions -> state.json checkpoint -> next slice
+The pipeline runs at two levels. The **project level** settles intent, research,
+conventions, and test strategy once for the whole project. **Slice
+disaggregation** then breaks the work into a DAG and seeds each slice, marking
+those early phases done so they are not repeated. Each slice then runs only the
+**tournament half**.
+
+```text
+PROJECT (once):
+  elicit (/stz:new) -> research (/stz:research) -> ground-truth (/stz:validate)
+    -> standards (/stz:standards) -> test strategy (/stz:tests)
+    -> slice disaggregation (/stz:slice)  [seeds each slice; early phases done]
+
+PER SLICE (/stz:run <id>, sequenced by /stz:pipeline over the DAG):
+  test-author (frozen, sealed held-out suite)
+    -> spawn N specimens in parallel
+    -> eval-gate (sealed suite + coverage + mutation + hack-pattern detect)
+    -> judge (pairwise votes, GRPO group-relative advantage)
+    -> winner -> as-built spec -> spec-diff -> state.json checkpoint
+
+FINISH:
+  /stz:summary  -> completion report across every slice
 
 failure (bounded): no passers -> 1 GRPO retry -> 1 replan -> halt + report
 ```
+
+Note: the standalone mock demo (`stz run`, no Claude Code) runs all eight phases
+inside a single slice for a self-contained, no-network smoke test. The two-level
+split above is the real in-session flow.
 
 ## The `.stz/` audit tree
 
 | Tier | Purpose |
 | ---- | ------- |
-| `00-intent/` | elicitation, questionnaire, done-predicates |
-| `10-research/` | research, validated claims, spikes |
+| `00-intent/` | project + intent manifests, elicitation, done-predicates |
+| `10-research/` | external/internal research, ground-truth validation |
 | `20-standards/` | versioned conventions, ADRs |
-| `30-tests/` | plan, rubric, sealed held-out suite |
-| `40-slices/` | manifest, plan, specimen prototypes, tournament, spec-diff |
+| `30-tests/` | test strategy, rubric, sealed held-out suite |
+| `40-slices/` | the slice DAG, manifests, specimen prototypes, tournament, spec-diff |
 | `50-pressure/` | culled specimens' diffs and critiques (the pressure log) |
-| `90-audit/` | journal, call ledger, cost, state.json |
+| `90-audit/` | project state, journal, call ledger, cost, completion report, SUMMARY |
 
 ## Module map (`src/`)
 
 `types.ts` (schema), `taxonomy.ts` (tree and frontmatter), `state.ts`
 (checkpoint and recovery), `grpo.ts`, `selection.ts`, `hack-detector.ts`,
 `escalation.ts`, `budget.ts`, `cost-tracker.ts`, `pressure.ts`, `specdiff.ts`,
-`orchestrator.ts` (mock pipeline), `bridge.ts` (the in-session CLI),
+`orchestrator.ts` (mock pipeline), `project.ts` (the project DAG driver),
+`bridge.ts` (the in-session CLI, per-slice and project subcommands),
 `eval-runner.ts` (real tests, coverage, mutation), and `llm/` (the model seam
 plus the deterministic mock).
 

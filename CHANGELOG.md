@@ -15,6 +15,11 @@ and the project aims to follow [Semantic Versioning](https://semver.org/).
 
 ### Changed
 - Moved `AS-BUILT.md` and `TESTPLAN.md` under `docs/`; README links updated.
+- README: corrected the pipeline description to the real two-level flow
+  (project-level phases once, then the per-slice tournament half). Removed the
+  contradictory "per slice re-elicits/researches" diagram and the superseded
+  manual multi-slice `/stz:run` workflow; refreshed the subagent list, audit-tree
+  tier table, and module map.
 
 ## [0.2.0]
 
