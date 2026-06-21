@@ -1,4 +1,4 @@
-# STZ — As-Built Note
+# STZ As-Built Note
 
 A self-contained record of what this project set out to be, what was actually
 built, the features that resulted, the gaps that remain, and the difference
