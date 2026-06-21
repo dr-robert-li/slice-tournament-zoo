@@ -6,28 +6,33 @@ and the project aims to follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
-### Added
-- Documentation guide in the README: install, use, uninstall, example commands
-  and workflows.
-- `LICENSE` (Apache-2.0) and this `CHANGELOG.md`.
-- `docs/` folder for reference material (`AS-BUILT.md`, `TESTPLAN.md`, and the
-  design pattern, kept locally as `docs/CLAUDE.md`).
+## [0.2.2]
 
 ### Added
 - ASCII-art logo in the README header, the `stz` CLI banner (`stz help` / no-arg),
   and the SessionStart hook.
 - npm install path: `npm i -g slice-tournament-zoo` (or
   `npm i -g dr-robert-li/slice-tournament-zoo` straight from GitHub), mirroring
-  the get-shit-done install UX. `tsx` is now a runtime dependency so the global
-  CLI works offline after install; `package.json` bumped to 0.2.1.
+  the get-shit-done install UX. `tsx` moved to runtime dependencies so the global
+  CLI works offline after install.
+- README documentation guide (install, use, uninstall, examples); `LICENSE`
+  (Apache-2.0); this `CHANGELOG.md`; and a `docs/` folder (`AS-BUILT.md`,
+  `TESTPLAN.md`, design pattern kept locally as `docs/CLAUDE.md`).
 
 ### Changed
-- Treated the repository as production-ready: isolated the no-network mock demo
-  into `src/mock/` (the orchestrator, the model-layer seam, and the deterministic
-  mock), with its own README. The production spine (`bridge.ts`, `project.ts`,
-  commands, agents) does not depend on it. Removed `src/llm/`. Trimmed the
-  README's mock sections to a pointer and split the module map into production
-  spine versus the mock harness.
+- Production-ready layout: isolated the no-network mock demo into `src/mock/`
+  (the orchestrator, the model-layer seam, and the deterministic mock), with its
+  own README; removed `src/llm/`. The production spine (`bridge.ts`, `project.ts`,
+  commands, agents) does not depend on it. Trimmed the README's mock sections to
+  a pointer and split the module map into production spine versus mock harness.
+- `docs/AS-BUILT.md` rewritten as a self-contained note (original intent, what
+  was built, resultant features, gaps, and the intent-vs-as-built diff); dropped
+  references to the design doc and its requirement codes.
+- README: corrected the `--auto` semantics. `/stz:run --auto` is single-slice and
+  skips only that slice's winner-approval pause; it does not cascade.
+  `/stz:pipeline --auto` walks the DAG in dependency order and runs every slice
+  through to the summary.
+- `package.json`, plugin, and marketplace versions bumped to 0.2.2.
 
 ## [0.2.1]
 

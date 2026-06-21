@@ -20,18 +20,6 @@
 > **frozen, sealed** test suite the implementers never see. Every run leaves a
 > markdown audit trail a human can replay.
 
-STZ runs two ways. The **deterministic spine** is real and fully tested. The
-**model layer** runs either against a deterministic mock (for tests and a
-no-network demo) or, the way it is meant to be used, as **in-session Claude Code
-Task subagents** driven by the `/stz:run` command.
-
-- Reference docs live in [`docs/`](./docs): `AS-BUILT.md` (what is real vs.
-  deferred) and `TESTPLAN.md` (requirement-to-test map). The full architectural
-  design pattern is kept locally as `docs/CLAUDE.md`.
-- The build narrative is in [`JOURNAL.md`](./JOURNAL.md).
-- A worked example of a real run is in
-  [`examples/clamp-tournament/`](./examples/clamp-tournament).
-
 ## Contents
 
 - [Requirements](#requirements)
