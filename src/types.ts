@@ -179,3 +179,65 @@ export interface SliceState {
   /** Set when escalation reaches "halted". */
   failureReport: string | null;
 }
+
+// ── Project-level pipeline (multi-slice driver) ─────────────────────────────
+
+/**
+ * Project-level pipeline phases — run ONCE for the whole project, before and
+ * around the per-slice tournaments. These share names with the per-slice
+ * `PHASES` but are a different scope: project preparation vs. one slice's
+ * tournament. Kept as a separate enum on purpose; do not overload `PHASES`.
+ */
+export const PROJECT_PHASES = [
+  "elicitation",
+  "research",
+  "ground-truth",
+  "standards",
+  "testing-conventions",
+  "slice-disaggregation",
+] as const;
+
+export type ProjectPhase = (typeof PROJECT_PHASES)[number];
+export type ProjectPhaseStatus = "pending" | "done";
+
+/** Per-slice rollup status as seen by the project driver. */
+export type SliceRunStatus = "pending" | "running" | "done" | "halted";
+
+/** One slice as registered in the project DAG. A thin pointer; the full
+ *  SliceManifest still lives at 40-slices/<id>/manifest.json. */
+export interface ProjectSliceEntry {
+  id: string;
+  name: string;
+  /** Slice ids this one depends on — reuses SliceManifest.dependsOn semantics. */
+  dependsOn: string[];
+}
+
+/** 00-intent/project.json — the declarative project spec + slice DAG. */
+export interface ProjectManifest {
+  schemaVersion: 1;
+  projectId: string;
+  name: string;
+  summary: string;
+  slices: ProjectSliceEntry[];
+}
+
+/** A project-level structured event (N1 replay spine, project scope). */
+export interface ProjectStateEvent {
+  seq: number;
+  phase: ProjectPhase | "lifecycle" | "slice";
+  kind: string;
+  detail: string;
+}
+
+/**
+ * 90-audit/project-state.json — the mutable project driver state. `sliceStatus`
+ * is a cache; `project-status` re-derives the authoritative value from each
+ * slice's own 40-slices/<id>/state.json (no dual-write, no drift).
+ */
+export interface ProjectState {
+  schemaVersion: 1;
+  projectId: string;
+  phaseStatus: Record<ProjectPhase, ProjectPhaseStatus>;
+  sliceStatus: Record<string, SliceRunStatus>;
+  events: ProjectStateEvent[];
+}

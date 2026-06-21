@@ -8,6 +8,7 @@ export * from "./budget.js";
 export * from "./cost-tracker.js";
 export * from "./taxonomy.js";
 export * from "./state.js";
+export * from "./project.js";
 export * from "./pressure.js";
 export * from "./specdiff.js";
 export * from "./orchestrator.js";

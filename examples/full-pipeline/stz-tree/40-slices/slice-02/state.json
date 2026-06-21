@@ -1,0 +1,52 @@
+{
+  "schemaVersion": 1,
+  "sliceId": "slice-02",
+  "currentPhase": "elicitation",
+  "phaseStatus": {
+    "elicitation": "done",
+    "research": "done",
+    "ground-truth-validation": "done",
+    "standards": "done",
+    "test-authoring": "pending",
+    "planning": "pending",
+    "tournament": "pending",
+    "judgment": "pending"
+  },
+  "escalation": "normal",
+  "retryCount": 0,
+  "replanCount": 0,
+  "activeSpecimens": [],
+  "budget": {
+    "tokenCap": 320000,
+    "wallClockMs": 2700000,
+    "tokensSpent": 0
+  },
+  "events": [
+    {
+      "seq": 0,
+      "phase": "elicitation",
+      "kind": "phase-done",
+      "detail": "elicitation → done"
+    },
+    {
+      "seq": 1,
+      "phase": "research",
+      "kind": "phase-done",
+      "detail": "research → done"
+    },
+    {
+      "seq": 2,
+      "phase": "ground-truth-validation",
+      "kind": "phase-done",
+      "detail": "ground-truth-validation → done"
+    },
+    {
+      "seq": 3,
+      "phase": "standards",
+      "kind": "phase-done",
+      "detail": "standards → done"
+    }
+  ],
+  "callCount": 0,
+  "failureReport": null
+}

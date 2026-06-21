@@ -1,0 +1,31 @@
+{
+  "problem": "Teams hand-write URL slugs from titles inconsistently; need one deterministic slugify.",
+  "users": "App developers calling a library function.",
+  "constraints": [
+    "TypeScript, zero runtime deps",
+    "pure function, no I/O"
+  ],
+  "donePredicates": [
+    {
+      "id": "lower-hyphen",
+      "expr": "slugify('Hello World') === 'hello-world'",
+      "kind": "test"
+    },
+    {
+      "id": "strip-punct",
+      "expr": "slugify('A, B & C!') === 'a-b-c'",
+      "kind": "test"
+    },
+    {
+      "id": "empty",
+      "expr": "slugify('') === ''",
+      "kind": "test"
+    }
+  ],
+  "areas": [
+    "problem",
+    "users",
+    "constraints",
+    "done-conditions"
+  ]
+}

@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "projectId": "slugify",
+  "name": "slugify utility",
+  "summary": "a small TypeScript library that turns titles into URL-safe slugs",
+  "slices": [
+    {
+      "id": "slice-01",
+      "name": "core-slugify",
+      "dependsOn": []
+    },
+    {
+      "id": "slice-02",
+      "name": "punctuation-stripping",
+      "dependsOn": [
+        "slice-01"
+      ]
+    }
+  ]
+}

@@ -16,6 +16,31 @@ and the project aims to follow [Semantic Versioning](https://semver.org/).
 ### Changed
 - Moved `AS-BUILT.md` and `TESTPLAN.md` under `docs/`; README links updated.
 
+## [0.2.0]
+
+The full interactive multi-phase pipeline (a get-shit-done-style UX) feeding the
+existing per-slice tournament.
+
+### Added
+- **Project-level driver** (`src/project.ts`): a project manifest + state, a
+  DAG of slices with topological ordering, per-slice status derived from each
+  slice's own `state.json` (no drift), and the next-runnable computation.
+- **Bridge subcommands** (`stz bridge`): `project-init`, `project-phase`,
+  `project-write-intent`, `project-record-area`, `slice-add`,
+  `project-seed-slices`, `project-status`, `summary`.
+- **Eight commands**: `/stz:new` (interactive elicitation), `/stz:research`,
+  `/stz:validate` (standalone ground-truth validation), `/stz:standards`,
+  `/stz:tests`, `/stz:slice` (collaborative DAG co-design), `/stz:summary`, and
+  the `/stz:pipeline` dashboard. Each accepts `--auto` for chaining.
+- **Six subagents**: `stz-researcher`, `stz-validator`, `stz-conventions`,
+  `stz-test-planner`, `stz-slicer`, `stz-summarizer` (H2 completion markers).
+- The project-tier to per-slice handoff: `project-seed-slices` writes each slice
+  manifest and seeds its `state.json` with the four early phases already done.
+- A worked live run of the front phases in `examples/full-pipeline/`.
+
+### Changed
+- Plugin and marketplace bumped to `0.2.0`.
+
 ## [0.1.0]
 
 The slice-00 kernel plus the in-session Claude Code harness.

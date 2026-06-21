@@ -1,7 +1,7 @@
 {
   "name": "stz",
-  "version": "0.1.0",
-  "description": "Slice-tournament-zoo: run each slice as an in-session adversarial tournament. N specimens implement a contract in parallel, a frozen sealed suite plus a layered hack detector gate them, pairwise LLM judges rank the survivors, and a replayable markdown audit trail records every decision.",
+  "version": "0.2.0",
+  "description": "Slice-tournament-zoo: a full interactive pipeline (elicit, research, validate, standards, tests, slice) feeding per-slice adversarial tournaments. N specimens implement a contract in parallel, a frozen sealed suite plus a layered hack detector gate them, pairwise LLM judges rank the survivors, and a replayable markdown audit trail records every decision.",
   "author": {
     "name": "Robert Li",
     "email": "dr.robert.li.au@gmail.com"

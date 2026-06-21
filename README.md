@@ -86,6 +86,35 @@ stz init .          # create the .stz/ taxonomy + AGENTS.md in the current repo
 This writes the tiered `.stz/` tree (`00-intent` through `90-audit`) and an
 `AGENTS.md` table of contents. Nothing else is required to start.
 
+### The full pipeline (in Claude Code)
+
+`/stz:run` handles one slice. The full pipeline takes a project from an idea to a
+completion report, one command per phase (a get-shit-done-style UX):
+
+```
+/stz:new        elicit intent + machine-checkable done-predicates (interactive Q&A)
+/stz:research   external (docs, prior art) + internal (codebase) research
+/stz:validate   ground-truth: verify each claim against reality, not recall
+/stz:standards  style, architecture, naming conventions
+/stz:tests      test strategy + coverage targets, locked BEFORE implementation
+/stz:slice      collaborative breakdown into a DAG of vertical slices
+/stz:run <id>   the adversarial tournament, once per slice
+/stz:summary    aggregate every document into one completion report
+```
+
+`/stz:pipeline` is a dashboard: it shows project-phase and per-slice status, then
+dispatches the recommended next step (and can run independent slices in
+parallel). Every command accepts `--auto` to chain to the next phase, pausing
+only at the two human gates: confirming a done-predicate in `/stz:new` and
+approving the slice breakdown in `/stz:slice`.
+
+Each project-level phase writes its own `.stz/` tier and is settled once, before
+any slice runs. When `/stz:slice` seeds the DAG, each slice inherits those early
+phases as done, leaving only the tournament half for `/stz:run`. Project status
+is derived from each slice's own `state.json`, so an interrupted pipeline resumes
+by re-reading state. A worked run of the front phases (a `slugify` library) lives
+in [`examples/full-pipeline/`](./examples/full-pipeline).
+
 ### Run a slice as a tournament (in Claude Code)
 
 ```

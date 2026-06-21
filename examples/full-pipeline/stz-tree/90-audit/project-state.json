@@ -1,0 +1,60 @@
+{
+  "schemaVersion": 1,
+  "projectId": "slugify",
+  "phaseStatus": {
+    "elicitation": "done",
+    "research": "done",
+    "ground-truth": "done",
+    "standards": "done",
+    "testing-conventions": "done",
+    "slice-disaggregation": "done"
+  },
+  "sliceStatus": {
+    "slice-01": "pending",
+    "slice-02": "pending"
+  },
+  "events": [
+    {
+      "seq": 0,
+      "phase": "lifecycle",
+      "kind": "project-init",
+      "detail": "project slugify created"
+    },
+    {
+      "seq": 1,
+      "phase": "elicitation",
+      "kind": "phase-done",
+      "detail": "elicitation → done"
+    },
+    {
+      "seq": 2,
+      "phase": "research",
+      "kind": "phase-done",
+      "detail": "research → done"
+    },
+    {
+      "seq": 3,
+      "phase": "ground-truth",
+      "kind": "phase-done",
+      "detail": "ground-truth → done"
+    },
+    {
+      "seq": 4,
+      "phase": "standards",
+      "kind": "phase-done",
+      "detail": "standards → done"
+    },
+    {
+      "seq": 5,
+      "phase": "testing-conventions",
+      "kind": "phase-done",
+      "detail": "testing-conventions → done"
+    },
+    {
+      "seq": 6,
+      "phase": "slice-disaggregation",
+      "kind": "phase-done",
+      "detail": "slice-disaggregation → done"
+    }
+  ]
+}

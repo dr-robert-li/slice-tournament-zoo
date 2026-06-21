@@ -1,0 +1,49 @@
+---
+description: Collaboratively break the project into vertical slices (a DAG), then seed them so the per-slice tournaments can run.
+argument-hint: "[--auto]"
+---
+
+# /stz:slice — slice disaggregation (phase 6)
+
+You are the STZ orchestrator. Read state first: `stz bridge project-status
+--root .`. Require testing-conventions `done`; else point at `/stz:tests`.
+
+This phase is collaborative: a subagent proposes the slice DAG, then you and the
+user shape it together before committing.
+
+## Procedure
+
+1. **Spawn one `stz-slicer` subagent.** It reads all prior tiers and proposes a
+   DAG, writing `.stz/40-slices/proposed-dag.md` and a machine `slices.json`
+   (an array of full slice manifests with `dependsOn` and the per-slice subset of
+   done-predicates), returning the DAG and `## SLICE PROPOSAL COMPLETE`.
+
+   ORCHESTRATOR RULE: spawn, then stop and wait for the marker.
+
+2. **Co-design loop (interactive, not just approve/reject).** Present the DAG:
+   the slices, their contracts, and the dependency edges. AUQ: header `Slices`,
+   question "Adjust the breakdown?", options `[Approve as-is, Merge two, Split
+   one, Reorder/deps]`.
+   - **Merge / Split / Reorder** → ask the targeted follow-up (which two? where
+     does it split? which edge?), in plain text for freeform edits. When the
+     change is structural, re-spawn `stz-slicer` with the instruction and show
+     the revised DAG. Loop.
+   - Every project done-predicate must end up owned by exactly one slice; if the
+     proposal leaves one unassigned, raise it before approval.
+   - Loop until the user picks **Approve as-is**.
+
+3. On approve: `stz bridge project-seed-slices --root . --dag <slices.json>`.
+   This writes each `40-slices/<id>/manifest.{json,md}` and seeds each slice's
+   `state.json` with the four early phases already `done` (they were settled at
+   the project level). Then `stz bridge project-phase --root . --phase
+   slice-disaggregation`.
+
+4. Run `stz bridge project-status --root .` and report the first runnable slice.
+   Hand off: **▶ Next up: `/stz:run <first-slice-id>`** (then `/stz:pipeline` to
+   drive the rest).
+
+## --auto
+
+Even with `--auto`, the final "Approve as-is" stays a human gate — the slice
+breakdown is too consequential to auto-accept. After approval, chain to
+`/stz:run <first>` (or hand to `/stz:pipeline`).

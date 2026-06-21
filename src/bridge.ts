@@ -23,10 +23,30 @@
  * it) and writes its durable artifacts into the `.stz/` tree.
  */
 import { readFileSync, writeFileSync, mkdirSync, readdirSync, existsSync } from "node:fs";
+import { writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import type { EvalResult, PairwiseVote, SliceManifest } from "./types.js";
-import { scaffold, writeDoc, stzPath } from "./taxonomy.js";
+import type {
+  EvalResult,
+  PairwiseVote,
+  SliceManifest,
+  ProjectManifest,
+  ProjectPhase,
+  ProjectSliceEntry,
+} from "./types.js";
+import { PROJECT_PHASES } from "./types.js";
+import { scaffold, writeDoc, readDoc, stzPath } from "./taxonomy.js";
 import { freshState, saveState, loadState, setPhaseStatus, appendEvent } from "./state.js";
+import {
+  freshProjectState,
+  saveProjectState,
+  loadProjectState,
+  appendProjectEvent,
+  projectManifestPath,
+  PROJECT_PHASE_TIER,
+  topoOrder,
+  deriveSliceStatus,
+  nextRunnable,
+} from "./project.js";
 import { detectHacks } from "./hack-detector.js";
 import { evalGate, select, pairings } from "./selection.js";
 import { diffSpecs, renderSpecDiff, isFaithful, type Spec } from "./specdiff.js";
@@ -290,6 +310,219 @@ async function finalize(args: Record<string, string>): Promise<void> {
   });
 }
 
+// ── project-level subcommands (the multi-slice driver) ──────────────────────
+
+/** project-init: scaffold + write project manifest + fresh project state. */
+async function projectInit(args: Record<string, string>): Promise<void> {
+  const root = args.root!;
+  const manifest = readJSON<ProjectManifest>(args.manifest!);
+  manifest.schemaVersion = 1;
+  manifest.slices = manifest.slices ?? [];
+  await scaffold(root);
+  await writeFile(projectManifestPath(root), JSON.stringify(manifest, null, 2) + "\n", "utf8");
+  const state = freshProjectState(manifest.projectId);
+  appendProjectEvent(state, "lifecycle", "project-init", `project ${manifest.projectId} created`);
+  await saveProjectState(root, state);
+  await writeDoc(root, join("00-intent", "project.md"), {
+    frontmatter: { summary: manifest.summary || `Project ${manifest.name}.` },
+    body:
+      `# ${manifest.name}\n\n${manifest.summary}\n\n## Slices (DAG)\n` +
+      (manifest.slices.length
+        ? manifest.slices.map((s) => `- ${s.id} (${s.name}) deps: [${s.dependsOn.join(", ")}]`).join("\n")
+        : "_none yet — added during slice-disaggregation_") +
+      "\n",
+  });
+  print({ projectId: manifest.projectId, slices: manifest.slices.map((s) => s.id), phases: PROJECT_PHASES });
+}
+
+function isProjectPhase(p: string): p is ProjectPhase {
+  return (PROJECT_PHASES as readonly string[]).includes(p);
+}
+
+/** project-phase: mark a project-level phase done + write a tier marker. */
+async function projectPhase(args: Record<string, string>): Promise<void> {
+  const root = args.root!;
+  const phase = args.phase!;
+  if (!isProjectPhase(phase)) {
+    process.stderr.write(`unknown project phase: ${phase}\n`);
+    process.exitCode = 1;
+    return;
+  }
+  const state = await loadProjectState(root);
+  state.phaseStatus[phase] = "done";
+  appendProjectEvent(state, phase, "phase-done", `${phase} → done`);
+  await saveProjectState(root, state);
+  const tier = PROJECT_PHASE_TIER[phase];
+  await writeDoc(root, join(tier, `${phase}.md`), {
+    frontmatter: { summary: `Project phase ${phase} marked done.` },
+    body: `# ${phase}\n\nCompleted at the project level. Artifacts live under \`${tier}/\`.\n`,
+  });
+  print({ phase, status: "done", tier });
+}
+
+/** project-write-intent: persist the elicited intent + done-predicates. */
+async function projectWriteIntent(args: Record<string, string>): Promise<void> {
+  const root = args.root!;
+  const intent = readJSON<{
+    problem?: string;
+    users?: string;
+    constraints?: string[];
+    donePredicates?: { id: string; expr: string; kind: string }[];
+    areas?: string[];
+  }>(args.intent!);
+  const preds = intent.donePredicates ?? [];
+  await writeFile(stzPath(root, join("00-intent", "intent.json")), JSON.stringify(intent, null, 2) + "\n", "utf8");
+  await writeDoc(root, join("00-intent", "intent.md"), {
+    frontmatter: { summary: `Intent: ${preds.length} done-predicate(s); ${(intent.areas ?? []).length} area(s).` },
+    body:
+      `# Intent\n\n## Problem\n${intent.problem ?? ""}\n\n## Users\n${intent.users ?? ""}\n\n` +
+      `## Constraints\n${(intent.constraints ?? []).map((c) => `- ${c}`).join("\n")}\n\n` +
+      `## Done predicates (machine-checkable)\n${preds.map((p) => `- \`${p.expr}\` (${p.kind})`).join("\n")}\n`,
+  });
+  print({ predicates: preds.length, areas: (intent.areas ?? []).length });
+}
+
+/** project-record-area: durable per-area checkpoint during elicitation. */
+async function projectRecordArea(args: Record<string, string>): Promise<void> {
+  const root = args.root!;
+  const phase = args.phase!;
+  if (!isProjectPhase(phase)) {
+    process.stderr.write(`unknown project phase: ${phase}\n`);
+    process.exitCode = 1;
+    return;
+  }
+  const state = await loadProjectState(root);
+  appendProjectEvent(state, phase, "area-resolved", `${args.area}: ${args.resolution ?? ""}`);
+  await saveProjectState(root, state);
+  const resolved = state.events.filter((e) => e.phase === phase && e.kind === "area-resolved").map((e) => e.detail.split(":")[0]);
+  print({ phase, area: args.area, recorded: true, resolved });
+}
+
+/** slice-add: append a slice to the DAG (permissive; validation in status). */
+async function sliceAdd(args: Record<string, string>): Promise<void> {
+  const root = args.root!;
+  const id = args.id!;
+  const entry: ProjectSliceEntry = {
+    id,
+    name: args.name ?? id,
+    dependsOn: args.depends ? args.depends.split(",").map((s) => s.trim()).filter(Boolean) : [],
+  };
+  const manifest = readJSON<ProjectManifest>(projectManifestPath(root));
+  manifest.slices = (manifest.slices ?? []).filter((s) => s.id !== id);
+  manifest.slices.push(entry);
+  await writeFile(projectManifestPath(root), JSON.stringify(manifest, null, 2) + "\n", "utf8");
+  const state = await loadProjectState(root);
+  if (!(id in state.sliceStatus)) state.sliceStatus[id] = "pending";
+  appendProjectEvent(state, "slice", "slice-added", `${id} deps=[${entry.dependsOn.join(",")}]`);
+  await saveProjectState(root, state);
+  print({ id, dependsOn: entry.dependsOn, totalSlices: manifest.slices.length });
+}
+
+/** project-seed-slices: write per-slice manifests + seed early phases done. */
+async function projectSeedSlices(args: Record<string, string>): Promise<void> {
+  const root = args.root!;
+  const dag = readJSON<SliceManifest[]>(args.dag!);
+  const created: string[] = [];
+  for (const m of dag) {
+    m.judge = m.judge ?? { votesPerPair: 8 };
+    m.dependsOn = m.dependsOn ?? [];
+    m.donePredicates = m.donePredicates ?? [];
+    mkdirSync(stzPath(root, sliceRel(m.id)), { recursive: true });
+    await writeFile(stzPath(root, join(sliceRel(m.id), "manifest.json")), JSON.stringify(m, null, 2) + "\n", "utf8");
+    await writeDoc(root, join(sliceRel(m.id), "manifest.md"), {
+      frontmatter: { summary: m.summary, contract: m.contract, complexity: m.complexity },
+      body: `# ${m.id} — ${m.name}\n\n## Contract\n\n\`${m.contract}\`\n\n## Depends on\n${m.dependsOn.join(", ") || "—"}\n`,
+    });
+    // Seed per-slice state: the four early phases were settled at the project
+    // level, so they start `done`; the tournament half remains for /stz:run.
+    let st = freshState(m.id, m.complexity ?? 1);
+    for (const p of ["elicitation", "research", "ground-truth-validation", "standards"] as const) {
+      st = setPhaseStatus(st, p, "done");
+    }
+    await saveState(root, st);
+    created.push(m.id);
+    // Also register in the project DAG.
+    await sliceAddInternal(root, { id: m.id, name: m.name, dependsOn: m.dependsOn });
+  }
+  print({ created, seeded: true });
+}
+
+async function sliceAddInternal(root: string, entry: ProjectSliceEntry): Promise<void> {
+  const manifest = readJSON<ProjectManifest>(projectManifestPath(root));
+  manifest.slices = (manifest.slices ?? []).filter((s) => s.id !== entry.id);
+  manifest.slices.push(entry);
+  await writeFile(projectManifestPath(root), JSON.stringify(manifest, null, 2) + "\n", "utf8");
+  const state = await loadProjectState(root);
+  if (!(entry.id in state.sliceStatus)) state.sliceStatus[entry.id] = "pending";
+  await saveProjectState(root, state);
+}
+
+/** project-status: READ-ONLY DAG + phase status + next runnable slice. */
+async function projectStatus(args: Record<string, string>): Promise<void> {
+  const root = args.root!;
+  const manifest = readJSON<ProjectManifest>(projectManifestPath(root));
+  const slices = manifest.slices ?? [];
+  const state = await loadProjectState(root);
+  const topo = topoOrder(slices);
+  if (!topo.ok) {
+    print(topo.error === "cycle" ? { error: "cycle", cycle: topo.cycle } : { error: "dangling", from: topo.from, missing: topo.missing });
+    process.exitCode = 1;
+    return;
+  }
+  const sliceStatus: Record<string, string> = {};
+  for (const id of topo.order) sliceStatus[id] = await deriveSliceStatus(root, id);
+  const runnable = await nextRunnable(slices, (id) => deriveSliceStatus(root, id));
+  const slicingDone = state.phaseStatus["slice-disaggregation"] === "done";
+  print({
+    projectPhases: state.phaseStatus,
+    order: topo.order,
+    sliceStatus,
+    frontier: slicingDone ? runnable.frontier : [],
+    next: slicingDone ? runnable.next : null,
+    blocked: !slicingDone,
+    note: slicingDone ? undefined : "slice execution gated until /stz:slice completes slice-disaggregation",
+  });
+}
+
+/** summary: aggregate every slice's outcome into a completion report. */
+async function summaryCmd(args: Record<string, string>): Promise<void> {
+  const root = args.root!;
+  const manifest = readJSON<ProjectManifest>(projectManifestPath(root));
+  const slices = manifest.slices ?? [];
+  const rows: { id: string; winner: string | null; faithful: boolean | null; culled: number | null; status: string }[] = [];
+  let done = 0, halted = 0, pending = 0;
+  for (const s of slices) {
+    const status = await deriveSliceStatus(root, s.id);
+    if (status === "done") done++; else if (status === "halted") halted++; else pending++;
+    let winner: string | null = null;
+    const jPath = judgmentPath(root, s.id);
+    if (existsSync(jPath)) winner = (readJSON<{ winner: string | null }>(jPath)).winner;
+    let faithful: boolean | null = null;
+    const sdPath = stzPath(root, join(sliceRel(s.id), "spec-diff.md"));
+    if (existsSync(sdPath)) {
+      const sd = await readDoc(root, join(sliceRel(s.id), "spec-diff.md"));
+      faithful = /0 missing/.test(String(sd.frontmatter.summary ?? ""));
+    }
+    let culled: number | null = null;
+    const pPath = stzPath(root, join("50-pressure", s.id, "pressure.md"));
+    if (existsSync(pPath)) {
+      const pd = await readDoc(root, join("50-pressure", s.id, "pressure.md"));
+      const m = String(pd.frontmatter.summary ?? "").match(/(\d+) culled/);
+      culled = m ? Number(m[1]) : null;
+    }
+    rows.push({ id: s.id, winner, faithful, culled, status });
+  }
+  await writeDoc(root, join("90-audit", "completion-report.md"), {
+    frontmatter: { summary: `Completion: ${done} done, ${halted} halted, ${pending} pending of ${slices.length} slice(s).` },
+    body:
+      `# Completion report — ${manifest.name}\n\n` +
+      `| slice | status | winner | faithful | culled |\n|---|---|---|---|---|\n` +
+      rows.map((r) => `| ${r.id} | ${r.status} | ${r.winner ?? "—"} | ${r.faithful ?? "—"} | ${r.culled ?? "—"} |`).join("\n") +
+      "\n",
+  });
+  print({ slices: rows, done, halted, pending });
+}
+
 export async function runBridge(argv: string[]): Promise<void> {
   const [sub, ...rest] = argv;
   const args = parseArgs(rest);
@@ -301,6 +534,14 @@ export async function runBridge(argv: string[]): Promise<void> {
     case "record-votes": recordVotes(args); break;
     case "select": await selectCmd(args); break;
     case "finalize": await finalize(args); break;
+    case "project-init": await projectInit(args); break;
+    case "project-phase": await projectPhase(args); break;
+    case "project-write-intent": await projectWriteIntent(args); break;
+    case "project-record-area": await projectRecordArea(args); break;
+    case "slice-add": await sliceAdd(args); break;
+    case "project-seed-slices": await projectSeedSlices(args); break;
+    case "project-status": await projectStatus(args); break;
+    case "summary": await summaryCmd(args); break;
     default:
       process.stderr.write(`unknown bridge subcommand: ${sub}\n`);
       process.exitCode = 1;

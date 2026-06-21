@@ -1,0 +1,21 @@
+{
+  "id": "slice-02",
+  "name": "punctuation-stripping",
+  "contract": "export function slugify(input: string): string",
+  "dependsOn": [
+    "slice-01"
+  ],
+  "complexity": 2,
+  "donePredicates": [
+    {
+      "id": "strip-punct",
+      "expr": "slugify('A, B & C!') === 'a-b-c'",
+      "kind": "test"
+    }
+  ],
+  "traceTier": "minimal",
+  "judge": {
+    "votesPerPair": 2
+  },
+  "summary": "Punctuation stripping: extends slice-01 so punctuation and diacritics collapse correctly (strip non-[a-z0-9], NFKD diacritics, collapse repeated hyphens) without changing the contract surface. Owns predicate strip-punct. dependsOn slice-01."
+}
