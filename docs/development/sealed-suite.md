@@ -55,6 +55,41 @@ it would hand specimens the answer — a worse hole than the one the gate closes
    from→to hashes + reason into the manifest and re-freezes. A silent edit then
    fails `seal-verify`.
 
+## Cross-family reference: an independent guide against shared blind spots
+
+The guide above (the `stz-test-author` hard rules) is the *only* control for the
+fragile-invariant class — but it has a structural limit: a single author cannot
+guide themselves out of a blind spot they don't know they have. The smoke gate
+can't help, because its reference shares that blind spot. So one control class
+remains uncovered: a wrong assumption baked into *both* the suite and its
+reference.
+
+The **cross-family reference** (0.5.0) closes it. A second reference is authored
+**independently** — a different model family (or a human), seeing only the
+contract and done-predicates, never the suite or the primary reference — by the
+`stz-cross-reference` agent. It is a full, correct solution, lives under
+`.stz/30-tests/held-out/reference-b/`, and is sealed with the suite (never
+specimen-visible). Before sealing, `stz bridge seal-crosscheck` runs the suite
+against both references:
+
+- **both-pass** — two independent implementations satisfy the suite. A blind spot
+  shared by author and suite would have made one of them fail, so passing both is
+  positive evidence the suite isn't over-fit to one author's assumptions. Seal.
+- **divergent** (exactly one passes) — the suite encodes an assumption one author
+  didn't share. The command exits non-zero to PAUSE the pipeline, exactly like
+  `seal-verify`.
+- **both-fail** — the suite is unsatisfiable as written; that's a gate/sensor
+  failure (loop the stderr back to the author), not a cross-family signal.
+
+**Divergence is a signal, not a verdict.** A B-fails-A-passes split is ambiguous
+by construction: either the suite over-fits A (the blind spot you want to catch)
+or reference B is simply wrong — and aggregate pass counts cannot distinguish
+them. So the cross-check is itself a **guide-class control**: it surfaces the
+divergence for *human adjudication* (strengthen the author guidance + `seal-amend`
+the suite, or discard a buggy B), and it never triggers a sensor-style automatic
+rewrite. It is the R2 "cross-family quorum" idea applied to the reference rather
+than the judge.
+
 ## Error handling follows the same split
 
 - **Compile or unsatisfiable failure** → a **gate (sensor) failure**. Feed the

@@ -60,7 +60,7 @@ import { evalGate, select, pairings } from "./selection.js";
 import { diffSpecs, renderSpecDiff, isFaithful, unmatchedIntentIds, mismatchedAsBuiltIds, type Spec } from "./specdiff.js";
 import { seal, verifySeal, amendSeal, heldOutFiles } from "./seal.js";
 import { renderPressureLog, refinementContext, type CulledSpecimen } from "./pressure.js";
-import { fullEval } from "./eval-runner.js";
+import { fullEval, crossReference } from "./eval-runner.js";
 
 // ── small arg parser ──────────────────────────────────────────────────────
 
@@ -679,6 +679,53 @@ function sealVerify(args: Record<string, string>): void {
   print({ ...res, files: heldOutFiles(root).length });
 }
 
+/**
+ * seal-crosscheck: run the sealed suite against TWO independent references (the
+ * test-author's primary + an independently-authored cross-family one) and report
+ * whether they agree. Gates the seal like `seal-verify` gates the tournament:
+ * exits non-zero on anything but both-pass so the pipeline PAUSES for human
+ * adjudication. Divergence is a GUIDE-class signal (the suite may encode a
+ * reference-specific assumption a second author didn't share), NOT an automatic
+ * rewrite trigger — see docs/development/sealed-suite.md. Writes a durable audit
+ * doc under 30-tests/cross-reference.md (outside held-out/, so it is not sealed).
+ */
+async function sealCrosscheck(args: Record<string, string>): Promise<void> {
+  const root = args.root!;
+  const sealed = args.sealed!;
+  const refA = args["reference-a"]!;
+  const refB = args["reference-b"]!;
+  if (!sealed || !refA || !refB) {
+    process.stderr.write("seal-crosscheck requires --sealed, --reference-a, and --reference-b.\n");
+    process.exitCode = 1;
+    return;
+  }
+  const res = crossReference(sealed, refA, refB);
+  const verdict =
+    res.status === "both-pass"
+      ? "✅ both independent references satisfy the sealed suite — no shared-blind-spot signal."
+      : res.status === "divergent"
+        ? "⚠️ DIVERGENT — exactly one reference satisfies the suite. The suite may encode a reference-specific assumption the other author did not share (a candidate fragile invariant), OR the cross-family reference is simply wrong. This is a GUIDE-class signal: adjudicate by hand — strengthen the stz-test-author guidance + seal-amend, or discard a buggy cross reference. Do NOT auto-rewrite."
+        : "⛔ both references FAIL the suite — it is unsatisfiable as written (a gate/sensor failure, not a cross-family signal). Send the stderr back to stz-test-author.";
+  await writeDoc(root, join("30-tests", "cross-reference.md"), {
+    frontmatter: {
+      summary: `Cross-family reference check: ${res.status} (A ${res.a.passed}/${res.a.total}, B ${res.b.passed}/${res.b.total}).`,
+    },
+    body:
+      `# Cross-family reference check\n\n` +
+      `A second, independently-authored reference is run against the same sealed\n` +
+      `suite to catch blind spots the single test-author reference shares with the\n` +
+      `suite (R2 cross-family quorum, applied to the reference).\n\n` +
+      `- **Primary reference (A):** ${res.a.passed}/${res.a.total} passed (passRate ${res.a.passRate})\n` +
+      `- **Cross-family reference (B):** ${res.b.passed}/${res.b.total} passed (passRate ${res.b.passRate})\n` +
+      `- **Status:** \`${res.status}\`\n\n## Verdict\n\n${verdict}\n`,
+  });
+  if (!res.bothPass) {
+    process.stderr.write(`${verdict}\n`);
+    process.exitCode = 1;
+  }
+  print({ status: res.status, bothPass: res.bothPass, divergent: res.divergent, bothFail: res.bothFail, a: res.a, b: res.b });
+}
+
 /** seal-amend: the only sanctioned way to change a sealed file — records from→to + reason. */
 async function sealAmend(args: Record<string, string>): Promise<void> {
   const root = args.root!;
@@ -720,6 +767,7 @@ export async function runBridge(argv: string[]): Promise<void> {
     case "summary": await summaryCmd(args); break;
     case "seal": await sealCmd(args); break;
     case "seal-verify": sealVerify(args); break;
+    case "seal-crosscheck": await sealCrosscheck(args); break;
     case "seal-amend": await sealAmend(args); break;
     default:
       process.stderr.write(`unknown bridge subcommand: ${sub}\n`);

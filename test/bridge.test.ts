@@ -186,3 +186,63 @@ describe("in-session bridge — the deterministic half the /stz:run command call
     expect(state.phaseStatus.planning).toBe("done");
   });
 });
+
+// A tiny sealed harness: g(x) must be 0 for x<5, 1 otherwise; asserts g(5)===1.
+const SEALED = `
+import assert from "node:assert";
+const mod = await import(process.argv[2]);
+const g = mod.g;
+let passed = 0, total = 0;
+function check(c){ total++; try { assert.ok(c); passed++; } catch {} }
+check(g(0) === 0); check(g(4) === 0); check(g(5) === 1); check(g(6) === 1);
+const passRate = passed/total;
+console.log(JSON.stringify({passed, total, passRate}));
+process.exit(passRate === 1 ? 0 : 1);
+`;
+
+describe("seal-crosscheck — cross-family reference gate (0.5.0)", () => {
+  async function setup(refBSrc: string): Promise<{ sealed: string; refA: string; refB: string }> {
+    const sealed = join(root, "sealed.mjs");
+    const refA = join(root, "refA.mjs");
+    const refB = join(root, "refB.mjs");
+    await writeFile(sealed, SEALED, "utf8");
+    await writeFile(refA, "export function g(x){ return x < 5 ? 0 : 1; }\n", "utf8");
+    await writeFile(refB, refBSrc, "utf8");
+    return { sealed, refA, refB };
+  }
+
+  it("both-pass: passes (exit 0) and writes the audit doc", async () => {
+    const { sealed, refA, refB } = await setup("export function g(x){ if (x < 5) return 0; return 1; }\n");
+    const code = process.exitCode;
+    captured = "";
+    await runBridge(["seal-crosscheck", "--root", root, "--sealed", sealed, "--reference-a", refA, "--reference-b", refB]);
+    expect(lastJSON<{ status: string; bothPass: boolean }>()).toMatchObject({ status: "both-pass", bothPass: true });
+    expect(process.exitCode ?? 0).toBe(0); // green gate does not set a failure code
+    const doc = await readFile(join(root, STZ_DIR, "30-tests/cross-reference.md"), "utf8");
+    expect(doc).toMatch(/both-pass/);
+    process.exitCode = code;
+  });
+
+  it("divergent: a reference disagreement sets exit 1 and records the signal", async () => {
+    // refB keys the boundary one off (g(5) → 0) — the suite asserts g(5)===1.
+    const { sealed, refA, refB } = await setup("export function g(x){ return x <= 5 ? 0 : 1; }\n");
+    const code = process.exitCode;
+    captured = "";
+    await runBridge(["seal-crosscheck", "--root", root, "--sealed", sealed, "--reference-a", refA, "--reference-b", refB]);
+    expect(lastJSON<{ status: string; divergent: boolean }>()).toMatchObject({ status: "divergent", divergent: true });
+    expect(process.exitCode).toBe(1); // pauses the pipeline like seal-verify
+    const doc = await readFile(join(root, STZ_DIR, "30-tests/cross-reference.md"), "utf8");
+    expect(doc).toMatch(/DIVERGENT/);
+    process.exitCode = code;
+  });
+
+  it("errors (exit 1) when a reference path is missing", async () => {
+    const sealed = join(root, "sealed.mjs");
+    await writeFile(sealed, SEALED, "utf8");
+    const code = process.exitCode;
+    captured = "";
+    await runBridge(["seal-crosscheck", "--root", root, "--sealed", sealed, "--reference-a", join(root, "refA.mjs")]);
+    expect(process.exitCode).toBe(1);
+    process.exitCode = code;
+  });
+});

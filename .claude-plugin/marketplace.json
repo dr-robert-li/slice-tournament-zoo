@@ -6,14 +6,14 @@
   },
   "metadata": {
     "description": "Slice-tournament-zoo and related agentic harness plugins.",
-    "version": "0.4.0"
+    "version": "0.5.0"
   },
   "plugins": [
     {
       "name": "stz",
       "source": "./",
       "description": "A full interactive pipeline (elicit, research, validate, standards, tests, slice) feeding per-slice adversarial tournaments with sealed tests, layered anti-reward-hacking, GRPO selection, and a replayable audit trail.",
-      "version": "0.4.0",
+      "version": "0.5.0",
       "category": "development",
       "strict": false
     }

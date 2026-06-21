@@ -51,6 +51,51 @@ export function runSealed(sealedPath: string, implPath: string, covDir?: string)
   return { passed: 0, total: 1, passRate: 0 };
 }
 
+export type CrossStatus = "both-pass" | "divergent" | "both-fail";
+
+export interface CrossReferenceResult {
+  /** Sealed-suite result for the primary (test-author's) reference. */
+  a: SealedResult;
+  /** Sealed-suite result for the independently-authored cross-family reference. */
+  b: SealedResult;
+  /** Both independent references satisfy the suite — the wanted green state. */
+  bothPass: boolean;
+  /** Exactly one passes — the suite encodes a reference-specific assumption. */
+  divergent: boolean;
+  /** Neither passes — the suite is unsatisfiable for both (a gate failure). */
+  bothFail: boolean;
+  status: CrossStatus;
+}
+
+/**
+ * Cross-family reference check (F10-adjacent / R2 "cross-family quorum"). The
+ * single smoke-gate reference is authored by the same agent as the suite, so it
+ * shares the author's blind spots: a fragile invariant (e.g. identity keyed on
+ * mutable position) goes green against it and still ships. A SECOND,
+ * independently-authored reference — different model family or a human — that is
+ * run against the SAME sealed suite catches exactly that class: if the two
+ * references disagree, the suite encodes an assumption one author didn't share.
+ *
+ * This primitive only REPORTS the divergence; it deliberately does not verdict.
+ * A B-fails-A-passes split is ambiguous — either the suite over-fits A (the
+ * blind spot we want to surface) OR reference B is simply wrong — and aggregate
+ * pass counts cannot tell them apart. Classification is the orchestrator's job,
+ * consistent with the guide/sensor split in `sealed-suite.md`: divergence is a
+ * GUIDE-class signal for human adjudication (amend + strengthen authoring
+ * guidance, or discard a buggy B), not a sensor-style auto-rewrite trigger.
+ */
+export function crossReference(sealedPath: string, refAPath: string, refBPath: string): CrossReferenceResult {
+  const a = runSealed(sealedPath, refAPath);
+  const b = runSealed(sealedPath, refBPath);
+  const aPass = a.passRate === 1;
+  const bPass = b.passRate === 1;
+  const bothPass = aPass && bPass;
+  const bothFail = !aPass && !bPass;
+  const divergent = aPass !== bPass;
+  const status: CrossStatus = bothPass ? "both-pass" : divergent ? "divergent" : "both-fail";
+  return { a, b, bothPass, divergent, bothFail, status };
+}
+
 /** Real coverage: fraction of the impl file's bytes V8 recorded as executed. */
 export function measureCoverage(sealedPath: string, implPath: string): number {
   const abs = resolve(implPath);

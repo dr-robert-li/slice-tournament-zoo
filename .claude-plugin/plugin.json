@@ -1,6 +1,6 @@
 {
   "name": "stz",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "description": "Slice-tournament-zoo: a full interactive pipeline (elicit, research, validate, standards, tests, slice) feeding per-slice adversarial tournaments. N specimens implement a contract in parallel, a frozen sealed suite plus a layered hack detector gate them, pairwise LLM judges rank the survivors, and a replayable markdown audit trail records every decision.",
   "author": {
     "name": "Robert Li",

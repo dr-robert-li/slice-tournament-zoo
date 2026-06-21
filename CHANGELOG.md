@@ -6,6 +6,43 @@ and the project aims to follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.5.0]
+
+Cross-family reference — a second, independently-authored reference run against
+the sealed suite to catch blind spots the single test-author reference shares
+with the suite. The smoke gate's reference is written by the same agent as the
+suite, so a wrong assumption baked into both (a fragile invariant, a boundary
+off-by-one) goes green anyway. An independent reference, from a different family
+or a human, makes that divergence observable. This is the R2 "cross-family
+quorum" idea applied to the reference rather than the judge.
+
+### Added
+- **`crossReference()` in the eval runner** — runs the sealed suite against two
+  references and reports `both-pass` / `divergent` / `both-fail`. It only reports;
+  it deliberately does not verdict, because a B-fails/A-passes split is ambiguous
+  (suite over-fits A, or B is wrong) and aggregate pass counts can't tell them
+  apart.
+- **`stz bridge seal-crosscheck --sealed --reference-a --reference-b`** — gates
+  the seal like `seal-verify` gates the tournament: exits non-zero on anything but
+  both-pass so the pipeline pauses for human adjudication, and writes a durable
+  audit doc at `30-tests/cross-reference.md` (outside `held-out/`, so it is not
+  sealed).
+- **`stz-cross-reference` agent** — independently authors the second reference
+  into `.stz/30-tests/held-out/reference-b/`, seeing only the contract +
+  done-predicates (never the suite or the primary reference), and deliberately
+  reaching for a different implementation strategy/model. Sealed with the suite,
+  never specimen-visible.
+
+### Changed
+- `/stz:run` step 2 now spawns `stz-cross-reference` and runs `seal-crosscheck`
+  after the smoke gate and before sealing; a divergence is classified as a
+  GUIDE-class signal for adjudication (strengthen author guidance + `seal-amend`,
+  or discard a buggy cross reference), never an automatic rewrite. `seal` now
+  freezes both references.
+- `docs/development/sealed-suite.md` gains the cross-family reference section (the
+  one control class a single author + smoke gate cannot cover); `bridge-cli.md`
+  documents `seal-crosscheck`.
+
 ## [0.4.0]
 
 Dark-factory mode — an optional, fully autonomous end-to-end run. With it

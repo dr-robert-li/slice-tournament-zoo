@@ -72,9 +72,35 @@ on prose-only acceptance (F2).
      **gate failure** and loop — send the exact compiler/test stderr back to
      `stz-test-author` to rewrite, then re-run the gate. Do not hand-patch the
      suite yourself.
-   - **Freeze.** Once green, `$STZ bridge seal --root .` — this sha256-hashes
-     every held-out file (suite + reference) into `30-tests/held-out/SEAL.json`.
-     The suite is now frozen; do not edit it by hand.
+   - **Cross-family reference (before sealing) — an independent GUIDE against
+     shared blind spots.** The smoke gate's reference was written by the same
+     agent as the suite, so a blind spot they hold (a fragile invariant, a
+     boundary off-by-one) is in both and the gate stays green. To catch that,
+     spawn ONE `stz-cross-reference` subagent — with a DIFFERENT model from the
+     testing role where the run config allows it (e.g. a different family, or at
+     least `runConfig.models.execution` vs `runConfig.models.testing`). It sees
+     only the contract + done-predicates (NEVER the suite or the primary
+     reference) and writes a second complete solution into
+     `.stz/30-tests/held-out/reference-b/`. Then run
+     `$STZ bridge seal-crosscheck --root . --sealed
+     .stz/30-tests/held-out/<sealed-file> --reference-a
+     .stz/30-tests/held-out/reference/<entry> --reference-b
+     .stz/30-tests/held-out/reference-b/<entry>`.
+     - **both-pass** → two independent references satisfy the suite; the
+       shared-blind-spot risk is reduced. Proceed to freeze.
+     - **divergent** (the command exits non-zero) → exactly one reference passes.
+       Do NOT auto-rewrite — this is a GUIDE-class signal for adjudication, same
+       class as the fragile-invariant case. Inspect `30-tests/cross-reference.md`:
+       either the suite over-fits the primary (fix via stronger `stz-test-author`
+       guidance + `seal-amend`) or the cross reference is wrong (discard/redo it).
+       Resolve before sealing.
+     - **both-fail** → the suite is unsatisfiable as written; treat it as a gate
+       failure and loop the stderr back to `stz-test-author`.
+   - **Freeze.** Once green AND the cross-check is both-pass, `$STZ bridge seal
+     --root .` — this sha256-hashes every held-out file (suite + both references)
+     into `30-tests/held-out/SEAL.json`. The suite is now frozen; do not edit it
+     by hand. (`reference-b/` lives under held-out, so it is sealed too and never
+     specimen-visible.)
 
 3. **Plan (intent spec).** Write `.stz/40-slices/$1/intent.json` as
    `{ "claims": [ {"id":"c1","text":"…"}, {"id":"c2","text":"…"}, … ] }` — the

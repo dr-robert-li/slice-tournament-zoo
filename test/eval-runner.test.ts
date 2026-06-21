@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { runSealed, measureCoverage, measureMutation, fullEval } from "../src/eval-runner.js";
+import { runSealed, measureCoverage, measureMutation, fullEval, crossReference } from "../src/eval-runner.js";
 
 let dir: string;
 let sealed: string;
@@ -86,5 +86,44 @@ describe("F7/F11 real eval runner — genuinely executed metrics", () => {
     expect(e.testPassRate).toBe(1);
     expect(e.coverage).toBeGreaterThan(0);
     expect(e.mutationScore).toBe(0);
+  });
+});
+
+describe("cross-family reference check (0.5.0) — catches shared blind spots", () => {
+  it("both-pass when two independent correct references satisfy the suite", async () => {
+    const a = join(dir, "refA.mjs");
+    const b = join(dir, "refB.mjs");
+    // Same behaviour, independently written (ternary vs if/else) — both correct.
+    await writeFile(a, "export function g(x){ return x < 5 ? 0 : 1; }\n", "utf8");
+    await writeFile(b, "export function g(x){ if (x < 5) return 0; return 1; }\n", "utf8");
+    const r = crossReference(sealed, a, b);
+    expect(r.status).toBe("both-pass");
+    expect(r.bothPass).toBe(true);
+    expect(r.divergent).toBe(false);
+  });
+
+  it("divergent when the references disagree (the blind-spot signal)", async () => {
+    const a = join(dir, "refA.mjs");
+    const b = join(dir, "refB.mjs");
+    // A is correct; B keys the boundary one off (g(5) → 0, not 1). The suite
+    // asserts g(5)===1, so exactly one reference passes → real divergence.
+    await writeFile(a, "export function g(x){ return x < 5 ? 0 : 1; }\n", "utf8");
+    await writeFile(b, "export function g(x){ return x <= 5 ? 0 : 1; }\n", "utf8");
+    const r = crossReference(sealed, a, b);
+    expect(r.status).toBe("divergent");
+    expect(r.divergent).toBe(true);
+    expect(r.a.passRate).toBe(1);
+    expect(r.b.passRate).toBeLessThan(1);
+  });
+
+  it("both-fail when neither reference satisfies the suite (a gate failure, not a cross signal)", async () => {
+    const a = join(dir, "refA.mjs");
+    const b = join(dir, "refB.mjs");
+    await writeFile(a, "export function g(x){ return 0; }\n", "utf8");
+    await writeFile(b, "export function g(x){ return 1; }\n", "utf8");
+    const r = crossReference(sealed, a, b);
+    expect(r.status).toBe("both-fail");
+    expect(r.bothFail).toBe(true);
+    expect(r.bothPass).toBe(false);
   });
 });
