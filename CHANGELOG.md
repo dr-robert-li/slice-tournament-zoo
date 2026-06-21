@@ -6,6 +6,24 @@ and the project aims to follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.5.7]
+
+Fix npm README rendering. Relative links (`./docs/...`, `../docs/...`, `./LICENSE`)
+resolve against the npmjs.com package page, not the repo, so every doc/source link
+in `README.md` and `src/README.md` was broken on npm. Rewrote them to absolute
+`github.com/.../blob/main/...` URLs (anchor links left intact). Added `repository`,
+`homepage`, and `bugs` to `package.json` so the npm page links back to GitHub. No
+harness behaviour change.
+
+### Fixed
+
+- **npm doc links** — relative markdown links in `README.md` and `src/README.md`
+  now point at absolute GitHub URLs; they were dead on the npm registry page.
+
+### Changed
+
+- **`package.json`** — added `repository`, `homepage`, `bugs` metadata.
+
 ## [0.5.6]
 
 Documentation staleness sweep + the **first npm publish** (`npx stz init`, the F17

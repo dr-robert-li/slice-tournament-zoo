@@ -12,8 +12,8 @@
 </pre>
 
 [![CI](https://github.com/dr-robert-li/slice-tournament-zoo/actions/workflows/ci.yml/badge.svg)](https://github.com/dr-robert-li/slice-tournament-zoo/actions/workflows/ci.yml)
-[![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](./LICENSE)
-[![Node](https://img.shields.io/badge/node-%3E%3D20-brightgreen.svg)](./package.json)
+[![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://github.com/dr-robert-li/slice-tournament-zoo/blob/main/LICENSE)
+[![Node](https://img.shields.io/badge/node-%3E%3D20-brightgreen.svg)](https://github.com/dr-robert-li/slice-tournament-zoo/blob/main/package.json)
 
 </div>
 
@@ -87,7 +87,7 @@ needed (Node.js 20+ is the only requirement; the bundled copy fetches `tsx` via
 `npx` on first use, so that first call needs network).
 
 > Developing STZ itself, or running the engine without Claude Code? See
-> [`docs/development/local-and-testing.md`](./docs/development/local-and-testing.md).
+> [`docs/development/local-and-testing.md`](https://github.com/dr-robert-li/slice-tournament-zoo/blob/main/docs/development/local-and-testing.md).
 
 ## Use
 
@@ -174,7 +174,7 @@ stz bridge project-dark-factory --root . --on    # engage; --off to disengage
 The toggle only flips the `darkFactory` flag in the run config — it never resets
 your fan-out / models / strictness. `project-status` hoists the flag to the top
 level, so engaging it between phases takes effect immediately. See
-[`docs/development/dark-factory.md`](docs/development/dark-factory.md) for the full
+[`docs/development/dark-factory.md`](https://github.com/dr-robert-li/slice-tournament-zoo/blob/main/docs/development/dark-factory.md) for the full
 contract.
 
 The DAG ordering and per-slice seeding are backed by the deterministic
@@ -187,7 +187,7 @@ any slice runs. When `/stz:slice` seeds the DAG, each slice inherits those early
 phases as done, leaving only the tournament half for `/stz:run`. Project status
 is derived from each slice's own `state.json`, so an interrupted pipeline resumes
 by re-reading state. A worked run of the front phases (a `slugify` library) lives
-in [`examples/full-pipeline/`](./examples/full-pipeline).
+in [`examples/full-pipeline/`](https://github.com/dr-robert-li/slice-tournament-zoo/tree/main/examples/full-pipeline).
 
 ### Run a slice as a tournament (in Claude Code)
 
@@ -341,17 +341,17 @@ split above is the real in-session flow.
 For contributors and anyone going past day-to-day operation:
 
 - **Contributing** — setup, the architecture rule, the quality bar:
-  [`CONTRIBUTING.md`](./CONTRIBUTING.md).
-- **Source layout** — the `src/` module map: [`src/README.md`](./src/README.md).
+  [`CONTRIBUTING.md`](https://github.com/dr-robert-li/slice-tournament-zoo/blob/main/CONTRIBUTING.md).
+- **Source layout** — the `src/` module map: [`src/README.md`](https://github.com/dr-robert-li/slice-tournament-zoo/blob/main/src/README.md).
 - **Local development & testing** — run the engine without Claude Code, the mock
-  pipeline, CI checks: [`docs/development/local-and-testing.md`](./docs/development/local-and-testing.md).
+  pipeline, CI checks: [`docs/development/local-and-testing.md`](https://github.com/dr-robert-li/slice-tournament-zoo/blob/main/docs/development/local-and-testing.md).
 - **The bridge CLI** — the deterministic `stz bridge` subcommands:
-  [`docs/development/bridge-cli.md`](./docs/development/bridge-cli.md).
+  [`docs/development/bridge-cli.md`](https://github.com/dr-robert-li/slice-tournament-zoo/blob/main/docs/development/bridge-cli.md).
 - **Sealed-suite integrity** — the guide-vs-sensor contract behind the frozen
-  held-out suite: [`docs/development/sealed-suite.md`](./docs/development/sealed-suite.md).
-- **Requirement-to-test mapping** — [`docs/TESTPLAN.md`](./docs/TESTPLAN.md).
-- **What is real versus deferred** — [`docs/AS-BUILT.md`](./docs/AS-BUILT.md).
+  held-out suite: [`docs/development/sealed-suite.md`](https://github.com/dr-robert-li/slice-tournament-zoo/blob/main/docs/development/sealed-suite.md).
+- **Requirement-to-test mapping** — [`docs/TESTPLAN.md`](https://github.com/dr-robert-li/slice-tournament-zoo/blob/main/docs/TESTPLAN.md).
+- **What is real versus deferred** — [`docs/AS-BUILT.md`](https://github.com/dr-robert-li/slice-tournament-zoo/blob/main/docs/AS-BUILT.md).
 
 ## License
 
-[Apache-2.0](./LICENSE).
+[Apache-2.0](https://github.com/dr-robert-li/slice-tournament-zoo/blob/main/LICENSE).
