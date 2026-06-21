@@ -472,3 +472,146 @@ the cost of a single-round run. The `ConvergenceConfig` presets are calibrated
 to converge before hitting `maxRounds` on typical tasks; the `budget` cap in
 `SliceState` still applies and `round-promote` will hard-fail if the per-slice
 token ceiling is exhausted before convergence.
+
+#### Validation findings and hardening adjustments
+
+The 0.6.0 architecture was reviewed against GRPO theory, ICRL literature, and
+best-of-N sampling research prior to implementation. Three issues were confirmed
+and the architecture adjusted accordingly. The findings below are the permanent
+record of that validation; they are not aspirational — they are binding
+constraints on the implementation.
+
+**Finding 1 — The ICRL framing is correct; the GRPO analogy is structural only.**
+
+The loop is a valid instance of in-context reinforcement learning: the agent
+adapts by conditioning on accumulated context (pressure logs) rather than by
+updating weights. This matches the ICRL definition precisely. The GRPO analogy
+holds at the structural level (group sampling → group-relative reward → iterative
+improvement), but not at the optimization-mechanics level — there is no gradient
+step, no clipping ratio, and no PPO-style surrogate objective. The analogy is
+useful for intuition and for borrowing the convergence vocabulary; it must not be
+used to import GRPO's convergence *rate* guarantees, which depend on the gradient
+machinery. STZ's convergence is empirical, not provably monotone.
+
+Independent specimens each round (not single-lineage self-revision) is confirmed
+as the correct scaffolding. Iterative single-lineage self-correction without
+strong external anchoring is known to degrade; population-based iteration with a
+shared external reward is the pattern that scales.
+
+**Finding 2 — The convergence signal `convergenceRate = Δ_R / σ_{R-1}` has a
+known failure mode under quantized rewards and must be stabilised.**
+
+When rewards are quantized (discrete pass/fail test counts rather than continuous
+scores), `σ_{R-1}` can be near zero even when the group has not converged — all
+specimens in a round may happen to score identically on quantized buckets,
+driving σ toward 0 and inflating `convergenceRate` spuriously. This risks
+premature halt.
+
+**Adjustment:** The convergence signal is revised to use a windowed absolute
+delta rather than a σ-normalized ratio. The new primary convergence criterion is:
+
+```
+convergenceRate = Δ_R / (windowMeanDelta + ε)
+```
+
+where `windowMeanDelta` is the mean of `|Δ_R|` over the last `plateauRounds`
+rounds (minimum 1, to avoid cold-start). This preserves the "relative
+improvement" intuition while remaining stable when σ collapses. A floor of `ε =
+0.001` prevents division by zero regardless of reward distribution.
+
+The existing `groupStddev` field is retained in `RoundSnapshot` as a diversity
+signal (see Finding 3), but it is no longer the denominator of `convergenceRate`.
+
+The `ConvergenceConfig` interface is updated: `convergenceThreshold` now applies
+to the windowed-delta form and its default of `0.05` is calibrated for
+normalised reward in `[0, 1]`. Operators working with raw test counts should
+scale accordingly; a note is added to the Area F elicitation.
+
+**Finding 3 — Diversity collapse must be a hard guardrail, not an operator
+interpretation.**
+
+`groupStddev` collapsing toward zero is a signal that the pressure log is
+over-constraining the generation distribution — all specimens are converging to
+the same strategy. In the training analogy this is policy collapse; here it means
+the loop has lost its ability to explore. Treating it as an operator-tuning hint
+(as originally specified in the operator table above) is insufficient: an
+operator running dark-factory mode has no opportunity to observe it.
+
+**Adjustment:** A `diversityFloor` field is added to `ConvergenceConfig`:
+
+```typescript
+/** Minimum acceptable groupStddev. If groupStddev < diversityFloor for
+ *  plateauRounds consecutive rounds, round-promote emits a DIVERSITY_COLLAPSE
+ *  warning and sets feedPressureLog: false for the next round automatically.
+ *  Default: 0.02 (normalised reward scale). Set to 0 to disable. */
+diversityFloor: number;
+```
+
+When triggered, the automatic response is to suppress the pressure log for the
+next round (equivalent to `feedPressureLog: false` for that round only), forcing
+the specimens to generate from the contract alone. This breaks the echo-chamber
+dynamic without halting the loop. The event is recorded in `RoundSnapshot` as
+`diversityCollapseRecovery: boolean` and surfaced in `round-status` output.
+
+The operator table is updated to reflect that `groupStddev` collapse now triggers
+automatic intervention rather than a manual response.
+
+**Finding 4 — Regression handling must use retry semantics, not silent retention
+with possible halt.**
+
+The original spec blocks promotion on regression (`rewardDelta < 0`) and retains
+the prior winner. This is correct. However, a regressive round in a stochastic
+system may be a sampling artifact — a bad draw of N specimens — rather than
+evidence that the strategy space is exhausted. Silently retaining the prior
+winner and continuing to the next round with no signal is ambiguous; under
+`plateauRounds = 2`, two consecutive regressions could trigger premature
+convergence halt when the loop was merely unlucky.
+
+**Adjustment:** A regressive round triggers the existing **escalation state
+machine** (one retry, then replan, then halt) rather than silent retention. The
+retry re-draws N fresh specimens from the same round context (contract + same
+pressure logs) without incrementing `currentRound`. The replan path triggers a
+PDR refinement of the pressure log before the retry, on the same logic as the
+single-round escalation path. This means regression handling is consistent with
+the rest of the system's no-runaway-loops guarantee, and the escalation ceiling
+still applies.
+
+`round-promote` returns a structured verdict with `outcome: "REGRESSION"` (not
+`"FAIL"`) when `rewardDelta < 0`, so the orchestrator can distinguish a bad draw
+from a genuine failure. The halt path is reached only if retry and replan both
+fail to produce a non-regressive winner — at which point the loop genuinely
+cannot improve and the current winner is finalised.
+
+**Finding 5 — Pressure log context growth must be bounded.**
+
+Appending all prior pressure logs plus full winner code to every round's
+generation context grows O(R) in token count and introduces two risks: (a) the
+model's effective attention degrades on later rounds as earlier context is
+discarded or diluted, and (b) the cost model underestimates actual spend on
+deeper convergence runs.
+
+**Adjustment:** The pressure log passed to round-R specimens is not a raw
+concatenation of all prior logs. Instead, `round-promote` maintains a single
+**rolling strategy document** (`50-pressure/active-strategy.md`) that is updated
+(not appended) at each promotion: it contains the current winning approach, the
+top-K failure modes across all rounds to date, and the most recent round's
+specific lessons. Full per-round logs are archived to
+`50-pressure/rounds/round-R.md` for the audit trail but are not included in
+generation context after round R+1. This bounds the strategy context to a fixed
+size regardless of `maxRounds`, eliminates re-correction of already-resolved
+failure modes, and keeps the cost model accurate.
+
+The `RoundSnapshot` records `activeStrategyTokens: number` (the token count of
+the rolling document fed to that round) alongside the existing `tokenCost` field.
+
+**Consolidated operator table (updated)**
+
+| Signal | Interpretation | Response |
+|---|---|---|
+| `convergenceRate` drops fast (by round 2) | Shallow strategy space | Reduce `maxRounds`; save tokens |
+| `convergenceRate` stays high through round 4 | Rich strategy space | Increase `maxRounds` |
+| `groupStddev < diversityFloor` | Diversity collapse; auto-recovery triggered | `feedPressureLog` suppressed for next round automatically; operator notified via `round-status` |
+| `rewardDelta < 0` | Regression; sampling artifact or exhausted space | Escalation retry fired automatically; escalation ceiling applies |
+| `interfaceHashMatch: false` | Contract ambiguity exposed | Escalate to `/stz:slice` for re-planning; round not promoted |
+| `activeStrategyTokens` growing | Rolling doc not summarising correctly | Inspect `50-pressure/active-strategy.md`; reduce manually if needed |
+| Convergence halt before `maxRounds` | Loop converged early | Normal; prior winner retained as slice winner |
