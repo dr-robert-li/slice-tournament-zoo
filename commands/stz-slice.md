@@ -19,16 +19,20 @@ echo "using bridge: $STZ"
 # /stz:slice — slice disaggregation (phase 6)
 
 You are the STZ orchestrator. Read state first: `$STZ bridge project-status
---root .`. Require testing-conventions `done`; else point at `/stz:tests`.
+--root .`. Require testing-conventions `done`; else point at `/stz:tests`. Note
+`runConfig.granularity` from the same output — it tunes how finely to slice.
 
 This phase is collaborative: a subagent proposes the slice DAG, then you and the
 user shape it together before committing.
 
 ## Procedure
 
-1. **Spawn one `stz-slicer` subagent.** It reads all prior tiers and proposes a
-   DAG, writing `.stz/40-slices/proposed-dag.md` and a machine `slices.json`
-   (an array of full slice manifests with `dependsOn` and the per-slice subset of
+1. **Spawn one `stz-slicer` subagent** (model: `runConfig.models.planning`).
+   Pass it the `runConfig.granularity` from project-status: `coarse` → prefer
+   fewer, larger slices; `balanced` → the default; `fine` → prefer more, smaller
+   single-responsibility slices. It reads all prior tiers and proposes a DAG,
+   writing `.stz/40-slices/proposed-dag.md` and a machine `slices.json` (an array
+   of full slice manifests with `dependsOn` and the per-slice subset of
    done-predicates), returning the DAG and `## SLICE PROPOSAL COMPLETE`.
 
    ORCHESTRATOR RULE: spawn, then stop and wait for the marker.

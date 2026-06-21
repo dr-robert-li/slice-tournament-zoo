@@ -23,9 +23,10 @@ You are the STZ orchestrator. Read state first: `$STZ bridge project-status
 
 ## Procedure
 
-1. **Spawn one `stz-researcher` subagent.** It reads `.stz/00-intent/` and writes
-   external + internal findings into `.stz/10-research/`, returning a claim list
-   and `## RESEARCH COMPLETE`.
+1. **Spawn one `stz-researcher` subagent** (model: `runConfig.models.research`
+   from `project-status`). It reads `.stz/00-intent/` and writes external +
+   internal findings into `.stz/10-research/`, returning a claim list and
+   `## RESEARCH COMPLETE`.
 
    ORCHESTRATOR RULE: after you spawn the Agent, stop. Do not read files or do
    research yourself. Wait for the `## RESEARCH COMPLETE` marker, then continue.

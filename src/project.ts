@@ -16,11 +16,17 @@ import { existsSync } from "node:fs";
 import { join } from "node:path";
 import {
   PROJECT_PHASES,
+  STZ_ROLES,
   type ProjectPhase,
   type ProjectPhaseStatus,
   type ProjectState,
   type ProjectSliceEntry,
   type SliceRunStatus,
+  type RunConfig,
+  type SlicingGranularity,
+  type MutationPolicy,
+  type ConventionStrictness,
+  type StzRole,
 } from "./types.js";
 import { STZ_DIR } from "./taxonomy.js";
 import { loadState, stateExists, isComplete } from "./state.js";
@@ -182,4 +188,124 @@ export async function nextRunnable(
     return deps.every((d) => status.get(d) === "done");
   });
   return { order: topo.order, frontier, next: frontier[0] ?? null, topo };
+}
+
+// ── run configuration (0.3.0) ───────────────────────────────────────────────
+
+export function runConfigPath(root: string): string {
+  return join(root, STZ_DIR, "00-intent", "run-config.json");
+}
+
+export function runConfigExists(root: string): boolean {
+  return existsSync(runConfigPath(root));
+}
+
+/**
+ * Default run config — a balanced starting point used when the user never set
+ * one (every downstream consumer falls back to this, so the pipeline always has
+ * a complete config). Model values are spawn aliases so they drop straight into
+ * an Agent `model` override: a cheap model for high-volume research, the strong
+ * model for judging where quality matters most.
+ */
+export const DEFAULT_MODELS: Record<StzRole, string> = {
+  planning: "sonnet",
+  research: "haiku",
+  execution: "sonnet",
+  testing: "sonnet",
+  validation: "sonnet",
+  judging: "opus",
+};
+
+export function defaultRunConfig(): RunConfig {
+  return {
+    schemaVersion: 1,
+    granularity: "balanced",
+    fanout: 4,
+    models: { ...DEFAULT_MODELS },
+    strictness: {
+      coverageTarget: 0.9,
+      mutationPolicy: "standard",
+      conventions: "standard",
+    },
+  };
+}
+
+const GRANULARITIES: readonly SlicingGranularity[] = ["coarse", "balanced", "fine"];
+const MUTATION_POLICIES: readonly MutationPolicy[] = ["off", "lenient", "standard", "strict"];
+const CONVENTION_STRICTNESS: readonly ConventionStrictness[] = ["relaxed", "standard", "strict"];
+
+/** Lower bound on specimen fan-out — a tournament needs at least a pair. */
+export const FANOUT_MIN = 2;
+/** Upper bound on specimen fan-out — the published RTV+PDR optimum for the
+ *  cloud/CI profile (N3/F6). Workstation runs typically use far fewer. */
+export const FANOUT_MAX = 16;
+
+/**
+ * Merge a partial config over the defaults and validate. Enum fields are
+ * rejected if present-but-invalid (a typo must not silently fall back); fanout
+ * is clamped to [FANOUT_MIN, FANOUT_MAX] and coverageTarget to [0, 1]. Model
+ * values stay free-form (the get-shit-done "Other" pattern) — any string passes.
+ */
+export function normalizeRunConfig(partial: Partial<RunConfig> | undefined): RunConfig {
+  const base = defaultRunConfig();
+  const p = partial ?? {};
+
+  if (p.granularity !== undefined && !GRANULARITIES.includes(p.granularity)) {
+    throw new Error(`invalid granularity: ${p.granularity} (expected ${GRANULARITIES.join("|")})`);
+  }
+  const granularity = p.granularity ?? base.granularity;
+
+  let fanout = base.fanout;
+  if (p.fanout !== undefined) {
+    const n = Math.round(Number(p.fanout));
+    if (!Number.isFinite(n)) throw new Error(`invalid fanout: ${p.fanout}`);
+    fanout = Math.max(FANOUT_MIN, Math.min(FANOUT_MAX, n));
+  }
+
+  const models: Record<StzRole, string> = { ...base.models };
+  if (p.models) {
+    for (const role of STZ_ROLES) {
+      const v = p.models[role];
+      if (v !== undefined && String(v).trim() !== "") models[role] = String(v).trim();
+    }
+  }
+
+  const s: Partial<RunConfig["strictness"]> = p.strictness ?? {};
+  if (s.mutationPolicy !== undefined && !MUTATION_POLICIES.includes(s.mutationPolicy)) {
+    throw new Error(`invalid mutationPolicy: ${s.mutationPolicy} (expected ${MUTATION_POLICIES.join("|")})`);
+  }
+  if (s.conventions !== undefined && !CONVENTION_STRICTNESS.includes(s.conventions)) {
+    throw new Error(`invalid conventions strictness: ${s.conventions} (expected ${CONVENTION_STRICTNESS.join("|")})`);
+  }
+  let coverageTarget = base.strictness.coverageTarget;
+  if (s.coverageTarget !== undefined) {
+    const c = Number(s.coverageTarget);
+    if (!Number.isFinite(c)) throw new Error(`invalid coverageTarget: ${s.coverageTarget}`);
+    coverageTarget = Math.max(0, Math.min(1, c));
+  }
+
+  return {
+    schemaVersion: 1,
+    granularity,
+    fanout,
+    models,
+    strictness: {
+      coverageTarget,
+      mutationPolicy: s.mutationPolicy ?? base.strictness.mutationPolicy,
+      conventions: s.conventions ?? base.strictness.conventions,
+    },
+  };
+}
+
+export async function saveRunConfig(root: string, config: RunConfig): Promise<void> {
+  const p = runConfigPath(root);
+  await mkdir(join(p, ".."), { recursive: true });
+  await writeFile(p, JSON.stringify(config, null, 2) + "\n", "utf8");
+}
+
+/** Load the persisted run config, or the default if none was ever set. */
+export async function loadRunConfig(root: string): Promise<RunConfig> {
+  if (!runConfigExists(root)) return defaultRunConfig();
+  const raw = JSON.parse(await readFile(runConfigPath(root), "utf8")) as Partial<RunConfig>;
+  return normalizeRunConfig(raw);
 }

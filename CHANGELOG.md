@@ -6,30 +6,42 @@ and the project aims to follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
-### Planned (0.3.0)
+## [0.3.0]
 
-Version bumped to 0.3.0 to open this feature cycle. Scope, not yet implemented:
-
-- **Batched elicitation.** `/stz:new` asks grouped questions per area (multi-
-  question AskUserQuestion calls) instead of one at a time, cutting round-trips.
-- **Run-configuration choices during elicitation.** Let the user set, up front:
-  - **Slicing granularity** — how finely `/stz:slice` breaks the work into slices.
-  - **Specimen fan-out** — the number of specimens N each slice's tournament runs.
-  - **Model combination per role** — which model handles planning, research,
-    execution, testing, validation, judging. Offer a few suggested combinations
-    with a one-line rationale each (for example a cheap model for research and a
-    stronger one for judging), and let the user type their own combination, the
-    same way answer options already accept free-form "Other" input (the
-    get-shit-done pattern).
-  - **Strictness** — the bar for conventions and testing (coverage target,
-    mutation policy, lint/convention strictness).
-- **Persisted run config consumed downstream.** Store the choices as project
-  config and apply them: granularity to the slicer, fan-out to `/stz:run`'s N,
-  the model map to the per-role subagents, and strictness to `/stz:standards` and
-  `/stz:tests`.
+### Added
+- **Batched elicitation.** `/stz:new` now asks grouped questions per area
+  (multi-question AskUserQuestion calls, up to 4 per call) instead of one at a
+  time, cutting round-trips. Area D (done-conditions) stays sequential — the
+  predicate kind, then the exact expression — because that drill-down depends on
+  the previous answer.
+- **Run-configuration choices during elicitation.** A new area E in `/stz:new`
+  captures, up front:
+  - **Slicing granularity** (`coarse` / `balanced` / `fine`) — how finely
+    `/stz:slice` breaks the work into slices.
+  - **Specimen fan-out** (N, clamped to 2–16, the published RTV+PDR cloud
+    optimum) — the number of specimens each slice's tournament runs.
+  - **Model combination per role** — planning, research, execution, testing,
+    validation, judging. Offered as suggested combos (Balanced / Thrifty / Max
+    quality) each with a one-line rationale, plus free-form "Other" — any spawn
+    alias (`opus`/`sonnet`/`haiku`/`fable`) or model id, the get-shit-done
+    pattern. Model values are never validated, so a custom id always passes.
+  - **Strictness** (`relaxed` / `standard` / `strict`) — the bar for conventions
+    and testing, expanded to a coverage target, mutation policy, and convention
+    strictness.
+- **Persisted run config, consumed downstream.** The choices are stored as
+  `.stz/00-intent/run-config.json` (plus a readable `run-config.md`) via the new
+  `stz bridge project-set-config` command, validated and clamped by
+  `normalizeRunConfig`. `project-status` now carries the resolved `runConfig`
+  (defaults when unset) so every downstream command reads it in one call:
+  granularity → `/stz:slice`, fan-out → `/stz:run`'s N, the model map → each
+  per-role subagent's `model` override, and strictness → `/stz:standards` and
+  `/stz:tests`. A read-only `stz bridge project-config` is also exposed.
 
 ### Changed
 - Moved `JOURNAL.md` to `docs/JOURNAL.md` and ran a light humanizing pass over it.
+- `package.json`, plugin, and marketplace versions are at 0.3.0 (the bump opened
+  this cycle; plugin/marketplace manifests are unchanged — no new commands were
+  registered).
 
 ## [0.2.2]
 

@@ -19,11 +19,15 @@ echo "using bridge: $STZ"
 # /stz:standards — standards & conventions (phase 4)
 
 You are the STZ orchestrator. Read state first: `$STZ bridge project-status
---root .`. Require ground-truth `done`; else point at `/stz:validate`.
+--root .`. Require ground-truth `done`; else point at `/stz:validate`. Note
+`runConfig.strictness.conventions` from the same output — it sets the bar.
 
 ## Procedure
 
-1. **Spawn one `stz-conventions` subagent.** It scans the codebase and
+1. **Spawn one `stz-conventions` subagent** (model: `runConfig.models.execution`).
+   Pass it `runConfig.strictness.conventions`: `relaxed` → minimal, only the
+   load-bearing conventions; `standard` → the default; `strict` → an exacting,
+   fully-specified style/architecture/naming bar. It scans the codebase and
    `.stz/10-research/`, then writes `.stz/20-standards/conventions.md` plus any
    `architecture-decisions/NNN-*.md`, returning a summary and
    `## CONVENTIONS COMPLETE`.

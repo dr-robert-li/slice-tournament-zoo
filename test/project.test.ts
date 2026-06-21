@@ -5,7 +5,8 @@ import { join } from "node:path";
 import { runBridge } from "../src/bridge.js";
 import { STZ_DIR } from "../src/taxonomy.js";
 import { freshState, saveState, setPhaseStatus } from "../src/state.js";
-import { PHASES } from "../src/types.js";
+import { PHASES, type RunConfig } from "../src/types.js";
+import { normalizeRunConfig, defaultRunConfig, loadRunConfig } from "../src/project.js";
 
 let root: string;
 let captured: string;
@@ -191,5 +192,120 @@ describe("project driver — multi-slice DAG (deterministic layer)", () => {
     const report = await readFile(join(root, STZ_DIR, "90-audit/completion-report.md"), "utf8");
     expect(report).toMatch(/slice-01/);
     expect(report).toMatch(/Completion: 1 done/);
+  });
+});
+
+async function setConfig(partial: Partial<RunConfig>): Promise<void> {
+  const p = join(root, "config.json");
+  await writeFile(p, JSON.stringify(partial), "utf8");
+  captured = "";
+  await runBridge(["project-set-config", "--root", root, "--config", p]);
+}
+
+describe("run configuration — 0.3.0 elicitation choices, consumed downstream", () => {
+  it("normalizeRunConfig fills every field from a sparse partial", () => {
+    const c = normalizeRunConfig({ fanout: 6 });
+    const d = defaultRunConfig();
+    expect(c.fanout).toBe(6);
+    expect(c.granularity).toBe(d.granularity);
+    expect(c.models).toEqual(d.models);
+    expect(c.strictness).toEqual(d.strictness);
+  });
+
+  it("clamps fanout to [2, 16] and coverageTarget to [0, 1]", () => {
+    expect(normalizeRunConfig({ fanout: 99 }).fanout).toBe(16);
+    expect(normalizeRunConfig({ fanout: 1 }).fanout).toBe(2);
+    expect(normalizeRunConfig({ fanout: 3.6 }).fanout).toBe(4); // rounded then in-range
+    expect(normalizeRunConfig({ strictness: { coverageTarget: 2 } as RunConfig["strictness"] }).strictness.coverageTarget).toBe(1);
+    expect(normalizeRunConfig({ strictness: { coverageTarget: -1 } as RunConfig["strictness"] }).strictness.coverageTarget).toBe(0);
+  });
+
+  it("rejects invalid enum values (a typo must not silently default)", () => {
+    expect(() => normalizeRunConfig({ granularity: "huge" as RunConfig["granularity"] })).toThrow(/granularity/);
+    expect(() => normalizeRunConfig({ strictness: { mutationPolicy: "max" } as unknown as RunConfig["strictness"] })).toThrow(/mutationPolicy/);
+    expect(() => normalizeRunConfig({ strictness: { conventions: "loose" } as unknown as RunConfig["strictness"] })).toThrow(/conventions/);
+  });
+
+  it("keeps model values free-form (the get-shit-done Other pattern)", () => {
+    const c = normalizeRunConfig({ models: { judging: "my-custom-model-id" } as RunConfig["models"] });
+    expect(c.models.judging).toBe("my-custom-model-id");
+    expect(c.models.research).toBe(defaultRunConfig().models.research); // untouched roles keep defaults
+  });
+
+  it("project-status carries default run config before any is set", async () => {
+    await initProject();
+    const s = await status<{ runConfig: RunConfig; runConfigSet: boolean }>();
+    expect(s.runConfigSet).toBe(false);
+    expect(s.runConfig).toEqual(defaultRunConfig());
+  });
+
+  it("set-config → status round-trip exposes every downstream-consumed field", async () => {
+    await initProject();
+    await setConfig({
+      granularity: "fine",
+      fanout: 5,
+      models: { judging: "opus", research: "haiku", execution: "sonnet" } as RunConfig["models"],
+      strictness: { coverageTarget: 0.95, mutationPolicy: "strict", conventions: "strict" },
+    });
+    const resolved = lastJSON<RunConfig>();
+    expect(resolved.fanout).toBe(5);
+
+    const s = await status<{ runConfig: RunConfig; runConfigSet: boolean }>();
+    expect(s.runConfigSet).toBe(true);
+    // granularity → /stz:slice
+    expect(s.runConfig.granularity).toBe("fine");
+    // fanout → /stz:run N
+    expect(typeof s.runConfig.fanout).toBe("number");
+    expect(s.runConfig.fanout).toBe(5);
+    // models → per-role subagents
+    expect(s.runConfig.models.judging).toBe("opus");
+    expect(s.runConfig.models.research).toBe("haiku");
+    expect(s.runConfig.models.testing).toBe(defaultRunConfig().models.testing); // unspecified role defaulted
+    // strictness → /stz:standards + /stz:tests
+    expect(s.runConfig.strictness.coverageTarget).toBe(0.95);
+    expect(s.runConfig.strictness.mutationPolicy).toBe("strict");
+    expect(s.runConfig.strictness.conventions).toBe("strict");
+
+    // persisted to disk and reloadable
+    const onDisk = await loadRunConfig(root);
+    expect(onDisk).toEqual(resolved);
+    const md = await readFile(join(root, STZ_DIR, "00-intent/run-config.md"), "utf8");
+    expect(md).toMatch(/fine/);
+    expect(md).toMatch(/fan-out \(N\):\*\* 5/);
+  });
+
+  it("project-config reads back the persisted config (defaults flagged)", async () => {
+    await initProject();
+    captured = "";
+    await runBridge(["project-config", "--root", root]);
+    expect(lastJSON<{ isDefault: boolean }>().isDefault).toBe(true);
+    await setConfig({ fanout: 7 });
+    captured = "";
+    await runBridge(["project-config", "--root", root]);
+    const c = lastJSON<RunConfig & { isDefault: boolean }>();
+    expect(c.isDefault).toBe(false);
+    expect(c.fanout).toBe(7);
+  });
+
+  it("project-status survives a corrupt run-config.json (falls back to defaults)", async () => {
+    await initProject();
+    await setConfig({ fanout: 5 });
+    // hand-corrupt the persisted config with an invalid enum
+    await writeFile(join(root, STZ_DIR, "00-intent/run-config.json"), JSON.stringify({ granularity: "BROKEN" }), "utf8");
+    const s = await status<{ runConfig: RunConfig; runConfigSet: boolean; runConfigBroken?: boolean }>();
+    expect(s.runConfigBroken).toBe(true);
+    expect(s.runConfigSet).toBe(false);
+    expect(s.runConfig).toEqual(defaultRunConfig()); // status still works
+  });
+
+  it("set-config rejects an invalid enum and exits non-zero", async () => {
+    await initProject();
+    const code = process.exitCode;
+    const p = join(root, "bad.json");
+    await writeFile(p, JSON.stringify({ granularity: "nope" }), "utf8");
+    captured = "";
+    await runBridge(["project-set-config", "--root", root, "--config", p]);
+    expect(process.exitCode).toBe(1);
+    process.exitCode = code;
   });
 });

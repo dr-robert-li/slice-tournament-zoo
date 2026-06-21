@@ -36,7 +36,11 @@ If no project state exists, initialize one. Write a minimal manifest JSON
 
 - Headers ≤12 chars. 2–4 options per question. Always include a "You decide" or
   "Let me explain" option.
-- Ask ONE focused question at a time; each answer shapes the next.
+- **Batch questions per area.** AskUserQuestion takes up to 4 questions in one
+  call — ask a whole area as ONE grouped AUQ call (≤4 questions) instead of one
+  at a time, to cut round-trips. The one exception is area D (done-conditions),
+  which is inherently sequential: ask the predicate *kind* first, then the exact
+  expression conditioned on that kind.
 - If the user picks "Other" and types freeform, reply in plain text and WAIT for
   their next message. Do NOT immediately fire another AUQ.
 - Options should be concrete and, where relevant, carry context (e.g. an option
@@ -44,18 +48,19 @@ If no project state exists, initialize one. Write a minimal manifest JSON
 
 ## The area loop
 
-Work through these areas in order. Announce each area in one plain line, then ask
-~4 questions, then a continuation checkpoint.
+Work through these areas in order. Announce each area in one plain line, then
+fire ONE grouped AUQ (≤4 questions) for the area, then a continuation checkpoint.
 
 - **(A) Problem & intent** — what breaks today, who feels it, what "better" means.
 - **(B) Users & usage** — who runs this, how often, in what environment.
 - **(C) Constraints** — performance, dependencies, platform, deadlines, things
   that are off the table.
-- **(D) Done-conditions** — this is the one that cannot be skipped. Drive every
-  success criterion to a machine-checkable predicate. For each: ask its kind
-  (`Sealed test passes` / `Metric threshold` / `Schema/shape match` / `You write
-  it`) then ask for the exact expression (offer concrete templates like
-  `p95_latency_ms < 200`, `coverage >= 0.9`, `returns [] on empty input`).
+- **(D) Done-conditions** — this is the one that cannot be skipped, and the one
+  area kept sequential. Drive every success criterion to a machine-checkable
+  predicate. For each: ask its kind (`Sealed test passes` / `Metric threshold` /
+  `Schema/shape match` / `You write it`) then ask for the exact expression (offer
+  concrete templates like `p95_latency_ms < 200`, `coverage >= 0.9`, `returns []
+  on empty input`).
 
 After each area, checkpoint with AUQ: header `Continue`, question "More on
 <area>, or next? Remaining: <list>", options `[Next area, More on <area>, Skip
@@ -66,6 +71,46 @@ remaining, You decide]`. Record the resolved area:
 After the last area, run the gray-areas loop: header `Gaps?`, question "Which
 gray areas remain?", options built from anything still fuzzy plus "Nothing —
 proceed". Loop until the user proceeds.
+
+## Run configuration (area E — sets how the rest of the pipeline runs)
+
+Before the predicate gate, capture the run config the downstream commands
+consume. Fire ONE grouped AUQ (≤4 questions) covering granularity, fan-out, and
+strictness, then a second focused AUQ for the model combination. Every choice has
+a sensible default — the user may "You decide" any of them.
+
+- **Slicing granularity** (header `Slicing`) — how finely `/stz:slice` breaks the
+  work: `[coarse, balanced, fine, You decide]`. → `granularity`.
+- **Specimen fan-out** (header `Fan-out`) — how many specimens N each slice's
+  tournament runs: `[3, 4, 6, You decide]` (clamped to 2–16; 4 is the workstation
+  default, up to 16 for cloud/CI). → `fanout`.
+- **Strictness** (header `Strictness`) — the conventions/testing bar:
+  `[relaxed, standard, strict, You decide]`. Map the pick to `strictness`:
+  relaxed → `{coverageTarget:0.7, mutationPolicy:lenient, conventions:relaxed}`,
+  standard → `{0.9, standard, standard}`, strict → `{0.95, strict, strict}`. If
+  the user wants finer control, ask for coverage target / mutation policy
+  (`off|lenient|standard|strict`) / conventions (`relaxed|standard|strict`)
+  individually in plain text.
+- **Model combination per role** (header `Models`) — which model handles each of
+  planning, research, execution, testing, validation, judging. Offer a few
+  suggested combos as options, each with a one-line rationale, plus free-form
+  "Other" (the get-shit-done pattern — the user can type any combo or model id):
+  - **Balanced** (default) — `research=haiku` (cheap, high-volume), everything
+    else `sonnet`, `judging=opus` (strong where the verdict matters).
+  - **Thrifty** — `haiku` for research + execution, `sonnet` for the rest.
+  - **Max quality** — `opus` for judging + planning + testing, `sonnet` for the
+    rest.
+  - **Other** — let the user type a per-role map or override single roles.
+
+  Use spawn aliases (`opus` / `sonnet` / `haiku` / `fable`) so the values drop
+  straight into an Agent `model` override; a free-form model id is also accepted.
+
+Assemble a config file `{granularity, fanout, models:{planning,research,
+execution,testing,validation,judging}, strictness:{coverageTarget,mutationPolicy,
+conventions}}` (omit any field to keep its default) and persist it:
+`$STZ bridge project-set-config --root . --config <that file>`. Echo back the
+resolved config the command prints (fan-out may have been clamped). With
+`--auto`, default the whole config and skip the questions.
 
 ## Exit (mandatory predicate gate, F2)
 
@@ -83,6 +128,7 @@ Then show the user the captured intent and the predicates, and hand off:
 ## --auto
 
 With `--auto` (optionally `@idea-doc`), ask only the questions whose answers are
-genuinely ambiguous, default the rest, but STILL confirm at least one
-done-predicate with the user (never auto-invent acceptance), then chain to
-`/stz:research --auto`.
+genuinely ambiguous, default the rest (including the whole run config — call
+`project-set-config` with an empty `{}` to persist the defaults), but STILL
+confirm at least one done-predicate with the user (never auto-invent acceptance),
+then chain to `/stz:research --auto`.

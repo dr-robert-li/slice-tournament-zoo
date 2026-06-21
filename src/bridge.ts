@@ -32,6 +32,7 @@ import type {
   ProjectManifest,
   ProjectPhase,
   ProjectSliceEntry,
+  RunConfig,
 } from "./types.js";
 import { PROJECT_PHASES } from "./types.js";
 import { scaffold, writeDoc, readDoc, stzPath } from "./taxonomy.js";
@@ -46,6 +47,11 @@ import {
   topoOrder,
   deriveSliceStatus,
   nextRunnable,
+  normalizeRunConfig,
+  saveRunConfig,
+  loadRunConfig,
+  runConfigExists,
+  defaultRunConfig,
 } from "./project.js";
 import { detectHacks } from "./hack-detector.js";
 import { evalGate, select, pairings } from "./selection.js";
@@ -457,6 +463,51 @@ async function sliceAddInternal(root: string, entry: ProjectSliceEntry): Promise
   await saveProjectState(root, state);
 }
 
+/**
+ * project-set-config: persist the run configuration captured during `/stz:new`.
+ * Reads a (possibly partial) config JSON, merges it over the defaults, validates
+ * and clamps, then writes run-config.json + a human-readable run-config.md and
+ * appends an event. Prints the resolved config.
+ */
+async function projectSetConfig(args: Record<string, string>): Promise<void> {
+  const root = args.root!;
+  const partial = readJSON<Partial<RunConfig>>(args.config!);
+  let config: RunConfig;
+  try {
+    config = normalizeRunConfig(partial);
+  } catch (e) {
+    process.stderr.write(`${(e as Error).message}\n`);
+    process.exitCode = 1;
+    return;
+  }
+  await saveRunConfig(root, config);
+  const m = config.models;
+  await writeDoc(root, join("00-intent", "run-config.md"), {
+    frontmatter: {
+      summary: `Run config: ${config.granularity} slicing, N=${config.fanout}, coverage≥${config.strictness.coverageTarget}, mutation ${config.strictness.mutationPolicy}, conventions ${config.strictness.conventions}.`,
+    },
+    body:
+      `# Run configuration\n\n` +
+      `- **Slicing granularity:** ${config.granularity}\n` +
+      `- **Specimen fan-out (N):** ${config.fanout}\n` +
+      `- **Strictness:** coverage ≥ ${config.strictness.coverageTarget}, mutation ${config.strictness.mutationPolicy}, conventions ${config.strictness.conventions}\n\n` +
+      `## Models per role\n\n| role | model |\n|---|---|\n` +
+      `| planning | ${m.planning} |\n| research | ${m.research} |\n| execution | ${m.execution} |\n` +
+      `| testing | ${m.testing} |\n| validation | ${m.validation} |\n| judging | ${m.judging} |\n`,
+  });
+  const state = await loadProjectState(root);
+  appendProjectEvent(state, "elicitation", "run-config-set", `N=${config.fanout}, ${config.granularity}, cov≥${config.strictness.coverageTarget}`);
+  await saveProjectState(root, state);
+  print(config);
+}
+
+/** project-config: READ-ONLY — print the run config (defaults if unset). */
+async function projectConfig(args: Record<string, string>): Promise<void> {
+  const root = args.root!;
+  const config = await loadRunConfig(root);
+  print({ ...config, isDefault: !runConfigExists(root) });
+}
+
 /** project-status: READ-ONLY DAG + phase status + next runnable slice. */
 async function projectStatus(args: Record<string, string>): Promise<void> {
   const root = args.root!;
@@ -473,6 +524,16 @@ async function projectStatus(args: Record<string, string>): Promise<void> {
   for (const id of topo.order) sliceStatus[id] = await deriveSliceStatus(root, id);
   const runnable = await nextRunnable(slices, (id) => deriveSliceStatus(root, id));
   const slicingDone = state.phaseStatus["slice-disaggregation"] === "done";
+  // A corrupt/hand-edited run-config.json must not brick status (and thus every
+  // command's first call). Fall back to defaults rather than throwing.
+  let runConfig;
+  let runConfigBroken = false;
+  try {
+    runConfig = await loadRunConfig(root);
+  } catch {
+    runConfig = defaultRunConfig();
+    runConfigBroken = true;
+  }
   print({
     projectPhases: state.phaseStatus,
     order: topo.order,
@@ -480,6 +541,9 @@ async function projectStatus(args: Record<string, string>): Promise<void> {
     frontier: slicingDone ? runnable.frontier : [],
     next: slicingDone ? runnable.next : null,
     blocked: !slicingDone,
+    runConfig,
+    runConfigSet: runConfigExists(root) && !runConfigBroken,
+    runConfigBroken: runConfigBroken || undefined,
     note: slicingDone ? undefined : "slice execution gated until /stz:slice completes slice-disaggregation",
   });
 }
@@ -538,6 +602,8 @@ export async function runBridge(argv: string[]): Promise<void> {
     case "project-phase": await projectPhase(args); break;
     case "project-write-intent": await projectWriteIntent(args); break;
     case "project-record-area": await projectRecordArea(args); break;
+    case "project-set-config": await projectSetConfig(args); break;
+    case "project-config": await projectConfig(args); break;
     case "slice-add": await sliceAdd(args); break;
     case "project-seed-slices": await projectSeedSlices(args); break;
     case "project-status": await projectStatus(args); break;

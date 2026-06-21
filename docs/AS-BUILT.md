@@ -50,6 +50,7 @@ decision (JSON in, JSON out, over the `.stz/` tree). On top of the spine:
   topological ordering, and per-slice status derived from each slice's own state;
 - the bridge subcommands for both a single slice (begin, eval, gate,
   record-votes, select, finalize) and the project (project-init, project-phase,
+  project-write-intent, project-record-area, project-set-config, project-config,
   slice-add, project-seed-slices, project-status, summary);
 - the full command surface: `/stz:new`, `/stz:research`, `/stz:validate`,
   `/stz:standards`, `/stz:tests`, `/stz:slice`, `/stz:summary`, `/stz:pipeline`,
@@ -63,7 +64,7 @@ decision (JSON in, JSON out, over the `.stz/` tree). On top of the spine:
 drives the whole pipeline against a deterministic fake model. It is a testing
 aid, not the production path, and the production spine does not depend on it.
 
-**Quality gates.** 84 deterministic tests plus a typecheck, run in CI on Node 20
+**Quality gates.** 93 deterministic tests plus a typecheck, run in CI on Node 20
 and 22.
 
 ## Resultant features
@@ -86,6 +87,14 @@ and 22.
   with elicitation Q&A, approval gates, a DAG co-design step, a dashboard, and
   `--auto` chaining. The front phases were run live end to end for a `slugify`
   project (`examples/full-pipeline/`).
+- **A run config set once and obeyed everywhere (0.3.0).** `/stz:new` batches its
+  questions per area and captures slicing granularity, specimen fan-out N (2–16),
+  a per-role model map (planning/research/execution/testing/validation/judging,
+  with suggested combos plus free-form "Other"), and a strictness bar
+  (coverage/mutation/conventions). It persists as `00-intent/run-config.json` via
+  `stz bridge project-set-config` (validated, clamped, defaults for anything
+  unset) and rides on every `project-status` read, so the slicer, `/stz:run`'s N,
+  each subagent's `model`, and `/stz:standards` + `/stz:tests` all consume it.
 - **Installs as a plugin.** The commands resolve the bundled bridge with no PATH
   setup.
 
@@ -121,5 +130,6 @@ and 22.
   sealing, the `dist/` build, and cross-round escalation from the command.
 - **Built beyond the original plan:** the `stz bridge` JSON contract, a
   dependency-free real eval runner (V8 coverage plus source mutation), the
-  two-level project DAG driver, the deterministic mock harness, the two worked
-  example runs, and the CI pipeline.
+  two-level project DAG driver, the persisted run config (granularity, fan-out,
+  per-role model map, strictness) consumed across the pipeline, the deterministic
+  mock harness, the two worked example runs, and the CI pipeline.

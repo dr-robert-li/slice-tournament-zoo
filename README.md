@@ -58,7 +58,7 @@ This puts `stz` on your `PATH` (`stz`, `stz init`, `stz run`, `stz bridge …`)
 and bundles its `tsx` runtime, so it works offline after install. Requires
 Node.js 20+. Run `stz` with no arguments to see the banner and commands.
 
-### As a Claude Code plugin (the real harness)
+### As a Claude Code plugin
 
 From inside Claude Code, add the marketplace and install the plugin:
 
@@ -88,7 +88,7 @@ If you only want the deterministic engine and the mock pipeline:
 git clone https://github.com/dr-robert-li/slice-tournament-zoo
 cd slice-tournament-zoo
 npm install
-npm test            # 84 deterministic tests
+npm test            # 93 deterministic tests
 npm run typecheck
 ```
 
@@ -109,7 +109,7 @@ This writes the tiered `.stz/` tree (`00-intent` through `90-audit`) and an
 completion report, one command per phase (a get-shit-done-style UX):
 
 ```text
-/stz:new        elicit intent + machine-checkable done-predicates (interactive Q&A)
+/stz:new        elicit intent + done-predicates + run config (batched Q&A)
 /stz:research   external (docs, prior art) + internal (codebase) research
 /stz:validate   ground-truth: verify each claim against reality, not recall
 /stz:standards  style, architecture, naming conventions
@@ -119,9 +119,28 @@ completion report, one command per phase (a get-shit-done-style UX):
 /stz:summary    aggregate every document into one completion report
 ```
 
-`/stz:pipeline` is a dashboard: it shows project-phase and per-slice status, then
-dispatches the recommended next step (and can run independent slices in
-parallel).
+`/stz:pipeline` is a dashboard: it shows project-phase and per-slice status (plus
+the run config), then dispatches the recommended next step (and can run
+independent slices in parallel).
+
+#### Run configuration (set once, applied everywhere)
+
+`/stz:new` batches its questions per area and, at the end, captures a **run
+config** the rest of the pipeline obeys — stored in `.stz/00-intent/run-config.json`
+and surfaced by `stz bridge project-status` so every later command reads it in one
+call:
+
+| Choice | Set in `/stz:new` | Consumed by |
+|---|---|---|
+| **Slicing granularity** (`coarse`/`balanced`/`fine`) | area E | `/stz:slice` |
+| **Specimen fan-out** (N, 2–16) | area E | `/stz:run` (the number of specimens) |
+| **Model per role** (planning, research, execution, testing, validation, judging) | area E | each phase's subagent `model` |
+| **Strictness** (coverage target, mutation policy, conventions) | area E | `/stz:standards`, `/stz:tests` |
+
+Model choices follow the get-shit-done "Other" pattern: pick a suggested combo
+(Balanced / Thrifty / Max quality) or type your own spawn alias
+(`opus`/`sonnet`/`haiku`/`fable`) or model id. Anything unset falls back to a
+balanced default, so the pipeline always has a complete config.
 
 `--auto` means different things by scope, so keep the mental model straight:
 
@@ -196,6 +215,11 @@ stz bridge gate         --root . --slice slice-01
 stz bridge record-votes --root . --slice slice-01 --votes votes.json
 stz bridge select       --root . --slice slice-01
 stz bridge finalize     --root . --slice slice-01 --intent intent.json --asbuilt asbuilt.json
+
+# project-level driver (multi-slice)
+stz bridge project-set-config --root . --config run-config.json  # persist run config (validated, clamped)
+stz bridge project-config     --root .                           # read it back (defaults if unset)
+stz bridge project-status     --root .                           # DAG + phase status + runConfig
 ```
 
 Each subcommand prints one JSON object and writes its artifacts under `.stz/`.

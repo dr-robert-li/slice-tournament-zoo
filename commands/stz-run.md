@@ -40,19 +40,29 @@ on prose-only acceptance (F2).
 
 ## Procedure
 
+0. **Read the run config.** `$STZ bridge project-status --root .` and read its
+   `runConfig`: `fanout` is N for step 4, and `models` is the per-role model map
+   — pass `model: models.testing` to the `stz-test-author` spawn,
+   `model: models.execution` to each `stz-specimen`, and `model: models.judging`
+   to each `stz-judge`. If there is no project (a bare single-slice run), fall
+   back to N=4 and the agents' own default models. (Each role's value is a spawn
+   alias like `opus`/`sonnet`/`haiku`, or a free-form model id.)
+
 1. **Begin.** `$STZ bridge begin --root . --manifest .stz/40-slices/$1/manifest.json`.
    Note `votesPerPair` and the prototype dir root from the JSON.
 
-2. **Author the sealed suite (frozen).** Spawn ONE `stz-test-author` subagent.
-   It writes the held-out tests to `.stz/30-tests/held-out/` and returns the
-   path + a one-line summary. Implementers never see its contents.
+2. **Author the sealed suite (frozen).** Spawn ONE `stz-test-author` subagent
+   (model: `runConfig.models.testing`). It writes the held-out tests to
+   `.stz/30-tests/held-out/` and returns the path + a one-line summary.
+   Implementers never see its contents.
 
 3. **Plan (intent spec).** Write `.stz/40-slices/$1/intent.json` as
    `{ "claims": [ ... ] }` — the behavioural claims the slice should satisfy
    (leave *how* open; that is the specimens' job, R5).
 
 4. **Spawn N specimens IN PARALLEL.** In a SINGLE message, emit N `stz-specimen`
-   Agent calls (default N=4). Give each a DISTINCT strategy label
+   Agent calls — N is `runConfig.fanout` from step 0 (default 4), each with
+   `model: runConfig.models.execution`. Give each a DISTINCT strategy label
    (iterator-based, stream-based, batch-based, recursive) so the group is
    diverse. Each specimen writes only into its own
    `prototypes/specimen-<id>/` directory and returns a path + summary, NOT file
@@ -74,7 +84,8 @@ on prose-only acceptance (F2).
    `eliminated`, and the `pairings` schedule.
 
 7. **Judge (pairwise).** For each pair in `pairings`, spawn `stz-judge`
-   subagents — `votesPerPair` votes per pair (you MAY lower this for a cheap
+   subagents (model: `runConfig.models.judging`) — `votesPerPair` votes per pair
+   (you MAY lower this for a cheap
    acceptance run; say so). Judges are frozen, see the sealed suite, and return
    only a winner id. Collect all votes into a `votes.json` array of
    `{a,b,winner}` and `$STZ bridge record-votes --root . --slice $1 --votes

@@ -35,6 +35,9 @@ Run `$STZ bridge project-status --root .` and show:
   shows its rollup; for finer detail, note its per-slice `state.json`.
 - The `next` runnable slice and the `frontier` (slices whose deps are all done —
   these can run in parallel).
+- **Run config** (one line) from `runConfig`: granularity, fan-out N, strictness
+  (coverage/mutation/conventions), and the per-role model map. Flag whether it is
+  user-set (`runConfigSet`) or still the defaults.
 
 If `project-status` returns `{error:"cycle"}` or `{error:"dangling"}`, surface it
 plainly and stop — the DAG must be fixed in `/stz:slice` first.

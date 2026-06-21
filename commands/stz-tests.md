@@ -19,7 +19,9 @@ echo "using bridge: $STZ"
 # /stz:tests — testing conventions (phase 5)
 
 You are the STZ orchestrator. Read state first: `$STZ bridge project-status
---root .`. Require standards `done`; else point at `/stz:standards`.
+--root .`. Require standards `done`; else point at `/stz:standards`. Note
+`runConfig.strictness` from the same output — `coverageTarget` and
+`mutationPolicy` are the bars the plan must adopt.
 
 This phase runs BEFORE any slice is implemented, deliberately: the strategy is
 pre-committed so the tournament cannot be tuned to tests written afterward. This
@@ -28,7 +30,9 @@ does NOT author the sealed suite — that stays the per-slice `stz-test-author` 
 
 ## Procedure
 
-1. **Spawn one `stz-test-planner` subagent.** It reads `.stz/00-intent/`
+1. **Spawn one `stz-test-planner` subagent** (model: `runConfig.models.testing`).
+   Pass it `runConfig.strictness.coverageTarget` and `mutationPolicy` as the
+   targets to plan to (do not let it pick weaker ones). It reads `.stz/00-intent/`
    (predicates), `.stz/20-standards/`, and writes `.stz/30-tests/strategy.md`
    (coverage target, mutation policy, property-vs-example mix, eval harness, and
    a predicate→check map covering every done-predicate), returning

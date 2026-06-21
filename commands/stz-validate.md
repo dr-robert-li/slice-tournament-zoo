@@ -23,9 +23,10 @@ You are the STZ orchestrator. Read state first: `$STZ bridge project-status
 
 ## Procedure
 
-1. **Spawn one `stz-validator` subagent** on the research claims. It verifies each
-   against reality and writes `.stz/10-research/validation.md` with a per-claim
-   verdict (confirmed / refuted / unverifiable + evidence), returning the
+1. **Spawn one `stz-validator` subagent** (model: `runConfig.models.validation`
+   from `project-status`) on the research claims. It verifies each against
+   reality and writes `.stz/10-research/validation.md` with a per-claim verdict
+   (confirmed / refuted / unverifiable + evidence), returning the
    refuted/unverifiable list and `## VALIDATION COMPLETE`.
 
    ORCHESTRATOR RULE: spawn, then stop and wait for the marker.

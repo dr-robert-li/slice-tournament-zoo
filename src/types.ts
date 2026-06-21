@@ -241,3 +241,53 @@ export interface ProjectState {
   sliceStatus: Record<string, SliceRunStatus>;
   events: ProjectStateEvent[];
 }
+
+// ── Run configuration (0.3.0 — captured during elicitation, consumed
+//    downstream) ─────────────────────────────────────────────────────────────
+
+/** How finely `/stz:slice` breaks the work into vertical slices. */
+export type SlicingGranularity = "coarse" | "balanced" | "fine";
+
+/** Mutation-testing bar for `/stz:tests`. */
+export type MutationPolicy = "off" | "lenient" | "standard" | "strict";
+
+/** Conventions/lint bar for `/stz:standards`. */
+export type ConventionStrictness = "relaxed" | "standard" | "strict";
+
+/** The per-role subagents whose model can be chosen up front. */
+export const STZ_ROLES = [
+  "planning",
+  "research",
+  "execution",
+  "testing",
+  "validation",
+  "judging",
+] as const;
+export type StzRole = (typeof STZ_ROLES)[number];
+
+/** Strictness bar applied to standards and testing conventions. */
+export interface StrictnessConfig {
+  /** Coverage target in [0, 1] — `/stz:tests` strategy + per-slice eval. */
+  coverageTarget: number;
+  mutationPolicy: MutationPolicy;
+  conventions: ConventionStrictness;
+}
+
+/**
+ * 00-intent/run-config.json — the run configuration the user sets during
+ * `/stz:new`, applied downstream: `granularity` → `/stz:slice`, `fanout` → the
+ * specimen count N in `/stz:run`, `models` → the per-role subagent model
+ * overrides, `strictness` → `/stz:standards` and `/stz:tests`.
+ *
+ * `models` values are FREE-FORM strings (the get-shit-done "Other" pattern):
+ * the suggested combos use spawn aliases (`opus`/`sonnet`/`haiku`/`fable`) so
+ * they drop straight into an Agent `model` override, but any string is allowed.
+ */
+export interface RunConfig {
+  schemaVersion: 1;
+  granularity: SlicingGranularity;
+  /** Specimens per tournament (N). Clamped to [2, 8]. */
+  fanout: number;
+  models: Record<StzRole, string>;
+  strictness: StrictnessConfig;
+}
