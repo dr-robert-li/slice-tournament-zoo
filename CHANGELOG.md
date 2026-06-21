@@ -6,6 +6,17 @@ and the project aims to follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.5.5]
+
+First **npm publish** (`npx stz init`, the F17 distribution path). No harness
+behaviour change — this packages what 0.5.4 already shipped.
+
+### Changed
+- npm packaging readiness: dropped a stale `template` entry from `files` (no such
+  dir, unused by the CLI) and added a `prepublishOnly: typecheck && test` guard so
+  a broken build cannot be published. Verified the packed tarball installs clean
+  and `stz init` / `stz bridge` run end to end from the installed bin.
+
 ## [0.5.4]
 
 A tabulated `/stz:pipeline` dashboard — at-a-glance progress instead of ad-hoc,
