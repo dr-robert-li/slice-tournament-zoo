@@ -73,11 +73,12 @@ From inside Claude Code, add the marketplace and install the plugin:
 ```
 
 This registers the project commands (`/stz:new`, `/stz:research`, `/stz:validate`,
-`/stz:standards`, `/stz:tests`, `/stz:slice`, `/stz:summary`, `/stz:pipeline`) and
-`/stz:run`, the subagents (the per-slice specimen, judge, test-author, documenter
-plus the project-level researcher, validator, conventions, test-planner, slicer,
-summarizer), and a SessionStart hook that announces STZ when a project contains a
-`.stz/` tree. Restart the session (or reload) so the definitions load.
+`/stz:standards`, `/stz:tests`, `/stz:slice`, `/stz:summary`, `/stz:pipeline`,
+`/stz:merge`) and `/stz:run`, the subagents (the per-slice specimen, judge,
+test-author, cross-reference, documenter plus the project-level researcher,
+validator, conventions, test-planner, slicer, summarizer), and a SessionStart hook
+that announces STZ when a project contains a `.stz/` tree. Restart the session (or
+reload) so the definitions load.
 
 The plugin calls a bundled `stz bridge` CLI for every deterministic decision. If
 you installed the npm CLI above, the commands use that `stz` directly. Otherwise

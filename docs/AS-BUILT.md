@@ -48,24 +48,28 @@ decision (JSON in, JSON out, over the `.stz/` tree). On top of the spine:
 
 - the project DAG driver (`src/project.ts`): manifest, project state,
   topological ordering, and per-slice status derived from each slice's own state;
-- the bridge subcommands for both a single slice (begin, eval, gate,
-  record-votes, select, finalize) and the project (project-init, project-phase,
-  project-write-intent, project-record-area, project-set-config, project-config,
-  slice-add, project-seed-slices, project-status, summary);
+- the bridge subcommands for a single slice (begin, eval, gate, record-votes,
+  select, finalize), the sealed-suite integrity set (seal, seal-verify,
+  seal-crosscheck, seal-amend), the cross-slice merge integrity set
+  (merge-validate, merge-compat-propose/approve/retire/list), and the project
+  (project-init, project-phase, project-write-intent, project-record-area,
+  project-set-config, project-dark-factory, project-config, slice-add,
+  project-seed-slices, project-status, summary);
 - the full command surface: `/stz:new`, `/stz:research`, `/stz:validate`,
-  `/stz:standards`, `/stz:tests`, `/stz:slice`, `/stz:summary`, `/stz:pipeline`,
-  and `/stz:run`;
-- ten subagents: the per-slice specimen, judge, test-author, documenter and the
-  project-level researcher, validator, conventions, test-planner, slicer,
-  summarizer;
-- packaging as a Claude Code plugin with a SessionStart hook.
+  `/stz:standards`, `/stz:tests`, `/stz:slice`, `/stz:merge`, `/stz:summary`,
+  `/stz:pipeline`, and `/stz:run`;
+- eleven subagents: the per-slice specimen, judge, test-author,
+  cross-reference, documenter and the project-level researcher, validator,
+  conventions, test-planner, slicer, summarizer;
+- packaging as a Claude Code plugin with a SessionStart hook, and an npm CLI
+  (`npx stz init` / `stz bridge …`).
 
 **Mock testing harness (`src/mock/`).** A self-contained, no-network demo that
 drives the whole pipeline against a deterministic fake model. It is a testing
 aid, not the production path, and the production spine does not depend on it.
 
-**Quality gates.** 93 deterministic tests plus a typecheck, run in CI on Node 20
-and 22.
+**Quality gates.** 131 deterministic tests plus a typecheck, run in CI on Node 20
+and 22, with a `prepublishOnly` (typecheck + test) guard before any npm publish.
 
 ## Resultant features
 
@@ -95,13 +99,37 @@ and 22.
   `stz bridge project-set-config` (validated, clamped, defaults for anything
   unset) and rides on every `project-status` read, so the slicer, `/stz:run`'s N,
   each subagent's `model`, and `/stz:standards` + `/stz:tests` all consume it.
-- **Installs as a plugin.** The commands resolve the bundled bridge with no PATH
-  setup.
+- **Dark-factory mode (0.4.0).** An opt-in fully autonomous run: once the F2
+  predicate gate is satisfied, the orchestrator drives every phase → per-slice
+  tournament → summary with no human in the loop, skipping the downstream approval
+  gates. A dedicated `project-dark-factory` toggle (load-modify-save, never resets
+  the rest of the config) flips it at any point; `project-status` hoists the flag.
+- **Cross-family reference (0.5.0).** A second, independently-authored reference
+  (different family/model) is run against the same sealed suite before sealing, to
+  catch blind spots the single test-author reference shares with the suite.
+  `seal-crosscheck` reports both-pass / divergent / both-fail and blocks on
+  anything but both-pass; divergence is a guide-class signal for human
+  adjudication, never an auto-rewrite.
+- **Cross-slice merge integrity (0.5.2).** When slice winners are assembled, an
+  earlier slice's sealed suite can legitimately fail because a later slice
+  supersedes one of its invariants. `merge-validate` adjudicates *reported* suite
+  results against an audited, signature-pinned compat manifest (propose ≠ approve;
+  transitional debt retired by a `seal-amend`) instead of the orchestrator
+  hand-waving the distinction.
+- **Tabulated pipeline dashboard (0.5.4).** `project-status` emits a computed
+  `progress` rollup and dashboard-ready slice rows (winner/faithful), so
+  `/stz:pipeline` renders the same fixed phases/slices tables every tick rather
+  than ad-hoc prose.
+- **Installs as a plugin, and ships on npm.** The commands resolve the bundled
+  bridge with no PATH setup; the CLI is also published to npm (`npx stz init`).
 
 ## Gaps
 
-- **Cross-family specimens** (OpenAI / Codex) are not wired; the seam accepts any
-  subagent, but only Claude Code subagents are connected.
+- **Cross-family *specimens and judge*** (OpenAI / Codex / Gemini) are not wired;
+  the seam accepts any subagent, but only Claude Code subagents are connected.
+  (Distinct from the **cross-family *reference*** for the sealed suite, which *is*
+  built — see 0.5.0 above: the second reference can be authored by a different
+  family today.)
 - **Python eval drivers** (Hypothesis, mutmut, Stryker) are not used. Coverage and
   mutation are executed in JavaScript via V8 and source mutators.
 - **Per-specimen git worktrees and observability stacks** are not built; distinct
@@ -126,11 +154,15 @@ and 22.
 - **Delivered as intended:** the deterministic spine, the in-session adversarial
   tournament, the full project pipeline with sealed tests and layered
   anti-reward-hacking, the replayable audit trail, and an installable plugin.
-- **Deferred and documented (not missing by accident):** cross-family specimens,
-  Python eval libraries, worktrees and observability, cross-slice RAG, OS-level
-  sealing, the `dist/` build, and cross-round escalation from the command.
+- **Deferred and documented (not missing by accident):** cross-family specimens
+  and judge, Python eval libraries, worktrees and observability, cross-slice RAG,
+  OS-level sealing, the `dist/` build, and cross-round escalation from the command.
 - **Built beyond the original plan:** the `stz bridge` JSON contract, a
   dependency-free real eval runner (V8 coverage plus source mutation), the
   two-level project DAG driver, the persisted run config (granularity, fan-out,
-  per-role model map, strictness) consumed across the pipeline, the deterministic
-  mock harness, the two worked example runs, and the CI pipeline.
+  per-role model map, strictness) consumed across the pipeline, dark-factory mode
+  (autonomous end-to-end), the cross-family reference + `seal-crosscheck` against
+  the sealed suite, cross-slice merge integrity (`merge-validate` + the audited
+  supersession-compat manifest), the tabulated pipeline dashboard, the
+  deterministic mock harness, the two worked example runs, the CI pipeline, and
+  the npm CLI distribution.

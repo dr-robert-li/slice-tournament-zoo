@@ -6,7 +6,7 @@ deterministic spine is tested for real; the LLM layer is tested at the
 interface-contract + mock-e2e level (it is explicitly *not* a live-tournament
 result — see `AS-BUILT.md`).
 
-Run: `npm test` (66 tests) and `npm run typecheck`.
+Run: `npm test` (131 tests) and `npm run typecheck`.
 
 ## Requirement → test map
 
@@ -42,6 +42,11 @@ Run: `npm test` (66 tests) and `npm run typecheck`.
 | Plugin packaging | `.claude-plugin/{plugin,marketplace}.json` | JSON validity asserted; install/restart cycle not run (see AS-BUILT) |
 | SessionStart activation | `hooks/` | hook script executed, emits context when `.stz/` present |
 | Human winner gate | `commands/stz-run.md` step 8b | command-level (AskUserQuestion) |
+| Run config + dark-factory toggle (0.3.0 / 0.4.0) | `src/project.ts`, `src/bridge.ts` | `project.test.ts` — set-config round-trip, clamp/validate, load-modify-save toggle preserves sibling fields |
+| Sealed-suite integrity: seal / verify / amend (0.3.3) | `src/seal.ts` | `seal.test.ts` — drift detection, audited amend, stable manifest |
+| Cross-family reference: `seal-crosscheck` (0.5.0) | `src/eval-runner.ts`, `src/bridge.ts` | `eval-runner.test.ts` (both-pass/divergent/both-fail on a real boundary pair); `bridge.test.ts` exit codes + audit doc |
+| Cross-slice merge integrity: `merge-validate` (0.5.2) | `src/merge.ts`, `src/bridge.ts` | `merge.test.ts` — four verdict buckets on the slice-03/slice-05 fixture + propose→approve→retire lifecycle with exit codes |
+| Tabulated pipeline dashboard (0.5.4) | `src/bridge.ts` `project-status` | `project.test.ts` — computed `progress` totals + enriched slice rows (winner/faithful) |
 
 ## Manual / CLI acceptance
 

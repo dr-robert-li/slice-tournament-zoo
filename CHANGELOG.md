@@ -6,16 +6,34 @@ and the project aims to follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
-## [0.5.5]
+## [0.5.6]
 
-First **npm publish** (`npx stz init`, the F17 distribution path). No harness
-behaviour change — this packages what 0.5.4 already shipped.
+Documentation staleness sweep + the **first npm publish** (`npx stz init`, the F17
+distribution path). No harness behaviour change.
 
 ### Changed
-- npm packaging readiness: dropped a stale `template` entry from `files` (no such
-  dir, unused by the CLI) and added a `prepublishOnly: typecheck && test` guard so
-  a broken build cannot be published. Verified the packed tarball installs clean
-  and `stz init` / `stz bridge` run end to end from the installed bin.
+- **Docs brought current with the 0.4–0.5 feature set.** `AS-BUILT.md` had drifted
+  to ~0.3.0: corrected the subagent count (ten → eleven, adding `stz-cross-reference`),
+  the command surface (added `/stz:merge`), the bridge subcommand list (added the
+  seal-integrity set, `project-dark-factory`, and the merge-integrity set), the
+  test count (93 → 131), and added the four shipped features it was missing
+  (dark-factory, cross-family reference, cross-slice merge integrity, the tabulated
+  dashboard) plus the npm CLI; clarified that the cross-family *reference* is built
+  while cross-family *specimens/judge* remain deferred. `README.md` command and
+  subagent lists gained `/stz:merge` and `stz-cross-reference`. `TESTPLAN.md`
+  test count corrected (66 → 131) with rows added for the run-config/dark-factory,
+  sealed-suite, cross-family, merge-integrity, and dashboard suites.
+
+## [0.5.5]
+
+npm packaging readiness (rolled into the 0.5.6 publish). No harness behaviour
+change.
+
+### Changed
+- Dropped a stale `template` entry from `files` (no such dir, unused by the CLI)
+  and added a `prepublishOnly: typecheck && test` guard so a broken build cannot
+  be published. Verified the packed tarball installs clean and `stz init` /
+  `stz bridge` run end to end from the installed bin.
 
 ## [0.5.4]
 
