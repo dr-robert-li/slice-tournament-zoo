@@ -128,13 +128,19 @@ and 22, with a `prepublishOnly` (typecheck + test) guard before any npm publish.
   than ad-hoc prose.
 - **Installs as a plugin, and ships on npm.** The commands resolve the bundled
   bridge with no PATH setup; the CLI is also published to npm (`npx stz init`).
-- **Update pathway (F19).** `stz --version`, `stz update [--check]` (npm
+- **Update pathway (0.6.0 / F19).** `stz --version`, `stz update [--check]` (npm
   staleness; prints commands, never self-installs; also reports CLI-vs-plugin
   drift when a plugin manifest is reachable via `CLAUDE_PLUGIN_ROOT` or a repo
   checkout), `stz migrate` (additive, backed-up `.stz/` schema upgrade), and `stz
   bridge version`. Every `.stz/` tree carries a versioned `manifest.json`; a
   single `src/version.ts` seam sources the version from `package.json` and a test
   guards against the three version manifests drifting apart.
+- **Real escalation path wired (0.7.0).** `stz bridge escalate` is the
+  deterministic owner of bounded cross-round failure handling. `/stz:run` calls it
+  on a no-passers gate; it advances the retry→replan→halt FSM over `state.json`,
+  writes the PDR refinement the next round consumes, and on halt writes
+  `failure-report.md`. The escalation loop now lives in the real command path, not
+  only the mock.
 
 ## Not yet built (current gaps)
 
@@ -175,8 +181,9 @@ and 22, with a `prepublishOnly` (typecheck + test) guard before any npm publish.
   the sealed suite, cross-slice merge integrity (`merge-validate` + the audited
   supersession-compat manifest), the tabulated pipeline dashboard, the
   deterministic mock harness, the two worked example runs, the CI pipeline, the
-  npm CLI distribution, and the sustainable update/migrate pathway (`stz update`,
-  `stz migrate`, versioned `.stz/manifest.json`).
+  npm CLI distribution, the sustainable update/migrate pathway (`stz update`,
+  `stz migrate`, versioned `.stz/manifest.json`), and real escalation wired into
+  the command path (`stz bridge escalate`).
 
 ## Planned (roadmap)
 
@@ -229,7 +236,7 @@ ephemeral observability**, a prebuilt **`dist/`** to drop the runtime `tsx`
 dependency, **OS-level sealing** of the held-out suite, Python eval drivers, and
 cross-slice RAG/embeddings.
 
-### Multi-round convergence: iterative selection-pressure → design-feedback loop (0.6.0)
+### Multi-round convergence: iterative selection-pressure → design-feedback loop (0.8.0)
 
 #### Background and framing
 
@@ -239,7 +246,7 @@ promoted. This is structurally equivalent to **best-of-N sampling** — a
 well-understood strategy whose ceiling is bounded by the strategy space
 accessible in a single generation pass.
 
-The planned 0.6.0 architecture introduces a **multi-round convergence loop**:
+The planned 0.8.0 architecture introduces a **multi-round convergence loop**:
 after each round's winner is selected, a natural-language *pressure log*
 summarising why losers failed is injected into the next round's generation
 context. New specimens are generated independently (preserving diversity), but
@@ -248,7 +255,7 @@ loop runs until a convergence criterion is met or `maxRounds` is exhausted.
 
 This is the **in-context analogue of GRPO** applied to software engineering:
 
-| GRPO (training) | STZ 0.6.0 (SDLC) |
+| GRPO (training) | STZ 0.8.0 (SDLC) |
 |---|---|
 | Group of completions sampled from policy π | Round of N specimens generated from contract |
 | Reward signal per completion | Sealed suite score per specimen |
@@ -475,7 +482,7 @@ token ceiling is exhausted before convergence.
 
 #### Validation findings and hardening adjustments
 
-The 0.6.0 architecture was reviewed against GRPO theory, ICRL literature, and
+The 0.8.0 architecture was reviewed against GRPO theory, ICRL literature, and
 best-of-N sampling research prior to implementation. Three issues were confirmed
 and the architecture adjusted accordingly. The findings below are the permanent
 record of that validation; they are not aspirational — they are binding
