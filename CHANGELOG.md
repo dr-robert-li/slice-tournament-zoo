@@ -6,6 +6,26 @@ and the project aims to follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.3.2]
+
+### Fixed
+- **Completed slices now read `done`, so the pipeline advances and resumes
+  correctly.** Two bugs left a finished slice stuck as `running` forever, which
+  made `/stz:pipeline` never move past it — and re-derive it as unfinished (and
+  re-run the tournament) after any session restart:
+  - `begin` called `freshState`, **clobbering** the four early phases that
+    `project-seed-slices` had marked done at the project level — so a pipeline
+    slice could never become `isComplete`. `begin` now loads and preserves an
+    existing per-slice state, only seeding fresh for a standalone `/stz:run`.
+  - `finalize` marked only `judgment` done, leaving `test-authoring` and
+    `tournament` pending. It now marks the whole tournament half done
+    (idempotent, with journaled `phase-done` events), so the slice is complete.
+  Together these remove the per-slice manual `state.json` reconciliation the
+  orchestrator had to do every slice. (Note: a *session restart* — the "Welcome
+  back" banner from context exhaustion or a crash — is a Claude Code behaviour
+  STZ cannot prevent; this fix makes such a restart resume cleanly instead of
+  redoing finished work.)
+
 ## [0.3.1]
 
 ### Fixed

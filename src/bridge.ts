@@ -36,7 +36,7 @@ import type {
 } from "./types.js";
 import { PROJECT_PHASES } from "./types.js";
 import { scaffold, writeDoc, readDoc, stzPath } from "./taxonomy.js";
-import { freshState, saveState, loadState, setPhaseStatus, appendEvent } from "./state.js";
+import { freshState, saveState, loadState, stateExists, setPhaseStatus, appendEvent } from "./state.js";
 import {
   freshProjectState,
   saveProjectState,
@@ -140,7 +140,13 @@ async function begin(args: Record<string, string>): Promise<void> {
       manifest.donePredicates.map((d) => `- \`${d.expr}\` (${d.kind})`).join("\n") +
       "\n",
   });
-  const state = freshState(manifest.id, manifest.complexity);
+  // Preserve a project-seeded state if one exists: `project-seed-slices` already
+  // marked the four early phases done at the project level. A fresh `freshState`
+  // here would clobber that back to pending, so the slice could never read
+  // complete (the pipeline "reset"). Only seed fresh for a standalone /stz:run.
+  let state = stateExists(root, manifest.id)
+    ? await loadState(root, manifest.id)
+    : freshState(manifest.id, manifest.complexity);
   await saveState(root, setPhaseStatus(state, "planning", "done"));
   print({
     sliceId: manifest.id,
@@ -308,8 +314,19 @@ async function finalize(args: Record<string, string>): Promise<void> {
     body: renderSpecDiff(slice, sdiff),
   });
 
+  // finalize is the tournament-half completion barrier: by the time it runs the
+  // sealed suite was authored, the plan written, the tournament run, and the
+  // winner judged. Mark every tournament-half phase done (idempotent — `begin`
+  // already set planning; skip phases already done so events aren't duplicated)
+  // so the slice is `isComplete` and `project-status` derives it as "done".
+  // Without this, test-authoring/tournament stay "pending" forever, the slice
+  // reads "running", and `/stz:pipeline` never advances past it (or re-runs it on
+  // resume) — the orchestrator had to hand-patch state.json every slice.
   let state = await loadState(root, slice);
-  state = setPhaseStatus(state, "judgment", "done");
+  for (const p of ["test-authoring", "planning", "tournament", "judgment"] as const) {
+    if (state.phaseStatus[p] !== "done") state = setPhaseStatus(state, p, "done");
+  }
+  state.currentPhase = "judgment";
   await saveState(root, state);
   await writeDoc(root, join("90-audit", "journal.md"), {
     frontmatter: { summary: `Event journal for ${slice}: ${state.events.length} events.` },

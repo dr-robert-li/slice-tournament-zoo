@@ -4,7 +4,9 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { runBridge } from "../src/bridge.js";
 import { STZ_DIR } from "../src/taxonomy.js";
-import type { SliceManifest } from "../src/types.js";
+import { freshState, loadState, saveState, setPhaseStatus, isComplete } from "../src/state.js";
+import { deriveSliceStatus } from "../src/project.js";
+import { PHASES, type SliceManifest } from "../src/types.js";
 
 let root: string;
 let captured: string;
@@ -129,5 +131,58 @@ describe("in-session bridge — the deterministic half the /stz:run command call
     expect(pressure).toMatch(/test-skip/);
     const specdiff = await readFile(join(root, STZ_DIR, "40-slices/slice-01/spec-diff.md"), "utf8");
     expect(specdiff).toMatch(/Planned but missing \(0\)/);
+
+    // finalize marks the WHOLE tournament half done — not just judgment — so the
+    // slice can read complete instead of "running" forever (the state.json reset
+    // bug: without this the pipeline never advances and re-runs it on resume).
+    const state = await loadState(root, "slice-01");
+    for (const p of ["test-authoring", "planning", "tournament", "judgment"] as const) {
+      expect(state.phaseStatus[p]).toBe("done");
+    }
+    // every phase-done is journaled (no silent state edits), test-authoring incl.
+    expect(state.events.some((e) => e.kind === "phase-done" && e.detail.includes("test-authoring"))).toBe(true);
+
+    // In the pipeline path the early phases are pre-seeded done by
+    // project-seed-slices; simulate that and confirm the slice then reads
+    // complete and derives "done" (so the frontier advances / resume is stable).
+    let seeded = state;
+    for (const p of ["elicitation", "research", "ground-truth-validation", "standards"] as const) {
+      seeded = setPhaseStatus(seeded, p, "done");
+    }
+    await saveState(root, seeded);
+    for (const p of PHASES) expect(seeded.phaseStatus[p]).toBe("done");
+    expect(isComplete(seeded)).toBe(true);
+    expect(await deriveSliceStatus(root, "slice-01")).toBe("done");
+  });
+
+  it("begin preserves a project-seeded state instead of clobbering it", async () => {
+    // Simulate project-seed-slices: the four early phases settled at the project
+    // level, persisted before /stz:run calls begin.
+    let seeded = freshState("slice-01", manifest.complexity);
+    for (const p of ["elicitation", "research", "ground-truth-validation", "standards"] as const) {
+      seeded = setPhaseStatus(seeded, p, "done");
+    }
+    await saveState(root, seeded);
+
+    const manifestPath = join(root, "m.json");
+    await writeFile(manifestPath, JSON.stringify(manifest), "utf8");
+    await runBridge(["begin", "--root", root, "--manifest", manifestPath]);
+
+    // begin must NOT reset the seeded early phases (the bug that made a slice
+    // unable to ever read complete → the pipeline "reset").
+    const state = await loadState(root, "slice-01");
+    for (const p of ["elicitation", "research", "ground-truth-validation", "standards"] as const) {
+      expect(state.phaseStatus[p]).toBe("done");
+    }
+    expect(state.phaseStatus.planning).toBe("done"); // begin still marks planning
+  });
+
+  it("a standalone begin (no seeded state) starts the early phases fresh", async () => {
+    const manifestPath = join(root, "m.json");
+    await writeFile(manifestPath, JSON.stringify(manifest), "utf8");
+    await runBridge(["begin", "--root", root, "--manifest", manifestPath]);
+    const state = await loadState(root, "slice-01");
+    expect(state.phaseStatus.elicitation).toBe("pending");
+    expect(state.phaseStatus.planning).toBe("done");
   });
 });
