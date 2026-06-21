@@ -82,10 +82,18 @@ The model layer is no longer only a mock. STZ runs inside a Claude Code session:
 - **L1/L2 enforcement** via git read-only attributes + pre-commit hook — the
   sealed suite is written to `30-tests/held-out/` and only the judge is told to
   read it, but OS-level read-only attribution is not applied.
-- **Plugin install, end to end**: the manifests are valid and the layout is
-  conventional, but a full `/plugin install` + restart cycle was not executed
-  from the build session. Custom agent defs load at session start, so the live
-  acceptance run spawned general-purpose agents carrying the same prompts inline.
+- **Plugin install**: now installs. The manifest declares only the fields the
+  validator accepts (`commands/`, `agents/`, `hooks/hooks.json` auto-discover);
+  the earlier `agents: Invalid input` failure came from declaring those as path
+  strings. Commands no longer assume a global `stz` on `PATH` (a plugin install
+  is not an npm install and creates no `bin` symlink) — each resolves the bundled
+  bridge via a linked `stz`, then `${CLAUDE_PLUGIN_ROOT}/bin/stz.mjs`, then a
+  plugin-cache glob. Remaining caveat: the bundled bridge runs the TS CLI through
+  `tsx` fetched by `npx` on first use, so a fresh environment needs Node 20+ and
+  network for that first call. Shipping a prebuilt `dist/` to drop the runtime
+  `tsx` dependency is a hardening follow-up. Custom agent defs still load at
+  session start, so the build-session acceptance runs spawned general-purpose
+  agents carrying the same prompts inline.
 - **Bounded escalation in `/stz:run`**: a single command invocation halts on
   no-passers; the retry → replan → halt loop lives in the mock orchestrator and
   is not yet driven by the command across rounds.
