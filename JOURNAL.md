@@ -1,8 +1,8 @@
-# STZ build journal — Robert Li
+# STZ build journal (Robert Li)
 
 A working log. I write it as I go, so it is messy on purpose. Expectations first, then what actually happened, then what I got wrong.
 
-## Entry 0 — framing the next push (2026-06-21)
+## Entry 0: framing the next push (2026-06-21)
 
 The kernel is done and green. 67 tests, the deterministic spine holds, the mock pipeline runs a full slice end to end. Good. But a tested engine is not a harness anyone can use, and I keep saying that to myself so I do not get comfortable. GSD, BMAD, superpowers: people install them and type a command and real agents go to work. Mine imports a TypeScript module and talks to a fake model. That gap is the whole job now.
 
@@ -30,7 +30,7 @@ What I expect to go wrong: the boundary between "what the command does" and "wha
 
 Next: read the research result, get a second opinion on scope, then start step 1 with its elicitation phase.
 
-## Entry 1 — step 1 and 2, and a tournament that actually ran (2026-06-21)
+## Entry 1: step 1 and 2, and a tournament that actually ran (2026-06-21)
 
 I am writing this right after the part I was most worried about worked. So let me get the facts down before I round them off into something tidier than they were.
 
@@ -59,7 +59,7 @@ And GRPO advantage came out flat, all zeros. That one is on me, not the math. I 
 
 So steps 1 and 2 are real and proven, not just authored. The thing I set as the bar, one executed in-session tournament with parallel subagents and a materialized audit trail and a planted cheater getting caught, happened. Three to go: packaging so it installs, the human gates and the session hook, and the eval runner that makes coverage and mutation real. Those are lighter than what I just did. I will run each through the STZ phases in spirit and keep writing this down.
 
-## Entry 2 — steps 3, 4, 5, and a mutation bug worth keeping (2026-06-21)
+## Entry 2: steps 3, 4, 5, and a mutation bug worth keeping (2026-06-21)
 
 Three steps in one sitting. They were lighter than the tournament, as expected, but step 5 had a sting in the tail that I am glad I caught.
 
