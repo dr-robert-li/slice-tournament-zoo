@@ -12,14 +12,14 @@
   },
   "files": [
     "src",
-    "bin",
-    "template"
+    "bin"
   ],
   "scripts": {
     "stz": "tsx src/cli.ts",
     "test": "vitest run",
     "test:watch": "vitest",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "npm run typecheck && npm test"
   },
   "engines": {
     "node": ">=20"
