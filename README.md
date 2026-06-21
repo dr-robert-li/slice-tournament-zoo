@@ -1,4 +1,8 @@
-# slice-tournament-zoo (STZ)
+# Slice Tournament Zoo (STZ)
+
+[![CI](https://github.com/dr-robert-li/slice-tournament-zoo/actions/workflows/ci.yml/badge.svg)](https://github.com/dr-robert-li/slice-tournament-zoo/actions/workflows/ci.yml)
+[![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](./LICENSE)
+[![Node](https://img.shields.io/badge/node-%3E%3D20-brightgreen.svg)](./package.json)
 
 > An agentic-coding harness for "software-engineering dark factories with
 > auditable outputs." Each slice is one interface contract plus its
@@ -73,7 +77,7 @@ If you only want the deterministic engine and the mock pipeline:
 git clone https://github.com/dr-robert-li/slice-tournament-zoo
 cd slice-tournament-zoo
 npm install
-npm test            # 75 deterministic tests
+npm test            # 84 deterministic tests
 npm run typecheck
 ```
 
