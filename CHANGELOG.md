@@ -13,11 +13,18 @@ and the project aims to follow [Semantic Versioning](https://semver.org/).
 - `docs/` folder for reference material (`AS-BUILT.md`, `TESTPLAN.md`, and the
   design pattern, kept locally as `docs/CLAUDE.md`).
 
+## [0.2.1]
+
 ### Fixed
 - Plugin install failed with `agents: Invalid input`. The manifest declared
   `commands`, `agents`, and `hooks` as path strings; Claude Code auto-discovers
   `commands/`, `agents/`, and `hooks/hooks.json` and rejects those string
   fields. Removed them and corrected the `homepage` URL.
+- Commands assumed a global `stz` on `PATH`, which a plugin install never
+  creates (it is not an npm install, ignores `package.json` `bin`, and adds no
+  symlink). Each command now resolves the bundled bridge first via a linked
+  `stz`, then `${CLAUDE_PLUGIN_ROOT}/bin/stz.mjs`, then a plugin-cache glob, and
+  calls it through `$STZ`. `npm link` is now optional, for manual CLI use only.
 
 ### Changed
 - Moved `AS-BUILT.md` and `TESTPLAN.md` under `docs/`; README links updated.

@@ -59,8 +59,13 @@ plus the project-level researcher, validator, conventions, test-planner, slicer,
 summarizer), and a SessionStart hook that announces STZ when a project contains a
 `.stz/` tree. Restart the session (or reload) so the definitions load.
 
-The plugin shells out to the `stz bridge` CLI for every deterministic decision.
-Install the CLI on the machine so it is on `PATH`:
+The plugin calls a bundled `stz bridge` CLI for every deterministic decision.
+The commands resolve it automatically from the installed plugin (via
+`${CLAUDE_PLUGIN_ROOT}`), so no `PATH` setup is needed; the only requirement is
+Node.js 20+ on the machine. The bundled CLI runs through `tsx` (fetched on first
+use by `npx`), so the first bridge call in a fresh environment needs network.
+
+Optionally, expose a global `stz` for manual CLI use outside the plugin:
 
 ```bash
 git clone https://github.com/dr-robert-li/slice-tournament-zoo

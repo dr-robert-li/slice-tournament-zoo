@@ -3,22 +3,35 @@ description: The STZ pipeline dashboard. Show project phase and per-slice status
 argument-hint: "[--auto]"
 ---
 
+## Setup: locate the bridge
+
+This plugin is not on your PATH. A plugin install does not register a global
+`stz` command, so resolve the bridge CLI once at the start and use `$STZ` for
+every bridge call below:
+
+```bash
+if command -v stz >/dev/null 2>&1; then STZ='stz';
+elif [ -n "${CLAUDE_PLUGIN_ROOT:-}" ] && [ -f "${CLAUDE_PLUGIN_ROOT}/bin/stz.mjs" ]; then STZ="node ${CLAUDE_PLUGIN_ROOT}/bin/stz.mjs";
+else STZ="node $(ls -d ~/.claude/plugins/cache/*/stz/*/bin/stz.mjs 2>/dev/null | sort -V | tail -1)"; fi
+echo "using bridge: $STZ"
+```
+
 # /stz:pipeline — the dashboard
 
 You are the STZ orchestrator running a single-terminal command center, like a
 manager view. This command is read-only with respect to state: it reads
-`stz bridge project-status --root .` and dispatches other commands; it never
+`$STZ bridge project-status --root .` and dispatches other commands; it never
 writes project state itself.
 
 ## Render the dashboard
 
-Run `stz bridge project-status --root .` and show:
+Run `$STZ bridge project-status --root .` and show:
 
 - **Project phases** with a marker each: `✓` done, `▶` next, `○` pending —
   elicitation, research, ground-truth, standards, testing-conventions,
   slice-disaggregation.
 - **Slices** as a table: id, dependsOn, and derived status (pending / running /
-  done / halted). For a `running` slice, you may run `stz bridge project-status`
+  done / halted). For a `running` slice, you may run `$STZ bridge project-status`
   shows its rollup; for finer detail, note its per-slice `state.json`.
 - The `next` runnable slice and the `frontier` (slices whose deps are all done —
   these can run in parallel).

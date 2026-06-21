@@ -3,9 +3,22 @@ description: Research the project — external (docs, prior art) and internal (c
 argument-hint: "[--auto]"
 ---
 
+## Setup: locate the bridge
+
+This plugin is not on your PATH. A plugin install does not register a global
+`stz` command, so resolve the bridge CLI once at the start and use `$STZ` for
+every bridge call below:
+
+```bash
+if command -v stz >/dev/null 2>&1; then STZ='stz';
+elif [ -n "${CLAUDE_PLUGIN_ROOT:-}" ] && [ -f "${CLAUDE_PLUGIN_ROOT}/bin/stz.mjs" ]; then STZ="node ${CLAUDE_PLUGIN_ROOT}/bin/stz.mjs";
+else STZ="node $(ls -d ~/.claude/plugins/cache/*/stz/*/bin/stz.mjs 2>/dev/null | sort -V | tail -1)"; fi
+echo "using bridge: $STZ"
+```
+
 # /stz:research — research (phase 2)
 
-You are the STZ orchestrator. Read state first: `stz bridge project-status
+You are the STZ orchestrator. Read state first: `$STZ bridge project-status
 --root .`. Require elicitation `done`; if not, point the user at `/stz:new`.
 
 ## Procedure
@@ -25,7 +38,7 @@ You are the STZ orchestrator. Read state first: `stz bridge project-status
    - **Review full file** → print the file path(s), then re-ask.
    - Loop until Approve.
 
-3. On Approve: `stz bridge project-phase --root . --phase research`. Hand off:
+3. On Approve: `$STZ bridge project-phase --root . --phase research`. Hand off:
    **▶ Next up: `/stz:validate`**.
 
 ## --auto

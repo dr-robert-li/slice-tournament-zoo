@@ -3,13 +3,26 @@ description: Start an STZ project. Interrogate the user to extract intent, const
 argument-hint: "[project title] [--auto @idea-doc]"
 ---
 
+## Setup: locate the bridge
+
+This plugin is not on your PATH. A plugin install does not register a global
+`stz` command, so resolve the bridge CLI once at the start and use `$STZ` for
+every bridge call below:
+
+```bash
+if command -v stz >/dev/null 2>&1; then STZ='stz';
+elif [ -n "${CLAUDE_PLUGIN_ROOT:-}" ] && [ -f "${CLAUDE_PLUGIN_ROOT}/bin/stz.mjs" ]; then STZ="node ${CLAUDE_PLUGIN_ROOT}/bin/stz.mjs";
+else STZ="node $(ls -d ~/.claude/plugins/cache/*/stz/*/bin/stz.mjs 2>/dev/null | sort -V | tail -1)"; fi
+echo "using bridge: $STZ"
+```
+
 # /stz:new — elicitation (phase 1)
 
 You are the STZ **orchestrator** beginning a project. This phase is interactive:
 you interrogate the user with AskUserQuestion (AUQ) to extract intent. No
 subagent does the asking — you do.
 
-Read state first: `stz bridge project-status --root .` (if it errors with no
+Read state first: `$STZ bridge project-status --root .` (if it errors with no
 project, this is a fresh start). If a project exists and elicitation is already
 `done`, tell the user and point at the next phase.
 
@@ -17,7 +30,7 @@ project, this is a fresh start). If a project exists and elicitation is already
 
 If no project state exists, initialize one. Write a minimal manifest JSON
 (`{schemaVersion:1, projectId, name, summary, slices:[]}`) and run
-`stz bridge project-init --root . --manifest <that file>`.
+`$STZ bridge project-init --root . --manifest <that file>`.
 
 ## AUQ rules (hold to these)
 
@@ -47,7 +60,7 @@ Work through these areas in order. Announce each area in one plain line, then as
 After each area, checkpoint with AUQ: header `Continue`, question "More on
 <area>, or next? Remaining: <list>", options `[Next area, More on <area>, Skip
 remaining, You decide]`. Record the resolved area:
-`stz bridge project-record-area --root . --phase elicitation --area <A|B|C|D>
+`$STZ bridge project-record-area --root . --phase elicitation --area <A|B|C|D>
 --resolution "<one line>"`.
 
 After the last area, run the gray-areas loop: header `Gaps?`, question "Which
@@ -61,8 +74,8 @@ user gave only prose, push once more for at least one predicate.
 
 Assemble an intent file `{problem, users, constraints[], donePredicates[{id,expr,
 kind}], areas[]}` and run:
-- `stz bridge project-write-intent --root . --intent <that file>`
-- `stz bridge project-phase --root . --phase elicitation`
+- `$STZ bridge project-write-intent --root . --intent <that file>`
+- `$STZ bridge project-phase --root . --phase elicitation`
 
 Then show the user the captured intent and the predicates, and hand off:
 **▶ Next up: `/stz:research`**.

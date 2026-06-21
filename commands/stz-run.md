@@ -3,18 +3,31 @@ description: Run one STZ slice as an in-session tournament — spawn N specimens
 argument-hint: "[slice-id] (a manifest at .stz/40-slices/<slice-id>/manifest.json, or answer the prompts)"
 ---
 
+## Setup: locate the bridge
+
+This plugin is not on your PATH. A plugin install does not register a global
+`stz` command, so resolve the bridge CLI once at the start and use `$STZ` for
+every bridge call below:
+
+```bash
+if command -v stz >/dev/null 2>&1; then STZ='stz';
+elif [ -n "${CLAUDE_PLUGIN_ROOT:-}" ] && [ -f "${CLAUDE_PLUGIN_ROOT}/bin/stz.mjs" ]; then STZ="node ${CLAUDE_PLUGIN_ROOT}/bin/stz.mjs";
+else STZ="node $(ls -d ~/.claude/plugins/cache/*/stz/*/bin/stz.mjs 2>/dev/null | sort -V | tail -1)"; fi
+echo "using bridge: $STZ"
+```
+
 # /stz-run — in-session slice tournament
 
 You are the STZ **orchestrator**. STZ runs *inside* this Claude Code session:
 you spawn the model-side work as **Task subagents** (the Agent tool) and call
-the deterministic **bridge CLI** (`stz bridge …`) for every exact decision
+the deterministic **bridge CLI** (`$STZ bridge …`) for every exact decision
 (eval gate, hack detection, GRPO, selection, audit). You own spawn-and-collect;
 the bridge owns compute. Never tally, rank, or judge in your own head — call the
 bridge.
 
-The bridge is invoked as: `node bin/stz.mjs bridge <subcommand> --flag value`
-(from the STZ repo root) or `npx stz bridge …` once installed. Each call prints
-one JSON object on stdout; read it and act on it.
+Invoke the bridge as `$STZ bridge <subcommand> --flag value` (the `$STZ` resolver
+above handles plugin, linked-CLI, and repo cases). Each call prints one JSON
+object on stdout; read it and act on it.
 
 ## Inputs
 
@@ -27,7 +40,7 @@ on prose-only acceptance (F2).
 
 ## Procedure
 
-1. **Begin.** `stz bridge begin --root . --manifest .stz/40-slices/$1/manifest.json`.
+1. **Begin.** `$STZ bridge begin --root . --manifest .stz/40-slices/$1/manifest.json`.
    Note `votesPerPair` and the prototype dir root from the JSON.
 
 2. **Author the sealed suite (frozen).** Spawn ONE `stz-test-author` subagent.
@@ -47,27 +60,27 @@ on prose-only acceptance (F2).
    barrier is exactly the tournament boundary.
 
 5. **Eval each specimen (real, executed).** For each specimen, call:
-   `stz bridge eval --root . --slice $1 --specimen <id> --sealed
+   `$STZ bridge eval --root . --slice $1 --specimen <id> --sealed
    .stz/30-tests/held-out/<sealed-file> --impl
    .stz/40-slices/$1/prototypes/specimen-<id>/<entry-file> --fixtures
    <comma-sep fixture names>`. The bridge runs the sealed suite, measures V8
    coverage and mutation survival, runs the hack-detector, and records the
    gate decision — all in one call. You do not compute metrics by hand.
    (If an external eval runner already produced metrics, the alternate path is
-   `stz bridge record-eval --root . --slice $1 --specimen <id> --metrics
+   `$STZ bridge record-eval --root . --slice $1 --specimen <id> --metrics
    <metrics.json> --fixtures <...>`.)
 
-6. **Gate.** `stz bridge gate --root . --slice $1`. Read `passers`,
+6. **Gate.** `$STZ bridge gate --root . --slice $1`. Read `passers`,
    `eliminated`, and the `pairings` schedule.
 
 7. **Judge (pairwise).** For each pair in `pairings`, spawn `stz-judge`
    subagents — `votesPerPair` votes per pair (you MAY lower this for a cheap
    acceptance run; say so). Judges are frozen, see the sealed suite, and return
    only a winner id. Collect all votes into a `votes.json` array of
-   `{a,b,winner}` and `stz bridge record-votes --root . --slice $1 --votes
+   `{a,b,winner}` and `$STZ bridge record-votes --root . --slice $1 --votes
    votes.json`.
 
-8. **Select.** `stz bridge select --root . --slice $1`. The bridge runs the
+8. **Select.** `$STZ bridge select --root . --slice $1`. The bridge runs the
    two-stage selection + GRPO and returns `{winner, ranking, advantages}`.
 
 8b. **Winner approval gate (human-in-the-loop).** Before merging, show the user
@@ -78,7 +91,7 @@ on prose-only acceptance (F2).
 
 9. **Document + finalize.** Spawn ONE `stz-documenter` subagent on the winner's
    dir; it returns `{claims:[...]}` → write `asbuilt.json`. Then
-   `stz bridge finalize --root . --slice $1 --intent intent.json --asbuilt
+   `$STZ bridge finalize --root . --slice $1 --intent intent.json --asbuilt
    asbuilt.json`. This writes the pressure log, the spec-diff, and the audit
    journal.
 

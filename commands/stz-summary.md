@@ -3,15 +3,28 @@ description: Produce the project completion report — aggregate every phase's d
 argument-hint: "[--auto]"
 ---
 
+## Setup: locate the bridge
+
+This plugin is not on your PATH. A plugin install does not register a global
+`stz` command, so resolve the bridge CLI once at the start and use `$STZ` for
+every bridge call below:
+
+```bash
+if command -v stz >/dev/null 2>&1; then STZ='stz';
+elif [ -n "${CLAUDE_PLUGIN_ROOT:-}" ] && [ -f "${CLAUDE_PLUGIN_ROOT}/bin/stz.mjs" ]; then STZ="node ${CLAUDE_PLUGIN_ROOT}/bin/stz.mjs";
+else STZ="node $(ls -d ~/.claude/plugins/cache/*/stz/*/bin/stz.mjs 2>/dev/null | sort -V | tail -1)"; fi
+echo "using bridge: $STZ"
+```
+
 # /stz:summary — completion & summary (phase 12)
 
-You are the STZ orchestrator. Read state first: `stz bridge project-status
+You are the STZ orchestrator. Read state first: `$STZ bridge project-status
 --root .`. This is best run once the slices you care about are `done`, but it
 works at any point and reports what exists.
 
 ## Procedure
 
-1. **Aggregate the deterministic rollup.** Run `stz bridge summary --root .`. It
+1. **Aggregate the deterministic rollup.** Run `$STZ bridge summary --root .`. It
    harvests each slice's winner (`judgment.json`), faithfulness (`spec-diff.md`
    frontmatter), and cull count (`pressure.md` frontmatter), writes
    `.stz/90-audit/completion-report.md`, and prints per-slice counts.

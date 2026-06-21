@@ -3,9 +3,22 @@ description: Collaboratively break the project into vertical slices (a DAG), the
 argument-hint: "[--auto]"
 ---
 
+## Setup: locate the bridge
+
+This plugin is not on your PATH. A plugin install does not register a global
+`stz` command, so resolve the bridge CLI once at the start and use `$STZ` for
+every bridge call below:
+
+```bash
+if command -v stz >/dev/null 2>&1; then STZ='stz';
+elif [ -n "${CLAUDE_PLUGIN_ROOT:-}" ] && [ -f "${CLAUDE_PLUGIN_ROOT}/bin/stz.mjs" ]; then STZ="node ${CLAUDE_PLUGIN_ROOT}/bin/stz.mjs";
+else STZ="node $(ls -d ~/.claude/plugins/cache/*/stz/*/bin/stz.mjs 2>/dev/null | sort -V | tail -1)"; fi
+echo "using bridge: $STZ"
+```
+
 # /stz:slice — slice disaggregation (phase 6)
 
-You are the STZ orchestrator. Read state first: `stz bridge project-status
+You are the STZ orchestrator. Read state first: `$STZ bridge project-status
 --root .`. Require testing-conventions `done`; else point at `/stz:tests`.
 
 This phase is collaborative: a subagent proposes the slice DAG, then you and the
@@ -32,13 +45,13 @@ user shape it together before committing.
      proposal leaves one unassigned, raise it before approval.
    - Loop until the user picks **Approve as-is**.
 
-3. On approve: `stz bridge project-seed-slices --root . --dag <slices.json>`.
+3. On approve: `$STZ bridge project-seed-slices --root . --dag <slices.json>`.
    This writes each `40-slices/<id>/manifest.{json,md}` and seeds each slice's
    `state.json` with the four early phases already `done` (they were settled at
-   the project level). Then `stz bridge project-phase --root . --phase
+   the project level). Then `$STZ bridge project-phase --root . --phase
    slice-disaggregation`.
 
-4. Run `stz bridge project-status --root .` and report the first runnable slice.
+4. Run `$STZ bridge project-status --root .` and report the first runnable slice.
    Hand off: **▶ Next up: `/stz:run <first-slice-id>`** (then `/stz:pipeline` to
    drive the rest).
 
