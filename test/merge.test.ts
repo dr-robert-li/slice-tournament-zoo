@@ -67,6 +67,17 @@ describe("validateMerge — deterministic supersession verdict (the four buckets
     expect(v.sanctioned).toEqual([]);
   });
 
+  it("INVALID distinguishes 'replacement not reported' from 'replacement failed'", () => {
+    // slice-05 omitted entirely from results — it didn't fail, it never ran.
+    const v = validateMerge([supersededFail], manifestWith(true));
+    expect(v.ok).toBe(false);
+    expect(v.invalid).toHaveLength(1);
+    expect(v.invalid[0]!.reason).toMatch(/was not in the reported results/);
+    // vs. the genuine "ran and failed" reason
+    const failed = validateMerge([supersededFail, { slice: "slice-05", passed: false, failure: "x" }], manifestWith(true));
+    expect(failed.invalid[0]!.reason).toMatch(/did not pass/);
+  });
+
   it("UNSANCTIONED: a different panic in the same suite is NOT laundered by test name", () => {
     const realBug: SealedSuiteResult = { slice: "slice-03", passed: false, failure: "index out of bounds: the len is 55 but the index is 99" };
     const v = validateMerge([realBug, { slice: "slice-05", passed: true }], manifestWith(true));

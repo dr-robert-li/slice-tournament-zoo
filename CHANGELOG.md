@@ -6,6 +6,19 @@ and the project aims to follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.5.3]
+
+### Fixed
+- **`merge-validate` no longer reports a never-run replacement suite as "did not
+  pass".** When a matched compat entry's replacement invariant was simply absent
+  from the reported results (the operator forgot to run/report it), the verdict
+  classified it as `invalid` with reason "replacement invariant … did not pass" —
+  telling the operator the superseding behaviour was broken when in truth it was
+  never measured. It still blocked (fails closed), but a misleading verdict is the
+  exact sin this feature exists to replace. The reason now distinguishes "ran and
+  failed" from "was not in the reported results — run and report it". Docs-only
+  behaviour otherwise unchanged.
+
 ## [0.5.2]
 
 Cross-slice merge integrity — a deterministic, audited rule for the one place

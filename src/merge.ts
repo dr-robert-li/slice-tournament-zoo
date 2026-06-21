@@ -226,10 +226,16 @@ export function validateMerge(results: SealedSuiteResult[], manifest: MergeCompa
       used.add(pend.id);
       continue;
     }
-    // Matched but the replacement invariant did NOT pass → invalid, blocks even
+    // Matched but the replacement invariant is not proven → invalid, blocks even
     // if approved (rule 2: no supersession claim without a proven replacement).
+    // Distinguish "ran and failed" from "never reported" — saying a suite "did
+    // not pass" when it simply wasn't run is the same misleading verdict this
+    // whole feature replaces.
     const inv = matches[0]!;
-    invalid.push({ slice: r.slice, entryId: inv.id, reason: `replacement invariant ${inv.replacement.slice} did not pass — supersession unproven` });
+    const reason = bySlice.has(inv.replacement.slice)
+      ? `replacement invariant ${inv.replacement.slice} did not pass — supersession unproven`
+      : `replacement suite ${inv.replacement.slice} was not in the reported results — cannot prove supersession; run and report it`;
+    invalid.push({ slice: r.slice, entryId: inv.id, reason });
     used.add(inv.id);
   }
 
