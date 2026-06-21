@@ -149,6 +149,29 @@ balanced default, so the pipeline always has a complete config.
 Two human gates remain even in full auto: confirming a done-predicate in
 `/stz:new`, and approving the slice breakdown in `/stz:slice`.
 
+#### Dark-factory mode (lights-out, fully autonomous)
+
+`--auto` still pauses at those two human gates. **Dark-factory mode** goes one
+step further: it skips *every* downstream human gate — the `/stz:slice` approval
+and the `/stz:run` winner-approval — and runs the whole pipeline lights-out to a
+final `/stz:summary` completion report. The only gate it cannot skip is the F2
+done-predicate confirmation in `/stz:new`; acceptance criteria are never
+auto-invented. Everything the run decides (DAG, winners, GRPO advantages, hack
+findings) still lands in the `.stz/` audit tree for after-the-fact review.
+
+It is offered once at the end of elicitation (after the predicate gate) and can be
+flipped at any point:
+
+```bash
+stz bridge project-dark-factory --root . --on    # engage; --off to disengage
+```
+
+The toggle only flips the `darkFactory` flag in the run config — it never resets
+your fan-out / models / strictness. `project-status` hoists the flag to the top
+level, so engaging it between phases takes effect immediately. See
+[`docs/development/dark-factory.md`](docs/development/dark-factory.md) for the full
+contract.
+
 The DAG ordering and per-slice seeding are backed by the deterministic
 `stz bridge project-status` (which computes the runnable frontier). The `--auto`
 chaining itself is orchestration the agent follows from the command markdown, not

@@ -20,7 +20,9 @@ echo "using bridge: $STZ"
 
 You are the STZ orchestrator. Read state first: `$STZ bridge project-status
 --root .`. Require testing-conventions `done`; else point at `/stz:tests`. Note
-`runConfig.granularity` from the same output — it tunes how finely to slice.
+`runConfig.granularity` from the same output — it tunes how finely to slice. Also
+read the hoisted `darkFactory` flag: when `true`, the co-design gate below is
+auto-approved (see Dark-factory).
 
 This phase is collaborative: a subagent proposes the slice DAG, then you and the
 user shape it together before committing.
@@ -64,3 +66,13 @@ user shape it together before committing.
 Even with `--auto`, the final "Approve as-is" stays a human gate — the slice
 breakdown is too consequential to auto-accept. After approval, chain to
 `/stz:run <first>` (or hand to `/stz:pipeline`).
+
+## Dark-factory
+
+When `darkFactory` is `true` (read at the top), skip the co-design AUQ entirely:
+take the `stz-slicer` proposal as-is, still enforcing the one structural
+invariant (every project done-predicate owned by exactly one slice — if the
+proposal violates it, re-spawn the slicer with that instruction rather than
+prompting). Then seed and hand off automatically. This is the deliberate
+trade-off of an autonomous run: the DAG is accepted without human review, but it
+is fully recorded in `proposed-dag.md` + the manifests for after-the-fact audit.

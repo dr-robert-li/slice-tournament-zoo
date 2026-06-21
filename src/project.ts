@@ -227,6 +227,8 @@ export function defaultRunConfig(): RunConfig {
       mutationPolicy: "standard",
       conventions: "standard",
     },
+    // Human-in-the-loop by default — a fully autonomous run is opt-in (0.4.0).
+    darkFactory: false,
   };
 }
 
@@ -284,6 +286,13 @@ export function normalizeRunConfig(partial: Partial<RunConfig> | undefined): Run
     coverageTarget = Math.max(0, Math.min(1, c));
   }
 
+  // darkFactory is a plain boolean flag; accept the JSON literal or a stringy
+  // "true"/"false" (it can arrive from a CLI arg), default to the base value.
+  let darkFactory = base.darkFactory;
+  if (p.darkFactory !== undefined) {
+    darkFactory = p.darkFactory === true || String(p.darkFactory).trim().toLowerCase() === "true";
+  }
+
   return {
     schemaVersion: 1,
     granularity,
@@ -294,6 +303,7 @@ export function normalizeRunConfig(partial: Partial<RunConfig> | undefined): Run
       mutationPolicy: s.mutationPolicy ?? base.strictness.mutationPolicy,
       conventions: s.conventions ?? base.strictness.conventions,
     },
+    darkFactory,
   };
 }
 
@@ -308,4 +318,18 @@ export async function loadRunConfig(root: string): Promise<RunConfig> {
   if (!runConfigExists(root)) return defaultRunConfig();
   const raw = JSON.parse(await readFile(runConfigPath(root), "utf8")) as Partial<RunConfig>;
   return normalizeRunConfig(raw);
+}
+
+/**
+ * Flip dark-factory mode in place (0.4.0) without disturbing any other field.
+ * This is a LOAD-MODIFY-SAVE on the existing config — deliberately NOT routed
+ * through `normalizeRunConfig(partial)`, which merges over the *defaults* and
+ * would silently reset fanout/models/strictness mid-run. Returns the resolved
+ * config so the caller can echo it back.
+ */
+export async function setDarkFactory(root: string, enabled: boolean): Promise<RunConfig> {
+  const current = await loadRunConfig(root);
+  const next: RunConfig = { ...current, darkFactory: enabled };
+  await saveRunConfig(root, next);
+  return next;
 }

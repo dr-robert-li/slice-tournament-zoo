@@ -309,3 +309,74 @@ describe("run configuration — 0.3.0 elicitation choices, consumed downstream",
     process.exitCode = code;
   });
 });
+
+describe("dark-factory mode — 0.4.0 autonomous run flag", () => {
+  it("defaults to off and accepts a true/'true' literal", () => {
+    expect(defaultRunConfig().darkFactory).toBe(false);
+    expect(normalizeRunConfig({}).darkFactory).toBe(false);
+    expect(normalizeRunConfig({ darkFactory: true }).darkFactory).toBe(true);
+    expect(normalizeRunConfig({ darkFactory: "true" } as unknown as Partial<RunConfig>).darkFactory).toBe(true);
+    expect(normalizeRunConfig({ darkFactory: "false" } as unknown as Partial<RunConfig>).darkFactory).toBe(false);
+  });
+
+  it("set-config persists darkFactory and status surfaces it (hoisted + in runConfig)", async () => {
+    await initProject();
+    await setConfig({ fanout: 6, darkFactory: true });
+    const s = await status<{ darkFactory: boolean; runConfig: RunConfig }>();
+    expect(s.darkFactory).toBe(true);
+    expect(s.runConfig.darkFactory).toBe(true);
+  });
+
+  it("project-dark-factory toggle is load-modify-save — it never resets other fields", async () => {
+    await initProject();
+    // Set a fully non-default config first.
+    await setConfig({
+      granularity: "fine",
+      fanout: 7,
+      models: { judging: "opus", research: "haiku" } as RunConfig["models"],
+      strictness: { coverageTarget: 0.95, mutationPolicy: "strict", conventions: "strict" },
+    });
+    // Engage dark-factory mid-run via the dedicated command.
+    captured = "";
+    await runBridge(["project-dark-factory", "--root", root, "--on"]);
+    const out = lastJSON<{ darkFactory: boolean; runConfig: RunConfig }>();
+    expect(out.darkFactory).toBe(true);
+    // The regression this guards: every other field survives the toggle.
+    expect(out.runConfig.granularity).toBe("fine");
+    expect(out.runConfig.fanout).toBe(7);
+    expect(out.runConfig.models.judging).toBe("opus");
+    expect(out.runConfig.strictness.coverageTarget).toBe(0.95);
+    expect(out.runConfig.strictness.mutationPolicy).toBe("strict");
+
+    // Persisted to disk with everything intact.
+    const onDisk = await loadRunConfig(root);
+    expect(onDisk.darkFactory).toBe(true);
+    expect(onDisk.fanout).toBe(7);
+    expect(onDisk.granularity).toBe("fine");
+
+    // The doc reflects the engaged state, and an event was journaled.
+    const md = await readFile(join(root, STZ_DIR, "00-intent/run-config.md"), "utf8");
+    expect(md).toMatch(/Dark-factory mode:\*\* \*\*on\*\*/);
+    const pstate = JSON.parse(await readFile(join(root, STZ_DIR, "90-audit/project-state.json"), "utf8"));
+    expect(pstate.events.some((e: { kind: string }) => e.kind === "dark-factory")).toBe(true);
+  });
+
+  it("project-dark-factory --off disengages without touching other fields", async () => {
+    await initProject();
+    await setConfig({ fanout: 5, darkFactory: true });
+    captured = "";
+    await runBridge(["project-dark-factory", "--root", root, "--off"]);
+    const out = lastJSON<{ darkFactory: boolean; runConfig: RunConfig }>();
+    expect(out.darkFactory).toBe(false);
+    expect(out.runConfig.fanout).toBe(5);
+  });
+
+  it("dark-factory can be engaged before any config is set (defaults preserved)", async () => {
+    await initProject();
+    captured = "";
+    await runBridge(["project-dark-factory", "--root", root]); // bare = --on
+    const out = lastJSON<{ darkFactory: boolean; runConfig: RunConfig }>();
+    expect(out.darkFactory).toBe(true);
+    expect(out.runConfig).toMatchObject({ ...defaultRunConfig(), darkFactory: true });
+  });
+});

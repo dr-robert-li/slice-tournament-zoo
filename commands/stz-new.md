@@ -122,8 +122,39 @@ kind}], areas[]}` and run:
 - `$STZ bridge project-write-intent --root . --intent <that file>`
 - `$STZ bridge project-phase --root . --phase elicitation`
 
-Then show the user the captured intent and the predicates, and hand off:
-**▶ Next up: `/stz:research`**.
+## Dark-factory mode (ask AFTER the predicate gate)
+
+Once — and only once — the done-predicates are locked (the F2 gate is the one
+human checkpoint that can never be skipped), offer the autonomous end-to-end run.
+Fire ONE AUQ: header `Dark mode`, question "Run the rest of the pipeline as a
+dark factory — fully autonomous, no human in the loop, just a completion summary
+at the end? (You can flip this any time.)", options:
+- **Stay hands-on** (default) — keep the human gates (`/stz:slice` approval and
+  the `/stz:run` winner approval). Recommended for the first run on a project.
+- **Engage dark factory** — skip every downstream human gate and drive
+  research → … → slicing → every per-slice tournament → summary autonomously.
+  The done-predicates you just confirmed are the contract it runs against.
+- **You decide** — keep it off.
+
+If the user engages it, run `$STZ bridge project-dark-factory --root . --on`
+(persists `darkFactory:true` into run-config.json without disturbing the run
+config you just set). With `--auto`, default to **off** unless the idea-doc or the
+user explicitly asked for an unattended run.
+
+Then show the user the captured intent and the predicates (and whether dark-factory
+is engaged), and hand off: **▶ Next up: `/stz:research`** (or, if dark-factory is
+on, immediately chain into `/stz:pipeline --auto` yourself and do not stop until
+the completion report — see that command's dark-factory behaviour).
+
+## The `--dark` flag (engage at any point)
+
+Dark-factory is not only an elicitation-time question — it is a flag any STZ
+command accepts and that you may flip mid-run. Engage it with
+`$STZ bridge project-dark-factory --root . --on` (disengage with `--off`); every
+command reads the resolved state from `project-status` (`darkFactory` is hoisted
+to the top level) at the start of each phase, so turning it on between phases
+takes effect immediately. The bridge command is the single source of truth — do
+not hand-edit run-config.json.
 
 ## --auto
 

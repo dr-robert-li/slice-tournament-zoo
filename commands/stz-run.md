@@ -41,7 +41,9 @@ on prose-only acceptance (F2).
 ## Procedure
 
 0. **Read the run config.** `$STZ bridge project-status --root .` and read its
-   `runConfig`: `fanout` is N for step 4, and `models` is the per-role model map
+   `runConfig` plus the hoisted `darkFactory` flag (if `true`, this is an
+   autonomous run — skip the human winner-approval gate at step 8b below).
+   `fanout` is N for step 4, and `models` is the per-role model map
    — pass `model: models.testing` to the `stz-test-author` spawn,
    `model: models.execution` to each `stz-specimen`, and `model: models.judging`
    to each `stz-judge`. If there is no project (a bare single-slice run), fall
@@ -137,8 +139,11 @@ on prose-only acceptance (F2).
 8b. **Winner approval gate (human-in-the-loop).** Before merging, show the user
     the winner, the ranking, the GRPO advantages, and any disqualified specimens
     with their hack findings. Ask (AskUserQuestion) whether to accept the winner,
-    pick a different survivor, or halt. Only proceed once the user accepts. Skip
-    this gate only if the run was explicitly launched as non-interactive.
+    pick a different survivor, or halt. Only proceed once the user accepts.
+    **Skip this gate when `darkFactory` is true** (read in step 0) — a dark-factory
+    run auto-accepts the selected winner and records it without prompting; the
+    full ranking + advantages still land in the audit tree for after-the-fact
+    review. (Also skip it for any run explicitly launched non-interactive.)
 
 9. **Document + finalize.** Spawn ONE `stz-documenter` subagent on the winner's
    dir, and **pass it the intent claims from `intent.json` (ids and text)**. It

@@ -16,15 +16,24 @@ stz bridge select       --root . --slice slice-01
 stz bridge finalize     --root . --slice slice-01 --intent intent.json --asbuilt asbuilt.json
 
 # project-level driver (multi-slice)
-stz bridge project-set-config --root . --config run-config.json  # persist run config (validated, clamped)
-stz bridge project-config     --root .                           # read it back (defaults if unset)
-stz bridge project-status     --root .                           # DAG + phase status + runConfig
+stz bridge project-set-config   --root . --config run-config.json  # persist run config (validated, clamped)
+stz bridge project-config       --root .                           # read it back (defaults if unset)
+stz bridge project-dark-factory --root . --on                      # engage autonomous mode (--off to disengage)
+stz bridge project-status       --root .                           # DAG + phase status + runConfig + darkFactory
 
 # sealed held-out suite integrity (L1/F10) — freeze before the tournament
 stz bridge seal        --root .                       # sha256 the held-out suite into SEAL.json
 stz bridge seal-verify --root .                       # re-hash vs SEAL.json; exit 1 on drift (gate before judging)
 stz bridge seal-amend  --root . --reason "<why>"      # sanctioned post-freeze change: records from→to + reason
 ```
+
+`project-dark-factory` is a load-modify-save toggle: it flips `darkFactory` in the
+persisted run config without touching any other field (deliberately NOT routed
+through `project-set-config`, whose normalize-over-defaults merge would reset
+fan-out/models/strictness). It is the single source of truth for autonomous mode —
+the `/stz:*` commands read the hoisted `darkFactory` flag from `project-status` at
+each phase, so engaging it mid-run takes effect at the next phase. See
+[`dark-factory.md`](./dark-factory.md) for the gate-skipping contract.
 
 The sealed-suite trio backs the anti-hacking freeze: `seal` after the test-author's
 suite passes the smoke gate against its reference; `seal-verify` immediately before

@@ -6,6 +6,44 @@ and the project aims to follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.4.0]
+
+Dark-factory mode — an optional, fully autonomous end-to-end run. With it
+engaged, elicitation hands off and the orchestrator drives every phase →
+per-slice tournament → summary with no human in the loop, surfacing only the
+final completion report. This is the "software engineering dark factory" from the
+project's executive summary, made a real flag.
+
+### Added
+- **`darkFactory` on the run config.** Off by default (human-in-the-loop). When
+  on, the pipeline skips every *downstream* human gate it can legitimately skip —
+  the `/stz:slice` "Approve as-is" gate and the `/stz:run` winner-approval gate —
+  and runs autonomously to a `/stz:summary` completion report. The full ranking,
+  GRPO advantages, and any disqualified specimens still land in the audit tree;
+  nothing is hidden, only un-prompted.
+- **`stz bridge project-dark-factory --root . --on|--off`** — the invoke-anytime
+  toggle. It is a deliberate **load-modify-save** on the persisted config: it
+  flips only `darkFactory` and is NOT routed through `project-set-config`, whose
+  normalize-over-defaults merge would silently reset fan-out/models/strictness
+  mid-run. `project-status` hoists the resolved value to a top-level `darkFactory`
+  field so each command reads it once per phase; engaging it between phases takes
+  effect immediately.
+- **End-of-elicitation prompt.** `/stz:new` offers dark-factory once — and only
+  *after* the F2 done-predicate gate, the one human checkpoint that can never be
+  skipped. Acceptance criteria are never auto-invented; the predicates are the
+  contract the autonomous run executes against.
+- `docs/development/dark-factory.md` — the autonomous-run contract: the one gate
+  that never closes, which gates are skipped, why the toggle is a dedicated
+  load-modify-save command, and what is (plumbing) and isn't (the agent loop)
+  unit-tested. Linked from the bridge-CLI doc.
+
+### Changed
+- `/stz:pipeline`, `/stz:run`, and `/stz:slice` now read the hoisted `darkFactory`
+  flag and skip their respective human gates when it is on; `/stz:pipeline`
+  documents the autonomous loop (auto-approve DAG, auto-accept winners, continue
+  past halted slices, end on the summary). `run-config.md` and `project-status`
+  surface the dark-factory state.
+
 ## [0.3.4]
 
 ### Changed

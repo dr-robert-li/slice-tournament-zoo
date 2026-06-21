@@ -41,6 +41,7 @@ import {
   freshProjectState,
   saveProjectState,
   loadProjectState,
+  projectStateExists,
   appendProjectEvent,
   projectManifestPath,
   PROJECT_PHASE_TIER,
@@ -50,6 +51,7 @@ import {
   normalizeRunConfig,
   saveRunConfig,
   loadRunConfig,
+  setDarkFactory,
   runConfigExists,
   defaultRunConfig,
 } from "./project.js";
@@ -511,24 +513,50 @@ async function projectSetConfig(args: Record<string, string>): Promise<void> {
     return;
   }
   await saveRunConfig(root, config);
+  await writeRunConfigDoc(root, config);
+  const state = await loadProjectState(root);
+  appendProjectEvent(state, "elicitation", "run-config-set", `N=${config.fanout}, ${config.granularity}, cov≥${config.strictness.coverageTarget}, dark-factory=${config.darkFactory}`);
+  await saveProjectState(root, state);
+  print(config);
+}
+
+/** Render the human-readable run-config.md (shared by set-config + toggles). */
+async function writeRunConfigDoc(root: string, config: RunConfig): Promise<void> {
   const m = config.models;
   await writeDoc(root, join("00-intent", "run-config.md"), {
     frontmatter: {
-      summary: `Run config: ${config.granularity} slicing, N=${config.fanout}, coverage≥${config.strictness.coverageTarget}, mutation ${config.strictness.mutationPolicy}, conventions ${config.strictness.conventions}.`,
+      summary: `Run config: ${config.granularity} slicing, N=${config.fanout}, coverage≥${config.strictness.coverageTarget}, mutation ${config.strictness.mutationPolicy}, conventions ${config.strictness.conventions}, dark-factory ${config.darkFactory ? "on" : "off"}.`,
     },
     body:
       `# Run configuration\n\n` +
       `- **Slicing granularity:** ${config.granularity}\n` +
       `- **Specimen fan-out (N):** ${config.fanout}\n` +
-      `- **Strictness:** coverage ≥ ${config.strictness.coverageTarget}, mutation ${config.strictness.mutationPolicy}, conventions ${config.strictness.conventions}\n\n` +
+      `- **Strictness:** coverage ≥ ${config.strictness.coverageTarget}, mutation ${config.strictness.mutationPolicy}, conventions ${config.strictness.conventions}\n` +
+      `- **Dark-factory mode:** ${config.darkFactory ? "**on** — autonomous end-to-end, human gates skipped (except the F2 predicate gate)" : "off — human-in-the-loop"}\n\n` +
       `## Models per role\n\n| role | model |\n|---|---|\n` +
       `| planning | ${m.planning} |\n| research | ${m.research} |\n| execution | ${m.execution} |\n` +
       `| testing | ${m.testing} |\n| validation | ${m.validation} |\n| judging | ${m.judging} |\n`,
   });
-  const state = await loadProjectState(root);
-  appendProjectEvent(state, "elicitation", "run-config-set", `N=${config.fanout}, ${config.granularity}, cov≥${config.strictness.coverageTarget}`);
-  await saveProjectState(root, state);
-  print(config);
+}
+
+/**
+ * project-dark-factory: flip dark-factory mode at ANY point in the run (0.4.0).
+ * `--on` / `--off` (default `--on`). Implemented as a load-modify-save on the
+ * existing config — it must NOT round-trip through `project-set-config`, whose
+ * normalize-over-defaults merge would silently reset every other field.
+ */
+async function projectDarkFactory(args: Record<string, string>): Promise<void> {
+  const root = args.root!;
+  // --off disables; --on (or bare) enables. --enabled true/false also accepted.
+  const enabled = args.off ? false : args.enabled !== undefined ? String(args.enabled).trim().toLowerCase() === "true" : true;
+  const config = await setDarkFactory(root, enabled);
+  await writeRunConfigDoc(root, config);
+  if (projectStateExists(root)) {
+    const state = await loadProjectState(root);
+    appendProjectEvent(state, "lifecycle", "dark-factory", enabled ? "engaged — autonomous run" : "disengaged — human-in-the-loop");
+    await saveProjectState(root, state);
+  }
+  print({ darkFactory: config.darkFactory, runConfig: config });
 }
 
 /** project-config: READ-ONLY — print the run config (defaults if unset). */
@@ -572,6 +600,9 @@ async function projectStatus(args: Record<string, string>): Promise<void> {
     next: slicingDone ? runnable.next : null,
     blocked: !slicingDone,
     runConfig,
+    // Hoisted convenience: a command driving the autonomous loop reads this one
+    // field rather than reaching into runConfig.darkFactory each phase.
+    darkFactory: runConfig.darkFactory,
     runConfigSet: runConfigExists(root) && !runConfigBroken,
     runConfigBroken: runConfigBroken || undefined,
     note: slicingDone ? undefined : "slice execution gated until /stz:slice completes slice-disaggregation",
@@ -681,6 +712,7 @@ export async function runBridge(argv: string[]): Promise<void> {
     case "project-write-intent": await projectWriteIntent(args); break;
     case "project-record-area": await projectRecordArea(args); break;
     case "project-set-config": await projectSetConfig(args); break;
+    case "project-dark-factory": await projectDarkFactory(args); break;
     case "project-config": await projectConfig(args); break;
     case "slice-add": await sliceAdd(args); break;
     case "project-seed-slices": await projectSeedSlices(args); break;

@@ -38,6 +38,9 @@ Run `$STZ bridge project-status --root .` and show:
 - **Run config** (one line) from `runConfig`: granularity, fan-out N, strictness
   (coverage/mutation/conventions), and the per-role model map. Flag whether it is
   user-set (`runConfigSet`) or still the defaults.
+- **Dark-factory** — read the hoisted `darkFactory` field. If `true`, show a
+  banner (`🏭 dark-factory: ON — autonomous, no human gates`) and switch to the
+  autonomous behaviour below instead of prompting.
 
 If `project-status` returns `{error:"cycle"}` or `{error:"dangling"}`, surface it
 plainly and stop — the DAG must be fixed in `/stz:slice` first.
@@ -62,3 +65,32 @@ refresh. Loop until the user stops or all slices are done, then recommend
 With `--auto`, follow the recommended next action without prompting, looping
 phase → phase → per-slice runs → summary, pausing only at the two human gates
 (`/stz:new` predicate confirmation and `/stz:slice` "Approve as-is").
+
+## Dark-factory mode (autonomous, no human in the loop)
+
+When `project-status` reports `darkFactory:true` (or the run was invoked
+`/stz:pipeline --dark`, which first runs `$STZ bridge project-dark-factory
+--root . --on` then proceeds), drive the whole pipeline to completion with NO
+prompts:
+
+- Skip the dispatch AUQ entirely. At each tick, run the recommended next action
+  directly, then refresh — exactly the `--auto` loop, but the two human gates are
+  *also* skipped: do NOT pause at `/stz:slice` "Approve as-is" (auto-approve the
+  proposed DAG) or at the `/stz:run` winner-approval gate (auto-accept the
+  selected winner). Each downstream command sees `darkFactory:true` and skips its
+  own gate; you do not re-ask.
+- The ONE gate that still holds is the F2 predicate gate in `/stz:new` — if
+  elicitation never produced a machine-checkable predicate, stop and say so
+  rather than inventing acceptance. (In practice elicitation is already done
+  before dark-factory drives anything.)
+- When the frontier holds independent slices, run them as parallel background
+  agents (the DAG says they are independent), then refresh. Loop until every
+  slice is `done` or `halted`.
+- **End with the summary, not a prompt.** Run `/stz:summary` and present the
+  completion report (per-slice winner, faithful?, culled count, any halted
+  slices with their failure reports) as the final artifact. A halted slice does
+  not stall the factory — report it and continue the rest of the DAG; surface all
+  halts in the final summary.
+
+Disengage at any time with `$STZ bridge project-dark-factory --root . --off`
+(e.g. if a halt needs human eyes).

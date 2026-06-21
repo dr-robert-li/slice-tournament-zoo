@@ -290,4 +290,16 @@ export interface RunConfig {
   fanout: number;
   models: Record<StzRole, string>;
   strictness: StrictnessConfig;
+  /**
+   * Dark-factory mode (0.4.0). When true the pipeline runs end-to-end with no
+   * human in the loop: the orchestrator skips every interactive gate it can
+   * legitimately skip (the `/stz:slice` "approve as-is" gate and the `/stz:run`
+   * winner-approval gate) and drives every phase → per-slice run → summary
+   * autonomously, surfacing only the final completion report. The one gate it
+   * may NOT skip is the F2 done-predicate confirmation in elicitation — a run
+   * with zero machine-checkable predicates is never auto-invented. Off by
+   * default; offered at the end of elicitation and flippable at any point via
+   * `stz bridge project-dark-factory` (the invoke-anytime flag).
+   */
+  darkFactory: boolean;
 }
