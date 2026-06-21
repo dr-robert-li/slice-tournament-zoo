@@ -31,6 +31,14 @@ Gates that ARE skipped when `darkFactory` is on:
 A halted slice does not stall the factory: it is reported and the rest of the DAG
 continues. Every halt surfaces in the final `/stz:summary` completion report.
 
+This is also how the autonomous run handles the one decision it must not make
+alone: a `seal-crosscheck` divergence (0.5.0) is a blind-spot signal that requires
+human adjudication and must never auto-rewrite. Rather than seal on an unresolved
+signal — or block forever waiting for a human who isn't there — `/stz:run` halts
+that slice and lets the DAG continue; the divergence (already recorded in
+`30-tests/cross-reference.md`) is surfaced in the final summary for after-the-fact
+review. The factory defers that decision; it does not guess.
+
 ## Where the flag lives, and why a dedicated toggle
 
 `darkFactory` is a boolean on the persisted run config (`00-intent/run-config.json`).

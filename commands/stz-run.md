@@ -94,6 +94,15 @@ on prose-only acceptance (F2).
        either the suite over-fits the primary (fix via stronger `stz-test-author`
        guidance + `seal-amend`) or the cross reference is wrong (discard/redo it).
        Resolve before sealing.
+       - **In dark-factory mode** (`darkFactory` true, from step 0) there is no
+         human to adjudicate, and divergence must NOT auto-rewrite either — so do
+         not seal or judge this slice. Instead **halt it**: record the divergence
+         (it is already in `30-tests/cross-reference.md`), mark the slice halted
+         with a failure report pointing at the cross-check, and return. Per the
+         `/stz:pipeline` dark-factory rule, a halted slice does not stall the
+         factory — the DAG continues and the divergence surfaces in the final
+         `/stz:summary` for after-the-fact human review. (This is the one place
+         the autonomous run defers a decision rather than guessing.)
      - **both-fail** → the suite is unsatisfiable as written; treat it as a gate
        failure and loop the stderr back to `stz-test-author`.
    - **Freeze.** Once green AND the cross-check is both-pass, `$STZ bridge seal

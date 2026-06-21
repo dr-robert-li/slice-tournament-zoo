@@ -86,6 +86,12 @@ prompts:
 - When the frontier holds independent slices, run them as parallel background
   agents (the DAG says they are independent), then refresh. Loop until every
   slice is `done` or `halted`.
+- **The one decision the factory defers, never guesses:** a `seal-crosscheck`
+  divergence (`/stz:run` step 2) needs human adjudication and must not
+  auto-rewrite. With no human present, `/stz:run` halts that slice rather than
+  sealing on an unresolved blind-spot signal. That is the normal halted-slice
+  path: the DAG keeps going and the divergence is surfaced in the summary below.
+  Do not hand-resolve it mid-run; that is what the after-the-fact review is for.
 - **End with the summary, not a prompt.** Run `/stz:summary` and present the
   completion report (per-slice winner, faithful?, culled count, any halted
   slices with their failure reports) as the final artifact. A halted slice does

@@ -6,6 +6,21 @@ and the project aims to follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.5.1]
+
+### Fixed
+- **Resolved the dark-factory × cross-family seam.** A `seal-crosscheck`
+  divergence (0.5.0) is a blocking, human-adjudication gate, while dark-factory
+  mode (0.4.0) promises an unattended run — so the autonomous path could reach a
+  divergence with no documented, non-contradictory exit. Defined the policy in
+  one place, matching the existing "a halted slice does not stall the factory"
+  rule: in dark-factory mode a divergent cross-check is recorded, the slice is
+  **halted** (never sealed/judged on an unresolved blind-spot signal, and never
+  auto-rewritten), the DAG continues, and the divergence surfaces in the final
+  `/stz:summary` for after-the-fact review. Documented in `/stz:run` step 2,
+  `/stz:pipeline`'s dark-factory loop, and `docs/development/dark-factory.md`.
+  Docs-only; no code change.
+
 ## [0.5.0]
 
 Cross-family reference — a second, independently-authored reference run against
