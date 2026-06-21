@@ -12,6 +12,7 @@ stz bridge eval         --root . --slice slice-01 --specimen a \
                         --sealed .stz/30-tests/held-out/<file> \
                         --impl   .stz/40-slices/slice-01/prototypes/specimen-a/<file>
 stz bridge gate         --root . --slice slice-01
+stz bridge escalate     --root . --slice slice-01   # no-passers: advance retry→replan→halt FSM (F14), write refinement/failure report
 stz bridge record-votes --root . --slice slice-01 --votes votes.json
 stz bridge select       --root . --slice slice-01
 stz bridge finalize     --root . --slice slice-01 --intent intent.json --asbuilt asbuilt.json
@@ -47,6 +48,17 @@ approved supersession whose replacement invariant also passes; `pendingApproval`
 by a `seal-amend`. Full contract:
 [`../../commands/stz-merge.md`](../../commands/stz-merge.md) and the cross-slice
 section of [`sealed-suite.md`](./sealed-suite.md).
+
+`escalate` is the deterministic owner of bounded cross-round failure handling
+(F14). The `/stz:run` command calls it once after a gate that produced zero
+passers; it advances the retry→replan→halt FSM over `state.json` (hard ceiling:
+≤1 retry, ≤1 replan), persists the new counts, and writes the PDR `refinement.md`
+the next round's specimens consume (on retry/replan) or a `failure-report.md` and
+a `judgment: failed` phase (on halt). `gate` stays a pure read and never mutates
+escalation, so the two can't double-advance; the FSM's ceiling makes even a stray
+double-`escalate` fail-safe (it halts early, never loops). The sealed suite is
+untouched across rounds — retry/replan re-enter the tournament with the same
+frozen suite, `seal-verify` gating each round.
 
 `project-dark-factory` is a load-modify-save toggle: it flips `darkFactory` in the
 persisted run config without touching any other field (deliberately NOT routed

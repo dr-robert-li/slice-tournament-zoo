@@ -160,6 +160,31 @@ on prose-only acceptance (F2).
 6. **Gate.** `$STZ bridge gate --root . --slice $1`. Read `passers`,
    `eliminated`, and the `pairings` schedule.
 
+6b. **No passers → bounded escalation (F14).** If `passers` is empty, do NOT
+    decide on your own whether to retry — the bridge owns that bound. Call
+    `$STZ bridge escalate --root . --slice $1` exactly once and read its
+    `action`:
+    - **`retry`** — read `refinementPath` (a `50-pressure/$1/refinement.md` with
+      the GRPO-ranked losers as PDR negative context). Re-enter at **step 4**:
+      re-spawn N fresh `stz-specimen` agents, passing the refinement file's
+      content as "what the prior round got wrong — do not repeat it." Then
+      **step 4b** (`seal-verify` — the suite is unchanged but the gate is
+      mandatory every round), step 5 (eval), step 6 (gate) again.
+    - **`replan`** — the retry budget is spent. Re-enter at **step 3**: rewrite
+      `intent.json` using the failure analysis (read `refinementPath` and the
+      prior round's pressure log), then proceed to step 4 with the refinement
+      context as in `retry`.
+    - **`halt`** — both budgets are exhausted. Read `failureReportPath`, show the
+      user the structured failure report, and **STOP**. Do not spawn another
+      round.
+
+    The suite stays **frozen** across every round: never re-run step 2
+    (test-author / seal) on a retry or replan — re-authoring or re-sealing
+    mid-slice destroys the anti-hacking guarantee. Only `seal-verify` (4b) runs
+    each round. The FSM ceiling is hard (≤1 retry, ≤1 replan), so `escalate`
+    returns `halt` after at most two re-rounds — trust its `action`, never loop
+    past it.
+
 7. **Judge (pairwise).** For each pair in `pairings`, spawn `stz-judge`
    subagents (model: `runConfig.models.judging`) — `votesPerPair` votes per pair
    (you MAY lower this for a cheap
@@ -201,7 +226,8 @@ on prose-only acceptance (F2).
 - Flat orchestration only. Specimens and judges must NOT spawn their own
   subagents (keep depth 1).
 - Specimens return pointers, never file dumps (N2 context budget).
-- If the gate yields zero passers, do not loop on your own: report it and stop.
-  Bounded escalation (retry → replan → halt) is the orchestrator's job in the
-  full harness; for a single `/stz-run` invocation, halting on no-passers is
-  correct.
+- If the gate yields zero passers, do not loop or decide on your own: call
+  `$STZ bridge escalate` (step 6b) and follow its `action` (retry → replan →
+  halt). The bridge owns the bound — it persists the retry/replan counts to
+  `state.json` and halts deterministically after ≤1 retry + ≤1 replan, so the
+  escalation is replayable from state, not dependent on you counting rounds.

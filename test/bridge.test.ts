@@ -187,6 +187,89 @@ describe("in-session bridge — the deterministic half the /stz:run command call
   });
 });
 
+describe("bridge escalate — cross-round bounded escalation the command drives (F14)", () => {
+  // Stand up a slice with state + a field that all fails the gate, then drive
+  // the no-passers FSM the way /stz:run does: escalate once per failed round.
+  async function setupFailedField(): Promise<void> {
+    const manifestPath = join(root, "m.json");
+    await writeFile(manifestPath, JSON.stringify(manifest), "utf8");
+    await runBridge(["begin", "--root", root, "--manifest", manifestPath]);
+    await writeSpecimen("a", { "impl.ts": "export const run = (x:number)=>x;\n" });
+    await writeSpecimen("b", { "impl.ts": "export const run = (x:number)=>x;\n" });
+    for (const s of ["a", "b"]) {
+      captured = "";
+      await runBridge(["record-eval", "--root", root, "--slice", "slice-01", "--specimen", s,
+        "--metrics", await metricsFile({ testPassRate: 0.4, coverage: 0.5, mutationScore: 0.1 })]);
+      expect(lastJSON<{ passedGate: boolean }>().passedGate).toBe(false);
+    }
+    // gate confirms the empty field that triggers escalation.
+    captured = "";
+    await runBridge(["gate", "--root", root, "--slice", "slice-01"]);
+    expect(lastJSON<{ passers: string[] }>().passers).toEqual([]);
+  }
+
+  it("advances retry → replan → halt across rounds and persists each step", async () => {
+    await setupFailedField();
+
+    // Round 1 → retry.
+    captured = "";
+    await runBridge(["escalate", "--root", root, "--slice", "slice-01"]);
+    const r1 = lastJSON<{ action: string; round: number; retryCount: number; refinementPath: string }>();
+    expect(r1.action).toBe("retry");
+    expect(r1.round).toBe(1);
+    expect(r1.retryCount).toBe(1);
+    let state = await loadState(root, "slice-01");
+    expect(state.escalation).toBe("grpo-retry");
+    expect(state.retryCount).toBe(1);
+    // PDR refinement context written for the next round's specimens (F9).
+    expect(await readFile(join(root, STZ_DIR, "50-pressure/slice-01/refinement.md"), "utf8")).toMatch(/refinement/i);
+    expect(await readFile(join(root, STZ_DIR, "50-pressure/slice-01/pressure.md"), "utf8")).toMatch(/specimen-/);
+
+    // Round 2 → replan (retry budget spent). Planning re-opens.
+    captured = "";
+    await runBridge(["escalate", "--root", root, "--slice", "slice-01"]);
+    const r2 = lastJSON<{ action: string; round: number; replanCount: number }>();
+    expect(r2.action).toBe("replan");
+    expect(r2.round).toBe(2);
+    expect(r2.replanCount).toBe(1);
+    state = await loadState(root, "slice-01");
+    expect(state.escalation).toBe("replan");
+    expect(state.phaseStatus.planning).toBe("running"); // command rewrites intent before re-spawn
+
+    // Round 3 → halt (both budgets spent). Failure report + phase failed.
+    captured = "";
+    await runBridge(["escalate", "--root", root, "--slice", "slice-01"]);
+    const r3 = lastJSON<{ action: string; round: number; failureReportPath: string }>();
+    expect(r3.action).toBe("halt");
+    expect(r3.round).toBe(3);
+    expect(r3.failureReportPath).toMatch(/failure-report\.md$/);
+    state = await loadState(root, "slice-01");
+    expect(state.escalation).toBe("halted");
+    expect(state.phaseStatus.judgment).toBe("failed");
+    expect(state.failureReport).toMatch(/No specimen passed/);
+    const report = await readFile(join(root, STZ_DIR, "40-slices/slice-01/failure-report.md"), "utf8");
+    expect(report).toMatch(/3 round\(s\)/);
+    expect(report).toMatch(/specimen-a/);
+  });
+
+  it("never exceeds the ceiling — a stray fourth call stays halted (fail-safe)", async () => {
+    await setupFailedField();
+    for (let i = 0; i < 3; i++) {
+      captured = "";
+      await runBridge(["escalate", "--root", root, "--slice", "slice-01"]);
+    }
+    // A double-call beyond the budget must not loop or reset — it halts again.
+    captured = "";
+    await runBridge(["escalate", "--root", root, "--slice", "slice-01"]);
+    const extra = lastJSON<{ action: string; retryCount: number; replanCount: number }>();
+    expect(extra.action).toBe("halt");
+    expect(extra.retryCount).toBe(1);
+    expect(extra.replanCount).toBe(1);
+    const state = await loadState(root, "slice-01");
+    expect(state.escalation).toBe("halted");
+  });
+});
+
 // A tiny sealed harness: g(x) must be 0 for x<5, 1 otherwise; asserts g(5)===1.
 const SEALED = `
 import assert from "node:assert";

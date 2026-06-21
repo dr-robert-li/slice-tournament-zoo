@@ -33,6 +33,7 @@ import type {
   ProjectPhase,
   ProjectSliceEntry,
   RunConfig,
+  SpecimenId,
 } from "./types.js";
 import { PROJECT_PHASES } from "./types.js";
 import { scaffold, writeDoc, readDoc, stzPath } from "./taxonomy.js";
@@ -57,6 +58,7 @@ import {
 } from "./project.js";
 import { detectHacks } from "./hack-detector.js";
 import { STZ_VERSION, SCHEMA_VERSION, PACKAGE_NAME } from "./version.js";
+import { onNoPassers, type EscalationState } from "./escalation.js";
 import { evalGate, select, pairings } from "./selection.js";
 import { diffSpecs, renderSpecDiff, isFaithful, unmatchedIntentIds, mismatchedAsBuiltIds, type Spec } from "./specdiff.js";
 import { seal, verifySeal, amendSeal, heldOutFiles } from "./seal.js";
@@ -247,8 +249,134 @@ function gate(args: Record<string, string>): void {
   const { root, slice } = args as { root: string; slice: string };
   const evals = loadEvals(root, slice);
   const { passers, eliminated } = evalGate(evals);
-  // Emit the pairing schedule the command must drive with judge agents.
+  // Emit the pairing schedule the command must drive with judge agents. `gate`
+  // is a pure read — it never advances escalation. When `passers` is empty the
+  // command calls `escalate` (below), which owns the state transition; keeping
+  // them separate means a re-run of `gate` can't double-advance the FSM.
   print({ passers, eliminated, pairings: pairings(passers) });
+}
+
+/** Build the pressure-log entries: every specimen that is not the winner is a
+ *  negative exemplar (F9). `winner` is null for a no-passers round (all culled). */
+function culledFromEvals(
+  root: string,
+  slice: string,
+  evals: EvalResult[],
+  winner: SpecimenId | null,
+): CulledSpecimen[] {
+  return evals
+    .filter((e) => e.specimen !== winner)
+    .map((e) => ({
+      specimen: e.specimen,
+      reason: e.hackFindings.length
+        ? `hack: ${e.hackFindings.map((f) => f.pattern).join(",")}`
+        : `gate testPassRate=${e.testPassRate.toFixed(2)}`,
+      diff: Object.entries(readSpecimenFiles(root, slice, e.specimen))
+        .map(([p, c]) => `+++ ${p}\n${c}`)
+        .join("\n"),
+      critique: "",
+      hackFindings: e.hackFindings,
+    }));
+}
+
+/**
+ * Bounded cross-round escalation (F14), driven from the command-level `/stz:run`
+ * loop. Call this ONCE after a gate that yielded zero passers. It is the single
+ * deterministic owner of "are we allowed another round?": it advances the
+ * escalation FSM over `state.json`, persists the new counts, and on retry/replan
+ * writes the PDR refinement context the next round's specimens consume — exactly
+ * the path the mock orchestrator drives internally, now exposed to the real
+ * command so it is not the LLM deciding when to stop.
+ *
+ * The sealed suite is NOT touched here: retry/replan re-enter the tournament with
+ * the SAME frozen suite (the command re-runs `seal-verify` each round). Re-using
+ * the FSM's hard ceiling (≤1 retry, ≤1 replan) means even a stray double-call is
+ * fail-safe — it halts early, it never loops.
+ */
+async function escalateCmd(args: Record<string, string>): Promise<void> {
+  const { root, slice } = args as { root: string; slice: string };
+  const evals = loadEvals(root, slice);
+  let state = await loadState(root, slice);
+
+  const cur: EscalationState = {
+    stage: state.escalation,
+    retryCount: state.retryCount,
+    replanCount: state.replanCount,
+  };
+  // The round that just failed (1-based): rounds already consumed + this one.
+  const failedRound = cur.retryCount + cur.replanCount + 1;
+  const { next, action } = onNoPassers(cur);
+  state.escalation = next.stage;
+  state.retryCount = next.retryCount;
+  state.replanCount = next.replanCount;
+  state = appendEvent(state, "judgment", `escalation-${action.type}`, action.note);
+
+  // The whole field is culled this round (no winner). Persist the pressure log so
+  // the negative exemplars are auditable regardless of what comes next (F9).
+  const culled = culledFromEvals(root, slice, evals, null);
+  await writeDoc(root, join("50-pressure", slice, "pressure.md"), {
+    frontmatter: { summary: `Pressure log ${slice}: round ${failedRound}, ${culled.length} culled (no passers).` },
+    body: renderPressureLog({ sliceId: slice, culled }),
+  });
+
+  if (action.type === "halt") {
+    const report =
+      `# Failure report — ${slice}\n\n` +
+      `No specimen passed the sealed-suite gate after ${failedRound} round(s) ` +
+      `(${next.retryCount} retry, ${next.replanCount} replan). The bounded-escalation ` +
+      `budget (≤1 retry, ≤1 replan) is exhausted; halting per F14.\n\n` +
+      `## Per-specimen gate outcomes (final round)\n` +
+      evals
+        .map((e) => {
+          const why = e.hackFindings.length
+            ? `disqualified — hack: ${e.hackFindings.map((f) => f.pattern).join(", ")}`
+            : `gate fail — testPassRate=${e.testPassRate.toFixed(2)}, coverage=${e.coverage.toFixed(2)}, mutation=${e.mutationScore.toFixed(2)}`;
+          return `- specimen-${e.specimen}: ${why}`;
+        })
+        .join("\n") +
+      "\n";
+    state.failureReport = report;
+    state = setPhaseStatus(state, "judgment", "failed");
+    await writeDoc(root, join(sliceRel(slice), "failure-report.md"), {
+      frontmatter: { summary: `Halt: no passers after ${failedRound} round(s).` },
+      body: report,
+    });
+    await saveState(root, state);
+    print({
+      action: "halt",
+      note: action.note,
+      round: failedRound,
+      escalation: state.escalation,
+      retryCount: state.retryCount,
+      replanCount: state.replanCount,
+      failureReportPath: stzPath(root, join(sliceRel(slice), "failure-report.md")),
+    });
+    return;
+  }
+
+  // retry or replan → build the PDR refinement context (F9) from this round's
+  // group-relative advantages (no votes: GRPO over the eval rewards alone), the
+  // same computation the mock uses (orchestrator select(evals, [])).
+  const advantages = select(evals, []).judgment.advantages;
+  await writeDoc(root, join("50-pressure", slice, "refinement.md"), {
+    frontmatter: { summary: `PDR refinement for ${slice} after round ${failedRound} (${action.type}).` },
+    body: refinementContext({ sliceId: slice, culled }, advantages),
+  });
+  if (action.type === "replan") {
+    // Re-enter planning: the command rewrites intent.json before re-spawning.
+    state = setPhaseStatus(state, "planning", "running");
+  }
+  await saveState(root, state);
+  print({
+    action: action.type,
+    note: action.note,
+    round: failedRound,
+    nextRound: failedRound + 1,
+    escalation: state.escalation,
+    retryCount: state.retryCount,
+    replanCount: state.replanCount,
+    refinementPath: stzPath(root, join("50-pressure", slice, "refinement.md")),
+  });
 }
 
 function recordVotes(args: Record<string, string>): void {
@@ -293,19 +421,7 @@ async function finalize(args: Record<string, string>): Promise<void> {
     : { ranking: [], winner: null, advantages: [], votes: [] };
 
   // Pressure log: every non-winning specimen is a negative exemplar (F9).
-  const culled: CulledSpecimen[] = evals
-    .filter((e) => e.specimen !== judgment.winner)
-    .map((e) => ({
-      specimen: e.specimen,
-      reason: e.hackFindings.length
-        ? `hack: ${e.hackFindings.map((f) => f.pattern).join(",")}`
-        : `gate testPassRate=${e.testPassRate.toFixed(2)}`,
-      diff: Object.entries(readSpecimenFiles(root, slice, e.specimen))
-        .map(([p, c]) => `+++ ${p}\n${c}`)
-        .join("\n"),
-      critique: "",
-      hackFindings: e.hackFindings,
-    }));
+  const culled = culledFromEvals(root, slice, evals, judgment.winner);
   await writeDoc(root, join("50-pressure", slice, "pressure.md"), {
     frontmatter: { summary: `Pressure log ${slice}: ${culled.length} culled.` },
     body: renderPressureLog({ sliceId: slice, culled }),
@@ -932,6 +1048,7 @@ export async function runBridge(argv: string[]): Promise<void> {
     case "record-eval": recordEval(args); break;
     case "eval": evalCmd(args); break;
     case "gate": gate(args); break;
+    case "escalate": await escalateCmd(args); break;
     case "record-votes": recordVotes(args); break;
     case "select": await selectCmd(args); break;
     case "finalize": await finalize(args); break;

@@ -6,6 +6,41 @@ and the project aims to follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.7.0]
+
+Resolves the AS-BUILT gap: **cross-round escalation is now driven by the real
+`/stz:run` command**, not just the mock orchestrator. On a gate that produces no
+passers, the command consulted nothing and halted — the bounded retry→replan→halt
+loop (F14) lived only in the mock. This wires the existing escalation FSM into the
+deterministic bridge and the command markdown, so a real in-session run retries
+and replans within the hard ceiling before halting. Minor: new bridge subcommand
++ command-loop behaviour.
+
+### Added
+
+- **`stz bridge escalate --root . --slice <id>`** — the deterministic owner of
+  bounded cross-round failure handling. Call once after a no-passers gate: it
+  advances the retry→replan→halt FSM over `state.json` (ceiling ≤1 retry, ≤1
+  replan), persists the counts, and on retry/replan writes the PDR
+  `50-pressure/<slice>/refinement.md` (GRPO advantages over the eval rewards, the
+  same computation the mock uses) that the next round's specimens consume. On
+  halt it writes `failure-report.md` and sets `judgment: failed`. `gate` stays a
+  pure read and never advances escalation, so the two can't double-advance; the
+  FSM ceiling makes even a stray double-call fail-safe (halts early, never loops).
+
+### Changed
+
+- **`/stz:run` command** — adds step 6b: on zero passers it calls `escalate` and
+  follows the returned `action` — `retry` re-enters specimen spawning with the
+  refinement context, `replan` rewrites the intent first, `halt` stops with the
+  failure report. The sealed suite stays **frozen** across all rounds (never
+  re-authored/re-sealed; `seal-verify` still gates each round).
+
+### Docs
+
+- AS-BUILT: the cross-round-escalation gap bullet moves into the built section.
+  bridge-cli gains the `escalate` contract.
+
 ## [0.6.0]
 
 A sustainable **update/upgrade pathway** (F19). STZ ships through two channels

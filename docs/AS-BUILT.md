@@ -82,7 +82,11 @@ and 22, with a `prepublishOnly` (typecheck + test) guard before any npm publish.
   reward, GRPO advantage is non-flat: the winner is both judge-preferred and
   highest-advantage on the same run.
 - **No runaway loops.** The escalation ceiling (retry, replan, halt) is proven to
-  hold; the per-slice token cap throws rather than overspending.
+  hold; the per-slice token cap throws rather than overspending. The same FSM now
+  drives the real command path: `/stz:run` calls `stz bridge escalate` on a
+  no-passers gate, which advances the retry→replan→halt state over `state.json`
+  and writes the PDR refinement the next round consumes — the loop is no longer
+  mock-only.
 - **A replayable audit trail.** Every run materializes intent, research,
   conventions, test strategy, per-slice tournaments, pressure logs, spec-diffs,
   and a completion summary under `.stz/`, reconstructible from the tree plus
@@ -152,9 +156,6 @@ and 22, with a `prepublishOnly` (typecheck + test) guard before any npm publish.
   on first use, so a fresh environment needs Node 20+ and network for that first
   call. Shipping a prebuilt `dist/` to drop the runtime `tsx` dependency is a
   hardening follow-up.
-- **Cross-round escalation in `/stz:run`**: a single command invocation halts on
-  no-passers; the retry-then-replan loop currently lives in the mock orchestrator
-  and is not yet driven by the command across rounds.
 
 ## Intent vs as-built (the diff)
 
@@ -163,7 +164,7 @@ and 22, with a `prepublishOnly` (typecheck + test) guard before any npm publish.
   anti-reward-hacking, the replayable audit trail, and an installable plugin.
 - **Deferred and documented (not missing by accident):** cross-family specimens
   and judge, Python eval libraries, worktrees and observability, cross-slice RAG,
-  OS-level sealing, the `dist/` build, and cross-round escalation from the command.
+  OS-level sealing, and the `dist/` build.
 - **Built beyond the original plan:** the `stz bridge` JSON contract, a
   dependency-free real eval runner (V8 coverage plus source mutation), the
   two-level project DAG driver, the persisted run config (granularity, fan-out,
