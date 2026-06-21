@@ -46,14 +46,16 @@ on prose-only acceptance (F2).
    contents. They run concurrently and the turn blocks until all finish — that
    barrier is exactly the tournament boundary.
 
-5. **Eval each specimen.** For each specimen, run the eval runner:
-   `node bin/stz.mjs bridge ...` does not run tests itself — YOU run the sealed
-   suite against the specimen (e.g. `cd` into its dir and run the test command,
-   or use the `stz-eval` helper once built), compute
-   `{testPassRate, coverage, mutationScore}`, write it to a temp metrics.json,
-   then `stz bridge record-eval --root . --slice $1 --specimen <id> --metrics
-   <metrics.json> --fixtures <comma-sep fixture names>`. The bridge runs the
-   hack-detector itself and decides pass/fail.
+5. **Eval each specimen (real, executed).** For each specimen, call:
+   `stz bridge eval --root . --slice $1 --specimen <id> --sealed
+   .stz/30-tests/held-out/<sealed-file> --impl
+   .stz/40-slices/$1/prototypes/specimen-<id>/<entry-file> --fixtures
+   <comma-sep fixture names>`. The bridge runs the sealed suite, measures V8
+   coverage and mutation survival, runs the hack-detector, and records the
+   gate decision — all in one call. You do not compute metrics by hand.
+   (If an external eval runner already produced metrics, the alternate path is
+   `stz bridge record-eval --root . --slice $1 --specimen <id> --metrics
+   <metrics.json> --fixtures <...>`.)
 
 6. **Gate.** `stz bridge gate --root . --slice $1`. Read `passers`,
    `eliminated`, and the `pairings` schedule.
