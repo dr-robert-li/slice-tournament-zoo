@@ -54,15 +54,8 @@ jobs:
       - name: Typecheck + test
         run: npm run typecheck && npm test
 
-      - name: Debug — OIDC env + npmrc
-        run: |
-          echo "OIDC request URL present:   ${ACTIONS_ID_TOKEN_REQUEST_URL:+YES}${ACTIONS_ID_TOKEN_REQUEST_URL:-NO}"
-          echo "OIDC request token present: ${ACTIONS_ID_TOKEN_REQUEST_TOKEN:+YES}${ACTIONS_ID_TOKEN_REQUEST_TOKEN:-NO}"
-          echo "--- userconfig (${NPM_CONFIG_USERCONFIG:-~/.npmrc}) ---"
-          sed -E 's/(_authToken=).*/\1REDACTED/' "${NPM_CONFIG_USERCONFIG:-$HOME/.npmrc}" 2>/dev/null || echo "(no userconfig npmrc)"
-
       - name: Publish to npm (Trusted Publishing OIDC + provenance)
-        run: npm publish --provenance --access public --loglevel verbose
+        run: npm publish --provenance --access public
 
       - name: Extract changelog section
         id: notes
