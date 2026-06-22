@@ -28,15 +28,18 @@ jobs:
       # NOTE: no `registry-url:` — it injects a placeholder NODE_AUTH_TOKEN into
       # .npmrc that shadows OIDC and makes `npm publish` 404 under Trusted
       # Publishing. The default registry is npmjs; OIDC handles auth.
-      - name: Set up Node 20
+      # Node 24 ships npm >= 11 natively (Trusted Publishing needs npm >= 11.5.1).
+      - name: Set up Node 24
         uses: actions/setup-node@v5
         with:
-          node-version: 20
+          node-version: 24
           cache: npm
 
-      # provenance + trusted publishing need a recent npm (>= 11.5)
-      - name: Upgrade npm
-        run: npm install -g npm@latest
+      # belt-and-suspenders: ensure a Trusted-Publishing-capable npm, and prove it
+      - name: Ensure recent npm
+        run: |
+          npm install -g npm@latest
+          echo "node $(node -v) / npm $(npm -v)"
 
       - name: Install dependencies
         run: npm ci
