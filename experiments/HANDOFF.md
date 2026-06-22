@@ -92,7 +92,69 @@ cheaper thing matches). Build the loop only if best-of-N plateaus *below* fronti
 
 ---
 
-## ▶ NEXT STEP: run 1 seed of the controls (~$5–10)
+## ▶ NEXT STEP (CURRENT): build benchmark substrate + SWE-Bench pilot
+
+**DECISION (locked 2026-06-22, 3 models converged — GPT-5.5, Opus 4.8, Gemini 3.1 Pro):**
+**Do NOT build the 0.8.0 convergence loop next.** The pilots (cron/ipv4/hexcolor + controls)
+established ONE durable advantage — **selection-signal quality** (a reasoning judge / sharp sealed
+suite picks the spec-correct specimen where flat pass-rate ties). They did NOT demonstrate the
+predicate that justifies iterative convergence: **a correctness gradient a hardened sealed suite
+provably cannot express.** Evidence supports "better oracle + better selection" over "more rounds."
+Greenlight 0.8.0 ONLY IF the SWE-Bench pilot shows best-of-N plateaus below frontier AND scaling N
+does not close the gap.
+
+**What unlocks the decisive test:** a Python/pytest evaluation adapter that conforms to the
+existing deterministic bridge interface (`stz bridge eval`'s `{passed,total,passRate}` contract).
+SWE-Bench oracles are repo-native pytest suites; without this adapter we cannot run the benchmark
+faithfully to the field's norms (the whole justification — "absolute better outcomes demonstrable
+on SWE-Bench").
+
+> **Codebase hygiene (user guidance 2026-06-22):** keep ALL of this in `experiments/` — do NOT
+> modify production `src/`. The adapter is a pilot instrument under `experiments/swebench-pilot/`
+> that *mirrors* the bridge `{passed,total,passRate}` contract (drop-in compatible: `resolved`
+> maps to `passRate===1`), exactly as cron/ipv4/hexcolor pilots carry their own instruments.
+
+### Build order (this milestone)
+1. **[done above]** Patch this HANDOFF — supersede the controls NEXT STEP (below, archived).
+2. **Pytest eval adapter** under `experiments/swebench-pilot/`, a sibling PRODUCER of the
+   `{passed,total,passRate}` contract (NOT routed through `fullEval` — coverage/mutation are
+   JS-only & meaningless for a Python patch; `detectHacks` is JS-pattern-only). Oracle =
+   SWE-Bench `resolved`: **ALL FAIL_TO_PASS pass AND ALL PASS_TO_PASS still pass**, running ONLY
+   those named tests → mapped to `passRate===1` so the existing gate semantics carry over.
+   **Environment provisioning (decided): drive the official `swebench` harness** (Docker per
+   instance → `report.json` with resolved status) and parse that; ALSO support a direct
+   named-pytest mode for an already-provisioned cwd. Rolling our own grading is rejected — it
+   reintroduces the spec-gap-assisted-win confound cron/hexcolor fought.
+3. **SWE-Bench Verified/Lite pilot**, 3 conditions (criteria pre-registered below).
+
+### Pre-registered pilot decision criteria (commit BEFORE running — Opus thread mandate)
+Metric = **instance resolved-rate** (fraction of pilot instances where the selected patch is
+`resolved`). N small (Lite/Verified subset, e.g. 10–25 instances), report n explicitly.
+Conditions: **(A) STZ best-of-N sealed-selected** · **(B) naive best-of-N public-selected** ·
+**(C) frontier best-of-1** (or published frontier baseline).
+| outcome | reading | action |
+|---------|---------|--------|
+| A resolved ≈ C (frontier) | weak model + harness reaches frontier via samples | STZ value = selection signal; **0.8.0 loop NOT needed** — scale samples |
+| A resolved > B, same N | edge is the selection oracle, not the draws | core STZ claim confirmed |
+| A plateaus < C AND N-scaling doesn't close it | samples insufficient | **greenlight 0.8.0**; spec/build, test at equal token budget |
+| A ≈ B | selection adds nothing here | escalate to harder/less spec-gap task before any build |
+
+**Discipline carried over (non-negotiable):** (a) **Blindness** — specimens NEVER see the
+FAIL_TO_PASS set (held-out oracle) or PASS_TO_PASS internals; they get the issue text only.
+(b) **No judge "accuracy rate" claim** — any verification probe built from a judge's own cited
+bugs is circular; report selection wins, not an oracle-accuracy number. (c) Separate genuine
+correctness from spec-gap-assisted wins.
+
+---
+
+## ⛔ ARCHIVED (DONE / superseded) — controls NEXT STEP
+
+> Superseded by the section above. The three UPDATE blocks at the top of this file record what the
+> controls + disambiguating + hexcolor runs found; this block is kept for the decision chain only.
+> **Do not execute it** — the decision it informed ("build the 0.8.0 loop?") is now answered
+> "not yet; build the SWE-Bench substrate first."
+
+### (archived) run 1 seed of the controls (~$5–10)
 
 Cheap go/no-go before committing to 3 seeds or the convergence-loop build. Reuses the cron task
 (already built + blind-sealed). One seed only.
