@@ -6,6 +6,12 @@ and the project aims to follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.7.3]
+
+Release automation. First release published through CI with **provenance** (the
+0.7.2 release was hand-published; this is the live test of the tag-driven
+pipeline). No harness change.
+
 ### CI
 
 - **`.github/workflows/release.yml`** — push a `v*` tag and CI gates (typecheck +
