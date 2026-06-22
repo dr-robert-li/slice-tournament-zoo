@@ -6,6 +6,15 @@ and the project aims to follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### CI
+
+- **`.github/workflows/release.yml`** — push a `v*` tag and CI gates (typecheck +
+  tests), publishes to npm with **`--provenance`** (a Sigstore attestation linking
+  the npm version back to the exact GitHub commit + workflow run), then opens the
+  GitHub release from the matching `CHANGELOG` section. Prefers npm **Trusted
+  Publishing** (OIDC, no stored token); falls back to an `NPM_TOKEN` secret. Ends
+  the manual-OTP publish path for future releases.
+
 ## [0.7.2]
 
 Harness-quality fix to the test-author **guide**, plus a distribution fix. Hardens

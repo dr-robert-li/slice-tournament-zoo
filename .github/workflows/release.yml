@@ -1,0 +1,80 @@
+name: Release
+
+# Push a version tag and CI does the rest: gate → npm publish with provenance →
+# GitHub release. Tag must match package.json version (a guard checks it).
+#
+#   npm version patch        # bumps package.json + commits + tags vX.Y.Z
+#   git push --follow-tags
+#
+# Auth: prefers npm Trusted Publishing (OIDC, no secret) — register this repo+
+# workflow at npmjs.com → package → Settings → Trusted Publishing. Until then it
+# falls back to an NPM_TOKEN repo secret (a granular Automation/Publish token).
+# Either way `--provenance` stamps a verified link back to this commit + run.
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write   # create the GitHub release
+  id-token: write   # OIDC for provenance (and Trusted Publishing)
+
+jobs:
+  release:
+    name: publish + github release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Set up Node 20
+        uses: actions/setup-node@v5
+        with:
+          node-version: 20
+          registry-url: https://registry.npmjs.org
+          cache: npm
+
+      # provenance + trusted publishing need a recent npm (>= 11.5)
+      - name: Upgrade npm
+        run: npm install -g npm@latest
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Guard — tag matches package.json version
+        run: |
+          PKG="v$(node -p "require('./package.json').version")"
+          if [ "$PKG" != "${GITHUB_REF_NAME}" ]; then
+            echo "::error::tag ${GITHUB_REF_NAME} != package.json ${PKG}"; exit 1
+          fi
+
+      - name: Typecheck + test
+        run: npm run typecheck && npm test
+
+      - name: Publish to npm (with provenance)
+        run: npm publish --provenance --access public
+        env:
+          # Ignored when Trusted Publishing is configured; used otherwise.
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Extract changelog section
+        id: notes
+        run: |
+          VER="${GITHUB_REF_NAME#v}"
+          awk -v v="$VER" '
+            $0 ~ "^## \\["v"\\]" {f=1; next}
+            f && /^## \[/ {exit}
+            f {print}
+          ' CHANGELOG.md > RELEASE_NOTES.md
+          {
+            echo "**npm:** https://www.npmjs.com/package/slice-tournament-zoo/v/$VER";
+            echo "(\`npm i slice-tournament-zoo@$VER\` — published with provenance)";
+          } >> RELEASE_NOTES.md
+
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "${GITHUB_REF_NAME}" \
+            --title "${GITHUB_REF_NAME}" \
+            --notes-file RELEASE_NOTES.md \
+            --verify-tag
