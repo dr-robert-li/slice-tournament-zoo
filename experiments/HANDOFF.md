@@ -17,15 +17,19 @@
 > All four follow-ups ran. **The judge run REVERSES the earlier lean.** (1) Fresh-only Haiku
 > best-of-8 does NOT reach frontier — plateaus ~0.985, seed-3 hard 0.977; seeds 1–2's match was
 > tie-break luck (confound #1 resolved). (2) Naive's DNF was **mostly prompt-framing** — naive
-> +contract no longer hangs (confound #2 resolved). (3+4) **THE BIG ONE:** on truth-MIXED sealed
-> tiers the frozen `stz-judge` tracks *real* correctness ≈11/12 — and `probe-real-correctness.mjs`
-> confirms **truth-passRate is itself a leaky oracle** (a truth-1.0 specimen `orig-d` is only 2/5
-> on real cron probes, worse than a truth-0.977 one). Flat sealed-rate selection is blind to ≥4 real
-> bug classes the judge catches. → STZ's value = **selection-signal quality**; flat suite pass-rate
-> is a poor signal; a **reasoning judge earns its cost** (contradicting FINDINGS' "judge adds
-> nothing", which only ever tested truth-*tied* tiers). **Highest-value next lever = a SHARPER
-> sealed suite** (add the bug classes the judge surfaced), not the 0.8.0 loop — test judge-augmented
-> selection against a hardened suite before building the loop.
+> +contract no longer hangs (confound #2 resolved). (3+4) **THE BIG ONE (spec-mandated, clean):**
+> CONTRACT-VAGUE says "throw on malformed"; two **truth=1.0** specimens (`orig-c`,`orig-d`) accept
+> `5abc` instead — and the **sealed suite scores them 1.0 too**. So **both truth AND sealed oracles
+> pass spec-violating code on an unambiguous rule** — truth-passRate is provably leaky, no
+> convention needed. The frozen `stz-judge`, on the three truth-mixed pairs where that axis
+> discriminates, picked the spec-correct (throwing) specimen **3/3** — flat sealed-rate selection
+> cannot (scores both 1.0). → STZ's value = **selection-signal quality**; flat suite pass-rate is a
+> poor signal; a **reasoning judge earns its cost** (contradicting FINDINGS' "judge adds nothing",
+> only ever tested on truth-*tied* tiers). NB: NO overall judge "accuracy rate" is claimed — the
+> verification probe was built from the judges' own cited bugs (circular); other judge wins
+> (`7`=Sun, `a/n`, list+step) are spec-gap-assisted and discounted. **Highest-value next lever = a
+> SHARPER sealed suite** (add malformed-rejection + the surfaced bug classes), not the 0.8.0 loop —
+> test judge-augmented selection against a hardened suite before building the loop.
 
 **Status date:** 2026-06-22. Branch: `experiments/naive-vs-stz-pilots` (committed, not pushed).
 Author attribution: git `user.name = dr-robert-li` (global). Prompt caching: confirmed live

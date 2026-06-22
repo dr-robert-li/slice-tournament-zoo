@@ -61,47 +61,56 @@ ties these specimens so it leaks nothing; truth suite forbidden; no `7`=Sunday h
 6 cross-truth pairs (truth-1.0 "G" vs truth-0.977 "gap") × both orders = 12 judgments, + 2
 same-truth controls.
 
-### First: the truth oracle is incomplete. Verified real-cron probes (`probe-real-correctness.mjs`)
+### First: the truth oracle is leaky — proven on a SPEC-MANDATED axis (no convention needed)
 
-| specimen | truth-rate | 7=Sun | a/n step | list+step | oor reject | malformed reject | **verified /5** |
-|----------|-----------|-------|----------|-----------|-----------|------------------|-----------------|
-| s1 orig-b | 1.000 | OK | OK | OK | OK | OK | **5** |
-| s2 orig-a | 1.000 | OK | OK | OK | OK | OK | **5** |
-| s1 orig-c | 1.000 | OK | OK | **XX** | OK | **XX** | 3 |
-| s2 new-h | **0.977** | XX | OK | OK | OK | XX | **3** |
-| s2 orig-d | **1.000** | OK | **XX** | **XX** | OK | **XX** | **2** |
-| s1 new-g | 0.977 | XX | XX | OK | OK | XX | 2 |
-| s1 new-e | 0.977 | XX | XX | XX | OK | XX | 1 |
+Verified real-cron probes (`probe-real-correctness.mjs`). **The probe was written to check whether
+the judges' cited bugs were real — so it CANNOT be used to measure a judge "accuracy rate" (that
+would be circular: the yardstick is built from the judges' own answers). It is used only for what
+it can support: (a) the bugs are real code behaviour, not hallucination; (b) at least one bug class
+is spec-mandated.** Axes are bucketed by FINDINGS discipline (discount convention-only gaps, as was
+done for `7`=Sunday):
 
-**`orig-d` is truth-1.000 but only 2/5 on real cron cases — strictly worse than `new-h` (truth
-0.977, 3/5).** The 43-case truth suite simply never tests `a/n`-step disambiguation, list+step
-union, or malformed-token rejection. **So truth-passRate — the metric the whole pilot treated as
-ground truth — is itself a leaky oracle.** Every claimed defect below was independently confirmed
-by the probe; the judges did not hallucinate.
+| | **spec-MANDATED** | | spec-GAP-assisted (discount) | | |
+|----------|-------------------|-----------|------|----------|-----------|
+| specimen | malformed reject (`5abc`→throw) | oor-hour reject | 7=Sun (`7`) | a/n step (`5/15`) | list+step (`0,30/15`) |
+| s1 orig-b (T1.0) | **OK** | OK | OK | OK | OK |
+| s2 orig-a (T1.0) | **OK** | OK | OK | OK | OK |
+| s1 orig-c (T1.0) | **XX** | OK | OK | OK | XX |
+| s2 orig-d (T1.0) | **XX** | OK | OK | XX | XX |
+| s2 new-h (T.977) | **XX** | OK | XX | OK | OK |
+| s1 new-g (T.977) | **XX** | OK | XX | XX | OK |
+| s1 new-e (T.977) | **XX** | OK | XX | XX | XX |
 
-### The judge tracks real correctness, beating the truth oracle
+- **The clean pillar (spec-mandated, no convention):** CONTRACT-VAGUE says *"Throw on a malformed
+  expression."* `orig-c` and `orig-d` are **truth=1.000** yet return `00:05` on `5abc * * * *`
+  instead of throwing — and the **sealed suite also scores them 1.000**. So **both the truth AND
+  sealed oracles pass spec-violating code on an unambiguous, spec-mandated rule.** Truth-passRate —
+  the metric the whole pilot treated as ground truth — is provably leaky, with zero reliance on a
+  convention. (`oor-hour` is spec-clean too but non-discriminating: everyone throws.)
+- **Discounted (spec-gap-assisted):** `7`=Sunday (contract says `0–6`), bare `a/n` (contract lists
+  `*/n`, `a-b/n` — not bare `a/n`), and `0,30/15` list+step union are real Vixie conventions the
+  vague brief does not mandate. Same shape as the `7`=Sunday discount in FINDINGS — directional, not
+  banked. (This means the earlier "orig-d 2/5 < new-h 3/5" ranking was spec-gap-weighted; retracted
+  as a clean claim — on the spec-mandated axis alone, orig-d and new-h both fail malformed, so that
+  axis doesn't separate them.)
 
-Judge pick per cross-truth pair (both orders), scored against the **verified /5** column:
+### The judge beats flat-rate selection on the spec-mandated axis
 
-| pair | verified-better | judge order-1 | judge order-2 | judge correct? |
-|------|-----------------|---------------|---------------|----------------|
-| b vs e | orig-b (5>1) | orig-b | orig-b | ✓✓ |
-| b vs g | orig-b (5>2) | orig-b | orig-b | ✓✓ |
-| c vs e | orig-c (3>1) | orig-c | orig-c | ✓✓ |
-| a vs h | orig-a (5>3) | orig-a | orig-a | ✓✓ |
-| **d vs h** | **new-h (3>2)** | **new-h** | **new-h** | ✓✓ *(against truth label!)* |
-| c vs g | orig-c (3>2) | orig-c | new-g | ✓✗ (3-v-2 near-tie) |
+The malformed axis discriminates exactly three of the six cross-truth pairs (one specimen throws,
+the other accepts): **P1 (b vs e), P3 (b vs g), P5 (a vs h)** — in each, `orig-a`/`orig-b` throw
+(spec-correct) and the gap specimen accepts. **The judge picked the throwing, spec-correct specimen
+in all three, both orders.** Flat sealed-rate selection cannot: it scores both 1.000.
 
-- **Judge vs verified correctness: ~11/12.** The single "miss" is a 3-vs-2 near-tie (c vs g) where
-  the judge split on order. **Judge vs truth-label: 9/12** — and all 3 "disagreements" are cases
-  where the judge is *more right than the truth oracle* (it preferred the genuinely-more-correct
-  specimen truth mis-ranks).
-- Same-truth controls confirm the judge discriminates *within* a flat-rate-tied tier: among two
-  truth-1.0 specimens it preferred `orig-b` over `orig-c` (orig-c throws on `5-7` dow ranges); among
-  two truth-0.977 it preferred `new-g` over `new-e` (new-e has a 4-year-horizon leap bug on
-  `0 0 29 2 *` → 2100). Both confirmed by probe.
-- The judge cited, and the probe confirmed, **≥4 real bug classes that flat sealed-rate selection
-  is blind to**: `7`=Sunday, `a/n` step form, list+step union, malformed/out-of-range rejection.
+- So the clean, spec-grounded claim: **a reasoning judge catches a spec-MANDATED bug class
+  (malformed-rejection) that flat suite pass-rate is blind to.** No number is claimed for an overall
+  "tracking rate" (the probe can't support one — see above).
+- The judges' other cited defects (a/n step in `orig-c`/`orig-d`/`new-e`, list+step in `orig-c`, the
+  4-year-horizon leap bug in `new-e`, `5-7` dow throw in `orig-c`) were all probe-confirmed as **real
+  code behaviour** — the judges did not hallucinate — but they live on spec-gap axes, so they support
+  "the judge surfaces real issues" qualitatively, not a scored rate.
+- Same-truth controls still show the judge discriminates *within* a flat-rate-tied tier (preferred
+  `orig-b` over `orig-c`; `new-g` over `new-e`) — qualitative evidence that reasoning adds signal
+  flat pass-rate lacks.
 
 ---
 
@@ -111,15 +120,18 @@ Judge pick per cross-truth pair (both orders), scored against the **verified /5*
 |----------|-----------------------------------|------------------------|
 | weak best-of-N reaches frontier? | "≈ yes" (tie-break artifact) | **No** — plateaus ~0.985, seed-3 hard 0.977 |
 | naive DNF = selection? | "yes, naive blind" | **Mostly framing**; selection-blindness real but milder (0.953, not DNF) |
-| does the judge add value? | "A≈C, judge adds nothing" | **Wrong on truth-mixed tiers — the judge adds a lot** |
+| does the judge add value? | "A≈C, judge adds nothing" | **Yes on truth-mixed tiers — catches a spec-mandated bug class flat-rate is blind to** |
 | build the 0.8.0 convergence loop? | "do NOT" → "not-yet-determined" | **Reasoning-based selection earns its cost; prioritise the judge + a sharper suite, loop still untested** |
 
 **The core, robust conclusion:** STZ's value is **selection signal quality**, and *flat suite
-pass-rate is a poor selection signal* — it ties truth-mixed tiers and is blind to ≥4 real bug
-classes. A **reasoning judge** recovers most of that (≈11/12 vs verified correctness) and even
-out-performs the truth oracle. This is positive evidence that the **judge phase** (and, by
-extension, reasoning-based steering like the 0.8.0 loop) **earns its cost** — directly contradicting
-FINDINGS' "judge adds nothing," which was an artifact of only ever testing truth-*tied* tiers.
+pass-rate is a poor selection signal* — it ties truth-mixed tiers and (proven on the spec-mandated
+malformed-rejection axis) passes spec-violating code at 1.000. A **reasoning judge** picked the
+spec-correct specimen in all three pairs where that axis discriminates, where flat-rate selection
+cannot. That is positive evidence the **judge phase** (and, by extension, reasoning-based steering
+like the 0.8.0 loop) **earns its cost** — contradicting FINDINGS' "judge adds nothing," which was an
+artifact of only ever testing truth-*tied* tiers. (No overall judge "accuracy rate" is claimed: the
+verification probe was built from the judges' own cited bugs, so scoring the judge against it would
+be circular — see §3+4.)
 
 **But the deeper lever is the oracle, not the loop.** The sealed suite missed `a/n`/list+step/
 malformed discrimination *and* false-negatived a correct Opus impl; the truth suite mis-ranked
@@ -130,8 +142,15 @@ judge-augmented selection against a hardened suite.
 
 ## Honest limits
 
-- **Small n; single task/model tier.** Mechanism (judge > flat-rate; truth is leaky) is robust;
-  the percentages are directional.
+- **No judge "accuracy rate" is claimed — and shouldn't be from this data.** `probe.mjs` was
+  authored to verify the judges' *cited* bugs, so its cases are drawn from the judges' own
+  rationales. Scoring the judge against it is circular. Measuring a real tracking rate needs a probe
+  authored **blind to the judge rationales** (a fixed, pre-registered cron conformance battery). The
+  surviving claims here are deliberately rate-free: (a) truth+sealed both pass spec-violating
+  malformed code (leak proven), (b) the judge picked the spec-correct specimen 3/3 on the pairs the
+  malformed axis discriminates.
+- **Small n; single task/model tier.** Mechanism (judge > flat-rate on the spec-mandated axis;
+  truth is leaky) is robust; anything finer is directional.
 - **Pooling caveat (fresh seeds 2–3):** original-pilot a–d and control-style e–h are two prompt
   regimes in one "seed."
 - **Judge order-effect:** the c-vs-g pair split by presentation order — real position sensitivity;
