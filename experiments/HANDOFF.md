@@ -1,0 +1,125 @@
+# HANDOFF — STZ-vs-naive validation (resume here after context clear)
+
+> **UPDATE 2026-06-22 (controls run, n=1):** The NEXT STEP below is **DONE** — see
+> `cron-pilot/FINDINGS-CONTROLS.md` + `cron-pilot/score-controls.mjs`.
+> Result: best-of-N (sealed) truth **1.000** ≈ frontier Opus **1.000**; best-of-4-naive **DNF
+> (hang)** — naive's public suite can't discriminate. Both decision criteria 1 & 2 fired in STZ's
+> favour → **do NOT build the ROADMAP 0.8.0 convergence loop** on this task; selection signal +
+> samples reach frontier. **Two confounds to clear before banking** (read the findings): (1)
+> best-of-N's 1.000 is carried by *reused* seed-1 specimens — 4 *fresh* Haiku draws all plateaued
+> at 0.977; (2) the naive hang is partly prompt-framing, not pure selection. Next: 3 seeds +
+> fresh-only best-of-N + naive-with-same-contract to isolate. The original step text is kept below
+> for reference.
+
+**Status date:** 2026-06-22. Branch: `experiments/naive-vs-stz-pilots` (committed, not pushed).
+Author attribution: git `user.name = dr-robert-li` (global). Prompt caching: confirmed live
+(~98% cache-read on long sessions — verified via transcript `cache_read_input_tokens`).
+
+---
+
+## TL;DR — where we are
+
+Two pilots built & committed under `experiments/`:
+- **slugify-pilot** (easy/ambiguous task): STZ ≈ naive. Errors were convention-only (NFD vs
+  NFKD); a *blind* sealed suite rightly won't enforce a convention → nothing to select on.
+  See `slugify-pilot/DRY-RUN-FINDINGS.md`.
+- **cron-pilot** (`nextRun`, hard task, genuine bugs): on STZ's own metric (**absolute
+  correctness**, README §47–50 discloses the token premium is by design), **STZ ≥ naive 3/3
+  seeds** (truth 1.000 vs 0.977; seed-3 avoids a naive `*/0` hang). See `cron-pilot/FINDINGS.md`.
+
+**Honest qualifiers (still open):** the cron edge is small (~one feature), the recurring driver
+(`7`-as-Sunday) is **spec-gap-assisted** (vague brief said "0–6"), and A≈C (judge added nothing
+— top-sealed tier was truth-tied). **Token accounting:** per-token, naive is 2–4× cheaper — but
+that's the disclosed tradeoff, NOT the metric STZ optimizes.
+
+## The decision THIS next step informs
+
+The cron result is confounded two ways we haven't separated:
+1. Is STZ's edge the **selection signal** (blind sealed suite catches the bug) or just **drawing
+   N samples**? → needs a **best-of-4-naive control** (4 naive agents, naive picks by its own weak
+   public suite).
+2. Does **scaling N** (more Haiku draws, sealed-selected) **close the frontier gap** — i.e. can a
+   weak model + good harness match Opus? → needs **Haiku best-of-N vs Opus best-of-1**.
+
+**If Haiku best-of-N alone reaches frontier-truth, the expensive convergence-loop (ROADMAP 0.8.0)
+is unnecessary** — more samples suffice (the slugify lesson: don't build baroque machinery a
+cheaper thing matches). Build the loop only if best-of-N plateaus *below* frontier.
+
+---
+
+## ▶ NEXT STEP: run 1 seed of the controls (~$5–10)
+
+Cheap go/no-go before committing to 3 seeds or the convergence-loop build. Reuses the cron task
+(already built + blind-sealed). One seed only.
+
+### Assets to reuse (all exist)
+- Contract handed to implementers: `cron-pilot/slice/CONTRACT-VAGUE.md`
+- Public suite (B's signal): `cron-pilot/suites/cron.public.mjs`
+- **Blind sealed suite (selection signal for A/C/best-of-N):** `cron-pilot/suites-v2/cron.sealed.mjs`
+- **Truth oracle (grade only):** `cron-pilot/truth-suite/cron.truth.mjs`
+- Existing seed-1 Haiku specimens (4) at `cron-pilot/runs/seed-1-haiku-vague/A/prototypes/specimen-{a,b,c,d}/index.mjs`
+  — can be REUSED as part of the best-of-N pool (no need to respawn them).
+
+### Conditions to produce (1 seed)
+| label | agents | model | selection | dir |
+|-------|--------|-------|-----------|-----|
+| **best-of-N** | 8 specimens (reuse the 4 seed-1 + 4 new) | haiku | highest blind-sealed pass-rate | `cron-pilot/runs/control-seed-1/bestN/` |
+| **best-of-4-naive** | 4 naive agents | haiku | naive picks highest **public** pass-rate | `cron-pilot/runs/control-seed-1/naive4/` |
+| **frontier ref** | 2 specimens (best-of-1, take best) | opus (default) | highest blind-sealed | `cron-pilot/runs/control-seed-1/frontier/` |
+
+### Procedure
+1. `mkdir -p cron-pilot/runs/control-seed-1/{bestN,naive4,frontier}/specimen-{a..h}` (as needed).
+2. **best-of-N (4 new Haiku specimens)** — spawn `stz-specimen`, `model: haiku`. Each READS ONLY
+   `slice/CONTRACT-VAGUE.md` + `suites/cron.public.mjs`; must NOT read `slice/CONTRACT.md`,
+   `suites-v2/`, `truth-suite/`. Output `index.mjs` exporting `nextRun(expr, after)`, UTC, Node
+   built-ins. Vary strategy hints (minute-step / component-carry / day-scan / set-iterate) for
+   diversity. (Same prompt shape as the committed seed-1 specimens — see git history of those
+   files or the prior session's agent calls.)
+3. **best-of-4-naive (4 Haiku)** — spawn plain `claude` agents, `model: haiku`, naive framing:
+   "make my test suite pass" pointing ONLY at `suites/cron.public.mjs`; iterate ≤4 rounds. Naive
+   selects the winner by **public** pass-rate (NOT sealed — that's the point).
+4. **frontier (2 Opus)** — same specimen prompt as step 2 but default (Opus) model.
+5. **Score** every produced `index.mjs` on blind-sealed + truth. Reuse the scorer pattern (a
+   prior version is at `$CLAUDE_JOB_DIR/tmp/score.mjs` if still present; else inline:
+   `node <suite> <abs-impl>` → parse the final JSON line's `passRate`). Capture `subagent_tokens`
+   per agent from each Agent result for cost.
+6. Record one row per condition: condition, winner truth-passRate, total tokens, winner sealed-rate.
+
+### Decision criteria (pre-commit, apply after the 1 seed)
+- **best-of-N (sealed-select) truth ≈ frontier truth** → weak-model-+-harness reaches frontier on
+  this task via samples alone. STZ's value = the **selection signal**, not iteration → the
+  convergence loop is likely unnecessary; scale samples instead.
+- **best-of-N > best-of-4-naive** (both draw 4+; only the SELECTION suite differs) → confirms the
+  edge is the **blind sealed suite**, not the N draws. This is the core STZ claim.
+- **best-of-N plateaus < frontier** → samples aren't enough; the convergence loop (pressure-log
+  steering, ROADMAP 0.8.0) earns its cost — proceed to spec/build it, test at equal token budget.
+- **best-of-N ≈ best-of-4-naive** → selection signal adds nothing here; STZ's tournament is
+  theatre on this task → escalate to a harder/less spec-gap-assisted task before any build.
+
+n=1 is directional only. If signal is promising, expand to 3 seeds (~$15–30) before building.
+
+---
+
+## Guardrails / gotchas (learned the hard way)
+
+- **Blindness = no leakage.** Specimens/naive never see `suites-v2/` or `truth-suite/`. The sealed
+  suite was authored by `stz-test-author` blind to truth — do NOT "improve" sealed by copying
+  cases you saw fail on truth (train-on-test; voids the result).
+- **Truth oracle caveat:** the `7`-as-Sunday penalty is partly a convention the vague brief
+  under-specified. When interpreting, separate genuine bugs (step-0 hang, leap, rollover) from
+  spec-gap cases.
+- **Strict gate degenerates** at `passRate===1` (all-pass = no discrimination, or all-fail = DNF).
+  Select by **rank** (highest sealed pass-rate), not a hard 1.0 gate.
+- **Mutation-survival is uninformative** for this code (numeric mutators vs string/date logic).
+  Primary metric = truth-passRate.
+- **Brute-force specimens are slow** on the truth suite's multi-year Feb-29 case — use a ≥60s
+  per-call timeout when scoring; a hang on `*/0` is itself a real defect (score DNF).
+- **Token capture works** via `subagent_tokens` in each Agent tool result — sum per condition.
+- Don't trust the Console "not using caching" banner — caching is confirmed live (~98%).
+
+## Inventory
+- `slugify-pilot/` — instrument + DRY-RUN-FINDINGS.md (STZ ≈ naive, easy task).
+- `cron-pilot/` — task, suites, blind sealed, 3 seeds, FINDINGS.md (STZ ≥ naive, hard task).
+- `cron-pilot/seal.mjs` — standalone sealer (`node seal.mjs verify <dir>`).
+- Branch `experiments/naive-vs-stz-pilots`, commit `a846c02` (68 files). Not pushed.
+- ROADMAP 0.8.0 convergence-loop design: `docs/ROADMAP.md` §239–625 (planned, not built).
