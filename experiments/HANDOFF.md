@@ -1,5 +1,30 @@
 # HANDOFF — STZ-vs-naive validation (resume here after context clear)
 
+> **UPDATE 2026-06-22 (steps 2+3 DONE on a 2nd fresh task — see `hexcolor-pilot/FINDINGS.md`):**
+> Both roadmap steps ran on `parseHexColor` (fresh, un-burned; reproduces cron's `5abc` soft spot via
+> `parseInt("cg",16)=12`, so `#aabbcg` leaks in a per-byte slicer / is rejected by a validator).
+> **Step 2 (PBT-negative on a fresh contract):** the principle's separating value over OLD is still
+> **untested on a discriminating task — not disproven.** All 4 suites (OLD *and* NEW) caught the leaky
+> specimens, because hexcolor's soft spot is a *substitute-one-char* mutation any mutate-anywhere
+> generator hits (so is ipv4's), and OLD already writes those. The only class where NEW *could* beat
+> OLD is cron's *append-junk* soft spot (`5`→`5abc`) — **neither fresh task created that condition**,
+> so the win never had a chance to appear, vs failing to. Separately, the "stay within the contract"
+> guard **reversed roles vs ipv4**: here NEW over-committed on spec-silent inputs (whitespace,
+> non-string coercion → scored correct specimens <1.0), OLD stayed neutral → guard is author-variance
+> at n=2, not load-bearing. Strengthen it; keep the rejection/PBT content.
+> **Step 3 (judge vs HARDENED suite, equal budget) — the decisive new result:** against a *flat* suite
+> the judge wins (CONTROLS-2, banked); against a *hardened* suite it **does not change the selection
+> the suite already makes**. On the spec-mandated axis the judge agrees (re-derives f's `parseInt`
+> leniency, ~10k tokens ≈ one specimen draw); where the suite correctly TIES two equally-correct
+> specimens, the judge was **offered `WINNER: TIE` and declined it**, manufacturing a winner on a
+> **spec-silent** axis (both orders). Key reframing: the spec-silent over-commitment in the *suite*
+> (Step 2) and in the *judge* (Step 3) is **one phenomenon — a spec-silence discipline encodable in
+> both, reliable in neither yet.** So the 0.8.0 loop (a reasoning-judge steering layer) would inherit a
+> *fixable discipline gap*, not a structural flaw. Highest-value lever stays **a sharper sealed suite +
+> a reliable spec-silence guard** (both help a future judge/loop too); build the loop only if a future
+> task shows a correctness gradient a hardened suite provably cannot express (not seen cron/ipv4/hexcolor).
+
+
 > **UPDATE 2026-06-22 (controls run, n=1):** The NEXT STEP below is **DONE** — see
 > `cron-pilot/FINDINGS-CONTROLS.md` + `cron-pilot/score-controls.mjs`.
 > Raw numbers: best-of-N (sealed) truth **1.000** ≈ frontier Opus **1.000**; best-of-4-naive **DNF
