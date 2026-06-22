@@ -13,6 +13,20 @@
 > verdict:** fresh-only best-of-N, **run the judge on the truth-mixed top tier**, 3 seeds, and
 > naive-with-same-contract. Original step text kept below for reference.
 
+> **UPDATE 2026-06-22 (disambiguating runs DONE — see `cron-pilot/FINDINGS-CONTROLS-2.md`):**
+> All four follow-ups ran. **The judge run REVERSES the earlier lean.** (1) Fresh-only Haiku
+> best-of-8 does NOT reach frontier — plateaus ~0.985, seed-3 hard 0.977; seeds 1–2's match was
+> tie-break luck (confound #1 resolved). (2) Naive's DNF was **mostly prompt-framing** — naive
+> +contract no longer hangs (confound #2 resolved). (3+4) **THE BIG ONE:** on truth-MIXED sealed
+> tiers the frozen `stz-judge` tracks *real* correctness ≈11/12 — and `probe-real-correctness.mjs`
+> confirms **truth-passRate is itself a leaky oracle** (a truth-1.0 specimen `orig-d` is only 2/5
+> on real cron probes, worse than a truth-0.977 one). Flat sealed-rate selection is blind to ≥4 real
+> bug classes the judge catches. → STZ's value = **selection-signal quality**; flat suite pass-rate
+> is a poor signal; a **reasoning judge earns its cost** (contradicting FINDINGS' "judge adds
+> nothing", which only ever tested truth-*tied* tiers). **Highest-value next lever = a SHARPER
+> sealed suite** (add the bug classes the judge surfaced), not the 0.8.0 loop — test judge-augmented
+> selection against a hardened suite before building the loop.
+
 **Status date:** 2026-06-22. Branch: `experiments/naive-vs-stz-pilots` (committed, not pushed).
 Author attribution: git `user.name = dr-robert-li` (global). Prompt caching: confirmed live
 (~98% cache-read on long sessions — verified via transcript `cache_read_input_tokens`).
