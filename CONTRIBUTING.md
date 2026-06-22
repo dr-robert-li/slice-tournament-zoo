@@ -72,6 +72,30 @@ doubt, push logic down into `src/` so it can be tested and replayed.
   `.claude-plugin/marketplace.json` together when releasing.
 - Run the full suite before pushing.
 
+## Releasing
+
+Releases are tag-driven. Pushing a `v*` tag runs `.github/workflows/release.yml`,
+which gates (typecheck + tests), publishes to npm with **`--provenance`** via
+**Trusted Publishing** (OIDC — no token; the package requires 2FA and disallows
+tokens), then opens the GitHub release from the matching `CHANGELOG` section.
+
+```bash
+# bump all four version sites + CHANGELOG, commit, then:
+git tag -a vX.Y.Z -m "vX.Y.Z" && git push --follow-tags origin main
+```
+
+**Do CI/release-pipeline fixes on a short-lived branch and squash-merge into
+`main` — never iterate the workflow with debug commits directly on the default
+branch.** npm provenance immutably binds each release to the exact commit it was
+built from; that commit is whatever the tag points to. If the tag lands on a
+commit buried in a chain of `ci: fix… / ci: debug…` churn, you can't tidy the
+history afterward without either orphaning the provenance commit (breaking the
+badge) or leaving the release commit off `main`'s line. Squash-merge first, *then*
+tag, so the release binds to one clean commit and `main` stays linear.
+
+The tag must match `package.json` `version` (the workflow guards this) and must be
+**annotated** (`git tag -a`) — `git push --follow-tags` skips lightweight tags.
+
 ## License
 
 By contributing you agree your contributions are licensed under the project's
