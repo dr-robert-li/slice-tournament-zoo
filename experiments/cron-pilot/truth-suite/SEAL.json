@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "files": {
+    "cron.truth.mjs": "991df710d76dbdab732b4945125cd45ad8ae94be0be5a5a92e76950b7614ca25",
+    "naive/naive-1-dom-dow-and.mjs": "a92d7499561cfc8d83da24fb1a2b1f9c95267e147879c2bbc5e9c4392ed6e7a6",
+    "naive/naive-2-gte.mjs": "b7e3dd89510334fe684eb77ad2667f8abb238612ceb69301a52d942d032300ec",
+    "naive/naive-3-no-step.mjs": "b7ae4a788325e5ffd391c012b34eff8064458becfb7ababea1e1906c72dde399",
+    "reference/cron.ref.mjs": "2f95c9c4ae02be9a7177f8484261d0f16da08d9e4a534ef61a58ee6f3072d354"
+  },
+  "amendments": []
+}

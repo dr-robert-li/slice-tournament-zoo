@@ -1,0 +1,8 @@
+{
+  "schemaVersion": 1,
+  "files": {
+    "slugify.public.mjs": "e4cf25eb7187136554063d72a7cb1c076d5605f9ba9ef2abdf4aa7d1e1e259b2",
+    "slugify.sealed.mjs": "25621c44755a4beee7faa161df7fa741783c5587d775a71e79cf1920b7966c75"
+  },
+  "amendments": []
+}

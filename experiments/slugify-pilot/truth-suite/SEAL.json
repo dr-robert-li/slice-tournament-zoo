@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "files": {
+    "naive/naive-1-spaces-only.mjs": "636bd4ab35b7c6241826ac6389cc1f249881657fffb2d74a431ce8035a8ae06d",
+    "naive/naive-2-no-normalize.mjs": "fd59a5463ba24fd45927c29890c70a2906429134fd8da3e02130ce5340fe6a22",
+    "naive/naive-3-single-trim.mjs": "2c4eb09d4f4bed921ec89861013f7beaf2b1de2feccdbcc3a404971d1d593fae",
+    "naive/naive-4-no-collapse.mjs": "15bc6ab1ad448906fe8e80c4fb4c8a6448366d1e96dd64d5ca907e6c8c5338bc",
+    "naive/nearmiss-ascii-only.mjs": "7309e78f54613ab20d07fffd7817209efcee7803a764b18ecb091dec9aa9571e",
+    "reference/slugify.ref.mjs": "34710f2412fd17a86ce64db3ba6975386edf031252314d4eb97b7b55de767081",
+    "slugify.truth.mjs": "734682bc53d47e99e4e05acf89e5f5a8ee75fa3215ff5f63116c0a1de6da1345"
+  },
+  "amendments": []
+}
