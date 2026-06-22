@@ -6,10 +6,9 @@ name: Release
 #   npm version patch        # bumps package.json + commits + tags vX.Y.Z
 #   git push --follow-tags
 #
-# Auth: prefers npm Trusted Publishing (OIDC, no secret) — register this repo+
-# workflow at npmjs.com → package → Settings → Trusted Publishing. Until then it
-# falls back to an NPM_TOKEN repo secret (a granular Automation/Publish token).
-# Either way `--provenance` stamps a verified link back to this commit + run.
+# Auth: npm Trusted Publishing (OIDC, no token) — the package is set to "require
+# 2FA and disallow tokens", so OIDC is the only path and there is nothing to leak,
+# expire, or revoke. `--provenance` stamps a verified link back to this commit+run.
 
 on:
   push:
@@ -50,11 +49,8 @@ jobs:
       - name: Typecheck + test
         run: npm run typecheck && npm test
 
-      - name: Publish to npm (with provenance)
+      - name: Publish to npm (Trusted Publishing OIDC + provenance)
         run: npm publish --provenance --access public
-        env:
-          # Ignored when Trusted Publishing is configured; used otherwise.
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Extract changelog section
         id: notes

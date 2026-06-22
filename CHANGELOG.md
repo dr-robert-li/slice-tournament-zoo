@@ -11,9 +11,10 @@ and the project aims to follow [Semantic Versioning](https://semver.org/).
 - **`.github/workflows/release.yml`** — push a `v*` tag and CI gates (typecheck +
   tests), publishes to npm with **`--provenance`** (a Sigstore attestation linking
   the npm version back to the exact GitHub commit + workflow run), then opens the
-  GitHub release from the matching `CHANGELOG` section. Prefers npm **Trusted
-  Publishing** (OIDC, no stored token); falls back to an `NPM_TOKEN` secret. Ends
-  the manual-OTP publish path for future releases.
+  GitHub release from the matching `CHANGELOG` section. Auth is npm **Trusted
+  Publishing** (OIDC) — the package is set to *require 2FA and disallow tokens*, so
+  there is no stored credential to leak, expire, or revoke. Ends the manual-OTP
+  publish path for future releases.
 
 ## [0.7.2]
 
