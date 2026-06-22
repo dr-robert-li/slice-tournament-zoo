@@ -2,14 +2,16 @@
 
 > **UPDATE 2026-06-22 (controls run, n=1):** The NEXT STEP below is **DONE** — see
 > `cron-pilot/FINDINGS-CONTROLS.md` + `cron-pilot/score-controls.mjs`.
-> Result: best-of-N (sealed) truth **1.000** ≈ frontier Opus **1.000**; best-of-4-naive **DNF
-> (hang)** — naive's public suite can't discriminate. Both decision criteria 1 & 2 fired in STZ's
-> favour → **do NOT build the ROADMAP 0.8.0 convergence loop** on this task; selection signal +
-> samples reach frontier. **Two confounds to clear before banking** (read the findings): (1)
-> best-of-N's 1.000 is carried by *reused* seed-1 specimens — 4 *fresh* Haiku draws all plateaued
-> at 0.977; (2) the naive hang is partly prompt-framing, not pure selection. Next: 3 seeds +
-> fresh-only best-of-N + naive-with-same-contract to isolate. The original step text is kept below
-> for reference.
+> Raw numbers: best-of-N (sealed) truth **1.000** ≈ frontier Opus **1.000**; best-of-4-naive **DNF
+> (hang)**. **But the headline does NOT hold up under review.** The sealed suite **ties four
+> specimens at 1.000** (two truth-1.000, two truth-0.977); best-of-N's win is **id-order tie-break
+> luck over a truth-mixed tier**, not a selection win — reorder the pool → 0.977, and all 4 *fresh*
+> Haiku draws plateau at 0.977. So criterion 1 is met **by number, not mechanism** (closer to
+> criterion-3 plateau), and the convergence-loop decision is **NOT-YET-DETERMINED**, not "don't
+> build." What *does* survive: naive's public suite is **provably non-discriminating** (all 4 =
+> public 1.000), the narrow robust core of criterion 2. **Disambiguating runs needed before any
+> verdict:** fresh-only best-of-N, **run the judge on the truth-mixed top tier**, 3 seeds, and
+> naive-with-same-contract. Original step text kept below for reference.
 
 **Status date:** 2026-06-22. Branch: `experiments/naive-vs-stz-pilots` (committed, not pushed).
 Author attribution: git `user.name = dr-robert-li` (global). Prompt caching: confirmed live
