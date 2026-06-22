@@ -20,6 +20,10 @@ per-element position snapshots), and requires each done-predicate to be encoded
 as an invariant rather than a brittle snapshot diff. This is the *only* control
 for the fragile-invariant class — see below for why.
 
+The same guide owns the **symmetric** class: a suite that does not *fail correct
+code* but does not *catch incorrect code* either — see "The permissive-suite
+class" below.
+
 **The smoke gate (a SENSOR) owns mechanical validity only.** Before sealing, the
 orchestrator compiles the suite and runs it against the test-author's reference
 implementation in a throwaway scratch dir. A green gate means exactly:
@@ -54,6 +58,41 @@ it would hand specimens the answer — a worse hole than the one the gate closes
    in place: `stz bridge seal-amend --reason "<why>"` records the per-file
    from→to hashes + reason into the manifest and re-freezes. A silent edit then
    fails `seal-verify`.
+
+## The permissive-suite class: passing INCORRECT code (the symmetric guide)
+
+The fragile-invariant class is a suite that **fails correct** code. Its mirror is
+a suite that **passes incorrect** code: it asserts only valid, happy-path inputs,
+so a spec-violating implementation scores 100% and ties with a correct one. The
+suite is *satisfiable* — the smoke gate is green — but it *discriminates nothing*.
+
+This is a **guide-class** failure for the same reason the fragile-invariant is:
+the smoke gate only proves "compiles + satisfiable against the reference"; a
+non-discriminating suite satisfies that vacuously. No mechanical sensor sees the
+missing negative case. Only authoring guidance can.
+
+The dogfood case that motivated the rule: a sealed `nextRun` (cron) suite asserted
+only first-fire *times* and contained **no rejection cases**. An implementation
+that silently accepted malformed expressions (returning a time instead of throwing,
+which the contract mandated) and mis-parsed a documented step form scored a full
+**1.000 — tying a correct one**, on both the sealed suite and an independent truth
+oracle. Flat pass-rate selection could not separate them.
+
+The `stz-test-author` guide now requires (symmetric with the invariant rules):
+
+- **contract-mandated rejection cases** — every "throw/error/reject on X" clause
+  gets a negative assertion; the author's reference must satisfy them too;
+- **discriminating inputs** — each case must be one a plausibly-wrong impl fails,
+  not one a degenerate impl also passes (the `5/15`-from-before-minute-5 trap);
+- **a property-based generator over the negative space** — hand-picked negatives
+  reliably cover only the obvious malformed forms an implementation already
+  rejects; a generator that mutates valid inputs into invalid ones and asserts
+  each throws reaches the parser soft spots a fixed list misses (the dogfood
+  validation below: 3/3 blind authors added rejection cases, but their hand-picked
+  negatives missed the one leniency that actually discriminated the specimens);
+- **coverage of every contracted feature**, not just the happy path —
+- while **staying within the contract** (testing an unstated convention would
+  re-introduce the fragile-invariant class from the other side).
 
 ## Cross-family reference: an independent guide against shared blind spots
 
@@ -137,6 +176,14 @@ message; the residual risk is the cost of the reported-results approach.
   gate miss**. The gate was never capable of detecting it. Fix via an audited
   `seal-amend`, and treat it as a signal to strengthen the author guidance — not
   as a bug in the gate.
+- **Permissive suite discovered later** (the sealed suite passes a specimen that
+  violates the contract — e.g. accepts input the contract says to reject, or ties
+  a spec-violating specimen with a correct one) → also an **authoring (guide)
+  failure, not a gate miss**: the gate only checks satisfiability, which a
+  non-discriminating suite meets vacuously. Fix via an audited `seal-amend` that
+  adds the missing rejection / discriminating cases, and strengthen the author
+  guidance. Do NOT fix it by copying cases you saw a specimen fail on a private
+  oracle — that is train-on-test and voids the held-out property.
 
 The short version: **fix the contract, not just the prompt.** Prompt hardening is
 the control for semantic fragility; the smoke gate is a narrow mechanical sensor;

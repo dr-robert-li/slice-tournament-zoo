@@ -80,6 +80,15 @@ and 22, with a `prepublishOnly` (typecheck + test) guard before any npm publish.
   network-bypass specimen passed all 304 sealed checks for a `clamp` slice and
   was still culled at the gate before any judge saw it
   (`examples/clamp-tournament/`).
+- **The sealed suite catches incorrect code, not just gamed code (0.7.2).** The
+  `stz-test-author` guide now owns the *permissive-suite* class — a suite that
+  passes a spec-violating specimen because it only checks valid inputs — by
+  mandating contract-driven rejection cases, discriminating inputs, a
+  property-based generator over the negative space, and a "stay within the
+  contract" guard so it does not fail a correct implementation of a spec-silent
+  reading. Validated non-regressive + over-strictness-avoiding on two dogfood
+  pilots (`experiments/`); full guide-class write-up in
+  `docs/development/sealed-suite.md`.
 - **Meaningful selection signal.** With real coverage and mutation feeding the
   reward, GRPO advantage is non-flat: the winner is both judge-preferred and
   highest-advantage on the same run.

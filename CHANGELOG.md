@@ -6,6 +6,51 @@ and the project aims to follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.7.2]
+
+Harness-quality fix to the test-author **guide**, plus a distribution fix. Hardens
+the sealed-suite authoring against the *permissive-suite* class — a suite that does
+not fail correct code but does not catch incorrect code either, so a spec-violating
+specimen ties a correct one. Surfaced by dogfood: a sealed `nextRun` (cron) suite
+scored an implementation that silently accepts malformed input at a full 1.000.
+
+### Changed
+
+- **`stz-test-author` guide hardened (the symmetric guide).** The agent prompt now
+  requires, alongside the existing invariant rules:
+  - **contract-mandated rejection cases** — every "throw/reject on X" clause gets a
+    negative assertion; the author's reference must satisfy them too;
+  - **discriminating** inputs (a case a degenerate impl also passes proves nothing);
+  - a **property-based generator over the negative space** (mutate valid inputs into
+    invalid ones and assert each throws), because hand-picked negatives cover only
+    the obvious malformed forms an implementation already rejects;
+  - **stay within the contract** — do not test behaviour the contract is silent on,
+    which would fail a correct implementation of a defensible alternate reading.
+- **`docs/development/sealed-suite.md`** documents the permissive-suite class as a
+  third guide-class (alongside fragile-invariant and superseded-invariant), with the
+  matching error-handling split and an audited `seal-amend` remedy.
+
+### Distribution
+
+- **npm package now ships `agents/` and `docs/development/`** (was `src` + `bin`
+  only), so the agent fix and its guide-class contract reach `npm` consumers, not
+  only the Claude Code plugin/marketplace channel. Plugin + npm versions bumped
+  together (0.7.2).
+
+### Validation (honest scope)
+
+- Validated on two pilots under `experiments/` (cron, IPv4): the hardened guidance is
+  **followed reliably** (every blind author added rejection + negative-space-generator
+  coverage), is **non-regressive** (still catches lenient specimens), and **prevents
+  over-strict false-fails** — NEW suites stay neutral on spec-silent inputs and pass
+  both strict and lenient correct references, where the old guidance committed to one
+  reading and failed a correct lenient reference (0.915–0.950).
+- **Not claimed:** that the permissive-suite gap is empirically *closed*. It is
+  addressed by construction; a fresh-task demonstration that the negative-space
+  generator catches a *subtle* parser soft spot the old guide missed is future work
+  (cron's soft spot was too subtle for hand-picked negatives and its specimens are now
+  contaminated; IPv4's negatives were too obvious to differentiate the two arms).
+
 ## [0.7.1]
 
 Docs-only. Reframes the as-built note as a **living roadmap** and records the
