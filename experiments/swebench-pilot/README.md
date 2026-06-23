@@ -95,6 +95,15 @@ circular). Separate genuine correctness from spec-gap-assisted wins.
 ### Status
 
 - [x] eval adapter (`eval-adapter.mjs`) — dual mode, 16/16 tests green.
-- [ ] instance set chosen (Verified/Lite subset) + official `swebench` harness wired for `report` mode.
+- [x] **substrate validated on real data** — `swebench 4.1.0` installed, `SWE-bench_Lite`
+      loads; adapter matched all 15 named tests of `astropy__astropy-12907` (incl. real
+      parametrized ids like `test_separable[compound_model6-result6]`) → `resolved=true` with
+      the gold patch; negative control (1 FAIL_TO_PASS failing) → `resolved=false`. Real
+      instance schema (`FAIL_TO_PASS`/`PASS_TO_PASS`/`patch`/`test_patch`) maps cleanly to
+      adapter inputs.
+- [ ] official `swebench` harness wired for `report` mode (needs per-instance Docker image
+      build — multi-GB; the one genuinely costly, user-gated step). report-mode parser is
+      already unit-tested against the official `report.json` shape.
+- [ ] instance set chosen (Verified/Lite subset).
 - [ ] conditions A/B/C produced under blindness discipline.
 - [ ] scored, decision table applied → 0.8.0 go/no-go.
