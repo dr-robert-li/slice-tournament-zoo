@@ -94,6 +94,21 @@ cheaper thing matches). Build the loop only if best-of-N plateaus *below* fronti
 
 ## ▶ NEXT STEP (CURRENT): build benchmark substrate + SWE-Bench pilot
 
+> **UPDATE 2026-06-25 — substrate DONE + validated; pilot BLOCKED on this host.**
+> Steps 1–2 complete and committed: HANDOFF decision locked, and the pytest eval adapter
+> (`swebench-pilot/eval-adapter.mjs`, dual-mode, 16/16 tests) is built and **validated against a
+> real SWE-Bench Lite instance** (`pallets__flask-4045` + `astropy__astropy-12907` node-ids).
+> `swebench 4.1.0` installed; the official harness was driven on a gold patch. **Step 3 (the
+> pilot) cannot run on THIS host** — two orthogonal environment blockers, NOT adapter defects
+> (the adapter surfaced both as clean DNF/ERROR with cause):
+>   1. official eval images are **x86_64**; this host is **aarch64** (no qemu) → `exec format error`;
+>   2. native ARM provisioning needs the instance's pinned **Python 3.9/3.10 + deps**, unsatisfiable
+>      on the host's Python 3.13 (werkzeug/pytest/`ast.Str` pin cascade).
+> **RESUME ON AN x86_64 HOST**: there the harness builds/pulls pinned per-instance images and emits
+> `report.json` → `node eval-adapter.mjs report ...`, fully faithful, zero hand-pinning. Do NOT
+> register qemu binfmt or build arm64 images on the shared GPU host. Full root-cause +
+> reproduction: `swebench-pilot/ENV-FINDINGS.md`. Remaining work is host/provisioning, not code.
+
 **DECISION (locked 2026-06-22, 3 models converged — GPT-5.5, Opus 4.8, Gemini 3.1 Pro):**
 **Do NOT build the 0.8.0 convergence loop next.** The pilots (cron/ipv4/hexcolor + controls)
 established ONE durable advantage — **selection-signal quality** (a reasoning judge / sharp sealed
