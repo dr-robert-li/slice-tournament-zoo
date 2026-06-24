@@ -101,9 +101,13 @@ circular). Separate genuine correctness from spec-gap-assisted wins.
       the gold patch; negative control (1 FAIL_TO_PASS failing) → `resolved=false`. Real
       instance schema (`FAIL_TO_PASS`/`PASS_TO_PASS`/`patch`/`test_patch`) maps cleanly to
       adapter inputs.
-- [ ] official `swebench` harness wired for `report` mode (needs per-instance Docker image
-      build — multi-GB; the one genuinely costly, user-gated step). report-mode parser is
-      already unit-tested against the official `report.json` shape.
+- [x] official `swebench` harness invoked (gold patch, `pallets__flask-4045`) — **two host-level
+      env blockers found, see `ENV-FINDINGS.md`**: (1) official images are x86_64, this host is
+      aarch64 → `exec format error`; (2) native ARM provisioning needs the instance's pinned
+      Python 3.9/3.10 + deps, unsatisfiable on the host's Python 3.13. Adapter behaved correctly
+      throughout (clean DNF/ERROR with cause). **Recommendation: run the pilot on an x86_64 host**
+      where report-mode is faithful with zero hand-pinning. report-mode parser is already
+      unit-tested against the official `report.json` shape.
 - [ ] instance set chosen (Verified/Lite subset).
 - [ ] conditions A/B/C produced under blindness discipline.
 - [ ] scored, decision table applied → 0.8.0 go/no-go.
