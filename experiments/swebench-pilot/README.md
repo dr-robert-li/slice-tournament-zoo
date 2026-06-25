@@ -108,6 +108,10 @@ circular). Separate genuine correctness from spec-gap-assisted wins.
       throughout (clean DNF/ERROR with cause). **Recommendation: run the pilot on an x86_64 host**
       where report-mode is faithful with zero hand-pinning. report-mode parser is already
       unit-tested against the official `report.json` shape.
-- [ ] instance set chosen (Verified/Lite subset).
+- [x] **report-mode wired to Epoch arm64 + 5-instance dry-run** (`run_epoch_arm64.py`,
+      `DRYRUN-RESULTS.md`): official harness → real `report.json` → `eval-adapter.mjs report`,
+      native on aarch64. 3/5 gold-resolved; the 2 failures are network-dependent (`httpbin` 503)
+      instances, not arch/adapter/wiring. Confirms the authoritative path runs on this host.
+- [ ] instance set chosen (Verified subset; **filter network-dependent instances**).
 - [ ] conditions A/B/C produced under blindness discipline.
 - [ ] scored, decision table applied → 0.8.0 go/no-go.
