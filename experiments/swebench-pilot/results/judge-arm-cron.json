@@ -1,0 +1,31 @@
+{
+  "substrate": "cron (recall-free)",
+  "prereg": "PILOT-PREREG-JUDGE.md",
+  "design": "signal-matched A/B/C: signal=frozen blind judge held fixed; vary only search (sample vs loop). C = hardened-suite+best-of-N as the cheap baseline the loop must beat.",
+  "gen_budget_B_tokens": 90140,
+  "fresh_pool": {
+    "j1": {"sealed": 1.0, "truth_full": 1.0, "mustThrow": "13/13", "axis_5abc_correct": true,  "tok": 15674},
+    "j2": {"sealed": 1.0, "truth_full": 1.0, "mustThrow": "13/13", "axis_5abc_correct": true,  "tok": 37549},
+    "j3": {"sealed": 0.9928, "truth_full": 0.9535, "mustThrow": "12/13", "axis_5abc_correct": false, "tok": 18183},
+    "j4": {"sealed": 1.0, "truth_full": 1.0, "mustThrow": "12/13", "axis_5abc_correct": false, "tok": 18734}
+  },
+  "axis": "5abc malformed-token (parseInt truncation): the ONLY recall-free, contract-mandated, sealed-AND-truth-blind discriminator on cron. fresh-pool reject base rate 2/4.",
+  "conditions": {
+    "A_judge_bestN": {"selects": "j1/j2 (perfect)", "truth_primary": 1.0, "axis_5abc_correct": true},
+    "B_judge_iterate": {"start": "j4 (sealed=1.0 green, truth_full=1.0, accepts 5abc)", "critic_tok": 74289, "reviser_tok": 17844, "rounds": 1, "final": {"sealed": 1.0, "truth_full": 1.0, "mustThrow": "13/13", "axis_5abc_correct": true}},
+    "C_hardened_bestN": {"selects": "j1/j2 (max mustThrow 13/13)", "truth_primary": 1.0, "axis_5abc_correct": true, "marginal_cost_tokens": 0}
+  },
+  "result": "B == C == A at the correctness ceiling (truth 1.0, 5abc-correct). B does NOT exceed C. B costs ~92k extra tokens (74k critique + 18k revise) to reach a ceiling C reaches by automated selection at ~0 marginal tokens.",
+  "verdict_prereg_row": "row 2: B ~= C, both >= A >= sealed -> 0.8.0 (judge-steered convergence loop) NOT warranted. Sharpen the suite.",
+  "two_findings": [
+    "Judge-beyond-suite WORKS as a loop critic (operational confirmation, stronger than CONTROLS-2 pairwise selection): a blind judge reading only contract+code past a fully-green sealed suite found the spec-mandated 5abc bug AND two more real malformed-validation gaps; the reviser fixed them to the ceiling. The mechanism is real.",
+    "The loop is still not warranted: the gradient it crosses (5abc malformed) is suite-EXPRESSIBLE, so hardened-suite+best-of-N reaches the same ceiling by SELECTION (the fresh pool already held two fully-correct candidates) at ~0 marginal tokens, vs 74k/round for the judge loop. The judge's value is SELECTION/AUTHORING (catch the bug class once, bake it into the suite), not per-slice search-loop value."
+  ],
+  "narrow_cell_acknowledged": "The loop strictly beats best-of-N only when the entire sampled pool lacks a correct candidate AND iteration repairs one (~(2/3)^N of pools at base rate 1/3). But if the hardened battery is available as a selection signal (it is, ~0 cost), the cheaper fix is to draw more / sharpen the suite, not pay 74k/round to iterate. Even that cell favors the suite.",
+  "bounds": [
+    "n=1 seed, directional. hexcolor/ipv4 replication pending (only needed if a clean B>C had shown).",
+    "single discriminating axis on cron (5abc); cron exposes no contract-mandated gradient a hardened suite cannot express.",
+    "recall-free; convention axes (7=Sunday, bare a/n) excluded from the primary number per contract citation.",
+    "judge critique cost 74k tokens here -- the cost asymmetry vs automated selection is itself load-bearing for the verdict."
+  ]
+}

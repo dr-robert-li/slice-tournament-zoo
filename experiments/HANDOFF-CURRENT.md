@@ -15,16 +15,23 @@ committed.
   build the 0.8.0 convergence loop yet. **Sharpen the sealed suite first.** Build a loop only if a
   reasoning judge that steers *beyond* the suite can cross a correctness gradient a hardened suite
   cannot express, tested at equal token budget.
-- **Newest result (clean):** a **blind, recall-free, budget-matched** iterate-vs-best-of-N run on the
-  synthetic cron task. Iterate ties best-of-N (truth 0.9767 each), both capped by the sealed signal's
-  blind spot. This **rules out SEALED-STEERED convergence** and **proves the gradient exists** (a
-  42/43 residual a hardened suite did not catch). It does NOT test the judge-beyond-suite form.
+- **Newest result (clean — CLOSES the last open door):** the **judge-beyond-suite blind arm** on
+  cron, signal-matched and budget-matched (`PILOT-RESULTS-JUDGE.md`). A blind judge reading only
+  {contract, code, green-sealed} reasoned PAST a fully-green suite and found the spec-mandated `5abc`
+  malformed bug + two more real gaps — so the **judge-loop mechanism works** (stronger than
+  CONTROLS-2). **But B (judge+iterate) == C (hardened-suite+best-of-N)** at the truth-1.0 ceiling, and
+  B cost ~92k extra tokens (74k/critique) to reach what C selects at ~0. The gradient is
+  **suite-expressible**, so the loop is **NOT warranted**. Verdict: sharpen the suite. **0.8.0 is now
+  ruled out on BOTH the sealed-steered AND the judge-beyond-suite forms.**
+- **Prior clean result:** the sealed-steered iterate arm (`PILOT-RESULTS-BLIND.md`) — iterate ties
+  best-of-N (truth 0.9767), proving the gradient exists but sealed-steering can't cross it.
 - **SWE-Bench is built and works on this aarch64 host**, but three pilots (A/B/C, scaled, the
   SWE-Bench iterate arm) were each **silent/confounded** on 0.8.0. SWE-Bench is demoted to
   *demonstration-only*; it cannot *decide* the build (recall contamination + the public/held-out test
   split fights the experiment). Decisions are made on the synthetic substrate.
-- **THE NEXT STEP (section 7):** the **judge-beyond-suite blind arm** on the synthetic substrate. It
-  is the only open door left on 0.8.0.
+- **THE NEXT STEP (section 7):** with 0.8.0 ruled out both ways, the live work is **building the
+  sharper sealed suite** (bake in the judge-surfaced bug classes) + the judge as a one-time
+  selection/authoring instrument — NOT the convergence loop.
 
 ---
 
@@ -34,11 +41,14 @@ committed.
 |--------------------------------|---------|--------|
 | best-of-N sampling, sealed-selected | yes (cron, budget-matched) | reaches the sealed ceiling, not above |
 | **sealed-steered** iterate loop (stop = sealed green) | yes (cron, budget-matched, recall-free) | **ties best-of-N; cannot cross the sealed-blind gradient. NOT warranted.** |
-| **judge-beyond-suite** loop (judge reasons past the suite) | **NO — open door** | CONTROLS-2 banked signal (judge picked spec-correct 3/3 where flat sealed ties); untested as a budget-matched loop |
+| **judge-beyond-suite** loop (judge reasons past the suite) | **yes (cron, signal-matched, budget-matched)** | **judge+iterate == hardened-suite+best-of-N at the truth-1.0 ceiling; loop NOT warranted.** Mechanism confirmed (blind judge found the `5abc` bug past a green suite) but the gradient is suite-expressible, so selection reaches the same ceiling at ~0 marginal cost vs 74k/critique-round. → sharpen the suite. (`PILOT-RESULTS-JUDGE.md`) |
 
 The sealed-steered null is partly definitional: a loop that stops at "sealed = 1.0" structurally
-cannot fix what the suite cannot see. That is exactly why the remaining question is the
-judge-beyond-suite form, whose stop condition is not "sealed green."
+cannot fix what the suite cannot see. The judge-beyond-suite form was the escape from that
+definitional trap — and it was tested (signal-matched, holding the judge fixed, varying only
+sample-vs-loop). The judge loop *works* but does not beat a hardened suite + best-of-N: every
+contract-mandated gradient found on cron is a finite test you can bake into the suite, so the judge's
+value is selection/authoring (one-time), not per-slice search. **Both loop forms are now ruled out.**
 
 ---
 
@@ -66,8 +76,11 @@ SWE-Bench line (`experiments/swebench-pilot/`):
 - **Scaled pilot + SWE-Bench iterate arm** — best-of-N ≈ frontier but complementary; iterate arm
   CONFOUNDED (critic not blind to F2P, pointed questions, recall). Silent on 0.8.0.
   `PILOT-RESULTS-SCALED.md`.
-- **Blind iterate arm (cron)** — the clean one. `PILOT-PREREG-BLIND.md`, **`PILOT-RESULTS-BLIND.md`**,
-  `results/blind-arm-cron.json`.
+- **Blind iterate arm (cron)** — the clean sealed-steered one. `PILOT-PREREG-BLIND.md`,
+  **`PILOT-RESULTS-BLIND.md`**, `results/blind-arm-cron.json`.
+- **Judge-beyond-suite arm (cron)** — the LAST arm; signal-matched, closes 0.8.0. Judge-loop
+  mechanism confirmed but B==C (loop not warranted; gradient suite-expressible). `PILOT-PREREG-JUDGE.md`,
+  **`PILOT-RESULTS-JUDGE.md`**, `results/judge-arm-cron.json`, `cron-pilot/runs/judge-arm/`.
 
 ---
 
@@ -145,41 +158,44 @@ build (the harness hardcodes x86_64 and can't build on ARM).
 
 ---
 
-## 7. THE NEXT STEP — the judge-beyond-suite blind arm (spec it, then run)
+## 7. THE NEXT STEP — judge-beyond-suite is DONE; build the sharper suite
 
-The only open door on 0.8.0. Run on the synthetic substrate (recall-free), budget-matched, same as
-the sealed-steered arm, with ONE change: the loop's stop/steer signal is a **reasoning judge that
-reads the CONTRACT and the candidate and reasons past the sealed suite**, not "sealed = 1.0".
+**The judge-beyond-suite arm ran and closed the door** (`PILOT-PREREG-JUDGE.md` →
+`PILOT-RESULTS-JUDGE.md`, `results/judge-arm-cron.json`). What it found, and what it leaves:
 
-Design:
-1. Reuse cron. best-of-N baseline already measured: max-sealed selection caps at truth 0.9767, and the
-   residual 42/43 is a sealed-blind case (a malformed-rejection / convention the contract
-   under-specifies).
-2. **iterate-judge:** generate a candidate; instead of stopping at sealed=1.0, a frozen judge (the
-   CONTROLS-2 judge, `stz-judge`) reads {contract, candidate code, sealed-suite output} and decides
-   whether the candidate is *contract-correct beyond what the suite checks* — e.g. does it reject the
-   malformed forms the contract mandates, handle the `7`==Sunday / leap conventions. If the judge
-   flags a gap, critique → revise → repeat, within budget B. Stop only when the judge is satisfied OR
-   B is exhausted. Score on truth.
-3. **The test:** does iterate-judge cross the 42/43 → 43/43 gradient that sealed-steering could not,
-   at equal budget? If yes → the judge-beyond-suite loop earns its cost → **0.8.0 (judge-steered
-   form) warranted**, spec it against ROADMAP §239-625. If no → even a reasoning judge can't beat a
-   sharpened suite here → **build a sharper suite, not the loop**, and 0.8.0 stays shelved.
-4. Keep blindness (judge never sees truth), recall-free substrate, budget-matched, 3 seeds, and the
-   symmetric-error rule. Replicate on hexcolor/ipv4 for breadth before any build call.
+- **Done / decided:** signal-matched A/B/C on cron. The judge-loop *mechanism* is real and confirmed
+  (a blind judge, given only {contract, code, green-sealed}, reasoned past a fully-green suite and
+  found the spec-mandated `5abc` malformed bug + 2 more gaps). But **B (judge+iterate) == C
+  (hardened-suite+best-of-N)** at the truth-1.0 ceiling, and B cost ~92k extra tokens to reach what C
+  selects at ~0. The only contract-mandated gradient on cron (`5abc`) is **suite-expressible**, so the
+  loop is **not warranted**. 0.8.0 is ruled out on both forms. (Two §7-original design errors were
+  fixed first: the 42/43 residual is the `7`==Sunday *convention* not a spec bug; and the comparison
+  must be signal-matched B-vs-C, not B-vs-sealed-best-of-N — see the pre-reg.)
 
-Pre-register this before running (the project's discipline). `PILOT-PREREG-BLIND.md` is the template;
-write `PILOT-PREREG-JUDGE.md` and lock the decision table first.
+- **The actual next step (build, not pilot):** the **sharper sealed suite** is now the named lever
+  on every arm (sealed-steered, judge-beyond-suite, CONTROLS-2). Bake the judge-surfaced bug classes
+  into the suite: strict malformed-token rejection (`5abc`), out-of-range range/step endpoints,
+  multi-component-token rejection (`1-5-9`, `*/2/3`). Keep the judge as a **one-time
+  selection/authoring** instrument that mines those classes from the contract — NOT as a per-slice
+  loop. The `runs/judge-arm/score.mjs` 13-form must-throw battery is the seed for it.
+
+- **Only thing that could reopen 0.8.0:** a task whose correctness is genuinely *non-enumerable*
+  (open-ended quality / unbounded input classes a finite suite cannot express) AND where sampling
+  reliably misses it. cron/hexcolor/ipv4 are not such tasks. If STZ ever targets one, re-run the
+  signal-matched B-vs-C arm there; until then, the loop stays shelved.
 
 ---
 
 ## 8. Inventory + recent commits
 
-Detail docs: `swebench-pilot/{PILOT-RESULTS-BLIND,PILOT-PREREG-BLIND,PILOT-RESULTS-SCALED,PILOT-RESULTS,
-PILOT-PREREG,ENV-FINDINGS,DRYRUN-RESULTS,README}.md`, `cron-pilot/FINDINGS*.md`. Scripts:
+Detail docs: `swebench-pilot/{PILOT-RESULTS-JUDGE,PILOT-PREREG-JUDGE,PILOT-RESULTS-BLIND,PILOT-PREREG-BLIND,
+PILOT-RESULTS-SCALED,PILOT-RESULTS,PILOT-PREREG,ENV-FINDINGS,DRYRUN-RESULTS,README}.md`,
+`cron-pilot/FINDINGS*.md`. Scripts:
 `swebench-pilot/{run_epoch_arm64,grade_pool_official,grade_candidate}.py`,
-`swebench-pilot/eval-adapter.mjs`, `cron-pilot/{sealed,truth}_verbose.mjs`. Machine-readable results:
-`swebench-pilot/results/*.json` (incl. `blind-arm-cron.json`, `batch1-combined.json`).
+`swebench-pilot/eval-adapter.mjs`, `cron-pilot/{sealed,truth}_verbose.mjs`,
+`cron-pilot/runs/judge-arm/score.mjs` (13-form must-throw battery + sealed/truth — seed for the
+sharper suite). Machine-readable results: `swebench-pilot/results/*.json` (incl. `judge-arm-cron.json`,
+`blind-arm-cron.json`, `batch1-combined.json`).
 
 Recent commits (newest first):
 ```
