@@ -60,14 +60,31 @@ spending more.
 via two perfect candidates, so iterate had no room to beat it either. Two seeds, both: iterate ≤
 best-of-N, never above.)
 
-## Verdict (pre-registered table)
+## Verdict (pre-registered table) — scoped to SEALED-STEERED convergence
 
-iterate ≈ best-of-N at equal budget → **0.8.0 convergence loop NOT warranted.** The binding
-constraint is the **sealed-signal quality**, not the number of rounds. A loop that steers on a
-fallible sealed suite inherits its blind spots and converges to the same truth ceiling sampling does;
-sharpening the sealed suite raises that ceiling, more rounds do not. This is exactly the lever the
-original cron/hexcolor pilots named, now demonstrated under a clean budget-matched iterate-vs-sampling
-comparison rather than asserted.
+iterate ≈ best-of-N at equal budget → **a SEALED-STEERED convergence loop is NOT warranted.** This is
+the precise claim, and the scope matters. What was tested is a loop whose stop/critique target is the
+sealed suite. Its stop condition (sealed = 1.0) structurally prevents it from crossing a gradient the
+suite cannot see: it halts the moment sealed is green and lands on the same truth ceiling that
+best-of-N's sealed-best candidate sits at. So "steering on the suite cannot beat the suite" is partly
+definitional, and it bounds suite-steered loops only.
+
+Two things this run earns, that were previously only asserted:
+1. **The gradient exists.** The residual 42/43 is a real correctness gap a hardened suite did not
+   express (the predicate the standing decision said would justify a loop).
+2. **Sealed-steering cannot cross it**, at matched budget, recall-free. More rounds do not help; the
+   binding constraint is **sealed-signal quality**. Sharpening the suite raises the ceiling; iterating
+   against it does not. Exactly the lever cron/hexcolor named.
+
+**The one door this run does NOT close:** a loop that steers BEYOND the suite — the frozen reasoning
+judge from `cron-pilot/FINDINGS-CONTROLS-2.md`, which picked the spec-correct specimen 3/3 on the
+truth-mixed tier where flat sealed pass-rate ties. That judge reasons from the contract past the
+sealed suite, so its "stop" is not "sealed green." This arm is untested here and remains the open
+question for 0.8.0. Nothing about the sealed-steered null result speaks to it.
+
+Net: the standing decision is unchanged and now earned. Sharpen the suite first. Build a loop only if
+the judge-beyond-suite form (not the sealed-steered form ruled out here) shows it can cross the
+gradient a hardened suite can't express, tested at equal budget the same way.
 
 ## Honest bounds
 

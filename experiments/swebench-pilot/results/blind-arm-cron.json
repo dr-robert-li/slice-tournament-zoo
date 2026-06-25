@@ -42,7 +42,7 @@
     "iterate_truth": 0.9767,
     "delta": 0.0
   },
-  "verdict": "iterate ~= best-of-N at matched budget -> 0.8.0 NOT warranted; binding constraint is sealed-signal quality not rounds. First clean (recall-free, blind, budget-matched) result; agrees with cron/hexcolor.",
+  "verdict": "SEALED-STEERED convergence is NOT warranted (budget-matched, recall-free): the loop halts at sealed=1.0 and lands on the same truth ceiling best-of-N's sealed-best candidate hits (42/43, same sealed-blind residual case). This run EARNS two things previously asserted: (1) the gradient exists (the 42/43 residual a hardened suite did not express); (2) sealed-steering cannot cross it - the lever is sealed-signal quality, not rounds. OPEN DOOR: the judge-steers-BEYOND-the-suite form (CONTROLS-2 frozen judge, spec-correct 3/3) is untested here and is the real remaining 0.8.0 question. Standing decision unchanged: sharpen the suite first; build a loop only if the judge-beyond-suite form crosses the gradient at equal budget.",
   "bounds": [
     "n=2 seeds directional",
     "one operator field-semantics nudge that HELPED iterate (null result robust)",

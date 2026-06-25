@@ -94,6 +94,23 @@ cheaper thing matches). Build the loop only if best-of-N plateaus *below* fronti
 
 ## ▶ NEXT STEP (CURRENT): build benchmark substrate + SWE-Bench pilot
 
+> **UPDATE 2026-06-26 (latest) — BLIND iterate arm on cron: first clean result, sealed-steered
+> convergence ruled out (budget-matched, recall-free).** After review ruled SWE-Bench structurally
+> unable to decide this (asymmetric recall + issue-authored-suite = train-on-test), ran the blind
+> iterate arm on the synthetic substrate where the sealed/truth split already exists and there is no
+> fix to recall. best-of-N (N=4 fresh Haiku, B=89,403 tok) selects max-sealed c2 → truth 0.9767;
+> iterate (start c3, 1 blind critic+reviser round, ≤B) reaches sealed 1.0 and stops → truth 0.9767.
+> **Equal at 0.9767, both capped at 42/43 on the SAME sealed-blind case.** Iterate halts at sealed=1.0
+> so extra budget is unusable. This EARNS two previously-asserted things: (1) the gradient EXISTS (the
+> 42/43 residual a hardened suite did not express); (2) **sealed-steered** convergence cannot cross it
+> at matched budget — the lever is sealed-signal quality, not rounds. **Scope:** this rules out the
+> SEALED-STEERED loop only; the judge-steers-BEYOND-the-suite form (`cron-pilot/FINDINGS-CONTROLS-2.md`,
+> frozen judge picked spec-correct 3/3) is UNTESTED and is the real open 0.8.0 question. Standing
+> decision unchanged and now earned: sharpen the suite first; build a loop only if the judge-beyond-
+> suite form crosses the gradient at equal budget. Detail: `swebench-pilot/PILOT-RESULTS-BLIND.md`,
+> `PILOT-PREREG-BLIND.md`. (n=2 seeds, directional; one operator nudge that HELPED iterate, so the
+> tie is robust; recall-free.)
+
 > **UPDATE 2026-06-26 — SCALED pilot (batch-1 + iterate arm); STILL silent on 0.8.0.**
 > Scaled to 10 instances + an iterate arm (subscription-billed in-session agents). What scaled
 > cleanly: pipeline handles it; **mixed pools rare at N=4** (~4/10); **best-of-N-Haiku ≈
