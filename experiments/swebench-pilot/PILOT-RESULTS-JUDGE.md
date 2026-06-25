@@ -48,16 +48,45 @@ already handle it).
 The pool already contains **two fully spec-correct candidates** (j1, j2: truth 1.0 *and* reject
 `5abc`). That single fact largely settles B vs C before the loop runs.
 
-## Conditions, equal budget, signal-matched
+## Conditions, signal-matched (all three executed)
 
-| condition | mechanism | reaches | `5abc`✓ | truth | marginal cost beyond generation |
-|-----------|-----------|---------|---------|-------|--------------------------------|
-| **A** judge+best-of-N | judge selects j1/j2 | ceiling | ✓ | 1.0 | one judge selection pass |
-| **B** judge+iterate | j4 → judge critique → revise | ceiling | ✓ | 1.0 | **74,289 (critique) + 17,844 (revise)** |
-| **C** hardened+best-of-N | battery selects j1/j2 | ceiling | ✓ | 1.0 | **~0 (automated scoring)** |
+| condition | mechanism | reaches | `5abc`✓ | truth | total tokens |
+|-----------|-----------|---------|---------|-------|--------------|
+| **A** judge+best-of-N | judge **selected j2** (measured), citing malformed-rejection | ceiling | ✓ | 1.0 | 179,736 (90,140 gen + 89,596 select) |
+| **B** judge+iterate | j4 → judge critique → revise | ceiling | ✓ | 1.0 | **110,867** (18,734 gen + 74,289 critique + 17,844 revise) |
+| **C** hardened+best-of-N | battery selects j1/j2 | ceiling | ✓ | 1.0 | **90,140** (4 draws; ~0 marginal scoring) |
 
 **B == C == A** at the identical correctness ceiling (truth 1.0, `5abc`-correct). B does **not**
 exceed C. → pre-registered table **row 2: 0.8.0 NOT warranted — sharpen the suite.**
+
+**Two honesty notes on this seed (both lean anti-build conservative):**
+- This pool held **two fully-correct candidates (j1, j2)**, so C reaches the ceiling by selection and
+  B *cannot exceed a ceiling C already hits* — **B==C was forced** the moment j1/j2 landed. The
+  equal-outcome here is **corroborative, not probative**; the probative test is the all-buggy cell
+  below.
+- B **overspent**: 110,867 tokens vs C's 90,140, and still only tied. The pre-reg's "equal budget B"
+  was not literally held — iterate cost *more* and did not win, which makes the anti-build call robust
+  to the extra budget.
+
+## The discriminating cell (all-buggy pool) — the test §7 actually asks
+
+The only cell that tests "does the loop reach correctness sampling cannot" is the **all-`5abc`-buggy
+pool**, where selection has no correct candidate to pick. This seed supplies it: **{j3, j4}** both
+fail `5abc`.
+
+- **C (hardened+best-of-N) on {j3,j4}:** selects max `mustThrow` (12/13 tie); the winner *still*
+  accepts `5abc` → **stuck. Selection cannot manufacture a correct candidate** (CONTROLS-2's own
+  point).
+- **B (judge+iterate) on j4:** judge critiques past green-sealed → reviser fixes → `5abc`-correct
+  ceiling → **B wins the binary.**
+- **But the loop still loses on cost.** The alternative to iterating an all-buggy pool is **draw
+  more** (sample until a correct candidate appears, expected `(1/p)·avg_gen`). At cron's base rate
+  `p ≈ 0.33–0.50`, draw-more ≈ **45k–68k** vs iterate's **111k**. The 74k/round judge critique
+  dominates. **Crossover: draw-more is cheaper for any `p > ~0.20`; iterate wins on cost only when the
+  base rate is tiny (< ~0.20). cron is well above that.**
+
+So even in the cell where the loop wins the binary, draw-more (a cheaper form of sampling) beats it.
+The loop **never strictly dominates** on cron.
 
 ## What condition B actually showed (the part that is genuinely new)
 
@@ -97,26 +126,34 @@ sealed-steered conclusion. It does **not** earn its cost as a **per-slice search
 standing decision is unchanged and now fully earned on both the sealed-steered and the
 judge-beyond-suite forms: **sharpen the suite; do not build the 0.8.0 convergence loop.**
 
-## The one narrow cell (acknowledged, not silently dropped)
+## The boundary (where a loop *could* win — stated once)
 
-The loop strictly beats best-of-N only when the *entire* sampled pool lacks a correct candidate AND
-iteration repairs one (≈ `(2/3)^N` of pools at base rate 1/3 — e.g. ~20% at N=4). But whenever the
-hardened battery is available as a selection signal (it is, at ~0 cost), the cheaper response to an
-all-buggy pool is to **draw more / sharpen the suite**, not to pay 74k/round to iterate. Even that
-cell favors the suite. A loop would only win where (a) you cannot express the requirement as a test
-*and* (b) sampling reliably misses it — a combination cron does not exhibit.
+The loop loses whenever **both**: (a) the gradient is **suite-expressible** (a finite test captures
+it), and (b) the base rate is **not tiny** (`> ~0.20`, so draw-more is cheap). **cron is both.** A
+loop could only win where correctness is genuinely **non-enumerable** (a finite suite cannot express
+it) OR the base rate is **tiny enough** that draw-more's `(1/p)·gen` exceeds the loop's flat cost.
+These are the **same door** — the only thing that reopens 0.8.0 — and cron walks through neither.
+(The all-buggy-cell analysis above is the cost half of this boundary; the suite-expressibility of
+`5abc` is the capability half.)
 
 ## Honest bounds
 
-- **n = 1 seed, directional.** hexcolor/ipv4 replication was pre-registered only as a follow-up to a
-  *clean B > C*; B = C, so the cross-task replication is not what would change the call (a
-  lower-base-rate, non-suite-expressible gradient would).
-- **Single discriminating axis on cron.** The verdict rests on cron exposing no contract-mandated
-  gradient a hardened suite cannot express. A task whose correctness is genuinely non-enumerable
-  (open-ended quality, unbounded input classes) could reopen the loop question — cron is not it.
+- **n = 1 seed; pre-reg deviation flagged.** The pre-reg specified 3 seeds and gated "apply the
+  table" on the 3-seed run. One seed ran; the discriminating test is this seed's **all-buggy
+  sub-pool {j3,j4}**, not 3 fresh seeds. The verdict leans on the **structural bar** (suite-expressible
+  gradient + cost crossover), which 3 seeds would not change — a *lower-base-rate, non-suite-expressible*
+  gradient would, and cron has none. hexcolor/ipv4 replication was pre-registered only as a follow-up
+  to a *clean B > C*, which did not occur.
+- **Condition A was executed** (judge-selector picked j2, 89,596 tok), not inferred.
+- **Blindness audit (pre-registered guardrail): clean.** grep of j1–j4 + `iterate/index.mjs` for
+  suite constants — the sealed count `1243`, truth-specific expected ISO times, and `sealed`/`truth`/
+  `suite` filenames — found **none**. Specimens were instructed not to read the suites; emitted code
+  shows no leakage. Evidence, not proof (a silent `Read` would not appear in the code).
+- **Single discriminating axis on cron** (`5abc`); cron exposes no contract-mandated gradient a
+  hardened suite cannot express.
 - **Recall-free**, convention axes excluded from the primary number with contract citation.
-- The 74k judge-critique cost is itself load-bearing: the cost asymmetry vs automated selection is
-  part of the verdict, not an incidental.
+- The 74k judge-critique cost is itself load-bearing: the cost asymmetry vs automated selection AND
+  vs draw-more is part of the verdict, not an incidental.
 
 ## Artifacts
 

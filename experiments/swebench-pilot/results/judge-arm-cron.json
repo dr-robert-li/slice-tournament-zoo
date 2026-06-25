@@ -2,30 +2,40 @@
   "substrate": "cron (recall-free)",
   "prereg": "PILOT-PREREG-JUDGE.md",
   "design": "signal-matched A/B/C: signal=frozen blind judge held fixed; vary only search (sample vs loop). C = hardened-suite+best-of-N as the cheap baseline the loop must beat.",
+  "n_deviation": "1 seed run, of a pre-registered 3. The discriminating test is the all-buggy sub-pool of THIS seed ({j3,j4}, see below), not 3 fresh seeds. Verdict leans on the structural bar (suite-expressible gradient) + the cell analysis, not on seed count.",
   "gen_budget_B_tokens": 90140,
+  "avg_gen_per_candidate": 22535,
   "fresh_pool": {
     "j1": {"sealed": 1.0, "truth_full": 1.0, "mustThrow": "13/13", "axis_5abc_correct": true,  "tok": 15674},
     "j2": {"sealed": 1.0, "truth_full": 1.0, "mustThrow": "13/13", "axis_5abc_correct": true,  "tok": 37549},
     "j3": {"sealed": 0.9928, "truth_full": 0.9535, "mustThrow": "12/13", "axis_5abc_correct": false, "tok": 18183},
     "j4": {"sealed": 1.0, "truth_full": 1.0, "mustThrow": "12/13", "axis_5abc_correct": false, "tok": 18734}
   },
-  "axis": "5abc malformed-token (parseInt truncation): the ONLY recall-free, contract-mandated, sealed-AND-truth-blind discriminator on cron. fresh-pool reject base rate 2/4.",
+  "axis": "5abc malformed-token (parseInt truncation): the ONLY recall-free, contract-mandated, sealed-AND-truth-blind discriminator on cron. fresh-pool reject base rate 2/4; broad 15-pool 1/3.",
   "conditions": {
-    "A_judge_bestN": {"selects": "j1/j2 (perfect)", "truth_primary": 1.0, "axis_5abc_correct": true},
-    "B_judge_iterate": {"start": "j4 (sealed=1.0 green, truth_full=1.0, accepts 5abc)", "critic_tok": 74289, "reviser_tok": 17844, "rounds": 1, "final": {"sealed": 1.0, "truth_full": 1.0, "mustThrow": "13/13", "axis_5abc_correct": true}},
-    "C_hardened_bestN": {"selects": "j1/j2 (max mustThrow 13/13)", "truth_primary": 1.0, "axis_5abc_correct": true, "marginal_cost_tokens": 0}
+    "A_judge_bestN": {"executed": true, "judge_selector_winner": "j2", "selector_tok": 89596, "total_tok": 179736, "truth_primary": 1.0, "axis_5abc_correct": true, "note": "judge picked a fully spec-correct candidate, citing malformed-rejection + out-of-range-clamp; = ceiling"},
+    "B_judge_iterate": {"executed": true, "start": "j4 (sealed=1.0 green, truth_full=1.0, accepts 5abc)", "gen_tok": 18734, "critic_tok": 74289, "reviser_tok": 17844, "total_tok": 110867, "rounds": 1, "final": {"sealed": 1.0, "truth_full": 1.0, "mustThrow": "13/13", "axis_5abc_correct": true}},
+    "C_hardened_bestN": {"executed": true, "selects": "j1/j2 (max mustThrow 13/13)", "total_tok": 90140, "truth_primary": 1.0, "axis_5abc_correct": true, "marginal_cost_over_generation": 0}
   },
-  "result": "B == C == A at the correctness ceiling (truth 1.0, 5abc-correct). B does NOT exceed C. B costs ~92k extra tokens (74k critique + 18k revise) to reach a ceiling C reaches by automated selection at ~0 marginal tokens.",
+  "non_discriminating_seed_caveat": "This seed's pool held two fully-correct candidates (j1,j2), so C reaches the ceiling by selection and B cannot exceed a ceiling C already hits -> B==C was forced. B==C here is corroborative, not probative. B also OVERSPENT (110,867 total vs C's 90,140) and still only tied -> conservative for the anti-build direction.",
+  "discriminating_all_buggy_cell": {
+    "pool": "{j3,j4} — both fail 5abc (the only cell that actually tests 'does the loop reach correctness sampling can't')",
+    "C_hardened_bestN": "selects max mustThrow (12/13 tie); winner STILL fails 5abc -> STUCK, selection cannot manufacture a correct candidate (CONTROLS-2's own point)",
+    "B_judge_iterate": "judge critiques j4 -> reviser -> 5abc-correct ceiling -> WINS the binary",
+    "cost_in_cell": {"iterate_tok": 110867, "draw_more_p0.33_tok": 67605, "draw_more_p0.50_tok": 45070, "crossover_base_rate": 0.203, "reading": "draw-more (sample until a correct candidate appears, ~(1/p)*avg_gen) is CHEAPER than the 74k/round judge loop for any base rate p > ~0.20. cron p~=0.33-0.50 > 0.20 -> draw-more wins even in the loop-wins-binary cell. iterate wins on cost ONLY when base rate < ~0.20."}
+  },
+  "blindness_audit": "grep of j1-j4 + iterate/index.mjs for suite constants (sealed count 1243, truth-specific ISO times, sealed/truth/suite filenames): NONE found. Specimens instructed not to read suites; emitted code shows no leakage. Evidence not proof (a silent Read would not show in code).",
+  "result": "All three conditions reach the truth-1.0 / 5abc-correct ceiling on this seed. B does NOT exceed C. In the discriminating all-buggy cell, B wins the binary but draw-more beats it on cost. The loop never strictly dominates on cron.",
   "verdict_prereg_row": "row 2: B ~= C, both >= A >= sealed -> 0.8.0 (judge-steered convergence loop) NOT warranted. Sharpen the suite.",
   "two_findings": [
     "Judge-beyond-suite WORKS as a loop critic (operational confirmation, stronger than CONTROLS-2 pairwise selection): a blind judge reading only contract+code past a fully-green sealed suite found the spec-mandated 5abc bug AND two more real malformed-validation gaps; the reviser fixed them to the ceiling. The mechanism is real.",
-    "The loop is still not warranted: the gradient it crosses (5abc malformed) is suite-EXPRESSIBLE, so hardened-suite+best-of-N reaches the same ceiling by SELECTION (the fresh pool already held two fully-correct candidates) at ~0 marginal tokens, vs 74k/round for the judge loop. The judge's value is SELECTION/AUTHORING (catch the bug class once, bake it into the suite), not per-slice search-loop value."
+    "The loop is still not warranted: the gradient it crosses (5abc malformed) is suite-EXPRESSIBLE, so hardened-suite+best-of-N reaches the same ceiling by SELECTION at ~0 marginal tokens; and in the all-buggy cell where selection fails, draw-more still beats the 74k/round loop on cost (crossover base rate ~0.20, cron is above it). The judge's value is SELECTION/AUTHORING (catch the bug class once, bake it into the suite), not per-slice search-loop value."
   ],
-  "narrow_cell_acknowledged": "The loop strictly beats best-of-N only when the entire sampled pool lacks a correct candidate AND iteration repairs one (~(2/3)^N of pools at base rate 1/3). But if the hardened battery is available as a selection signal (it is, ~0 cost), the cheaper fix is to draw more / sharpen the suite, not pay 74k/round to iterate. Even that cell favors the suite.",
+  "boundary": "The loop loses whenever the gradient is suite-EXPRESSIBLE AND the base rate is not tiny (> ~0.20). cron is BOTH. The loop could only win where correctness is genuinely non-enumerable (a finite suite cannot express it) OR the base rate is tiny enough that draw-more's (1/p)*gen exceeds the loop's flat cost. These are the same door — the only thing that reopens 0.8.0.",
   "bounds": [
-    "n=1 seed, directional. hexcolor/ipv4 replication pending (only needed if a clean B>C had shown).",
+    "n=1 seed; discriminating cell analyzed from this seed's all-buggy sub-pool, not 3 fresh seeds (pre-reg deviation, flagged).",
     "single discriminating axis on cron (5abc); cron exposes no contract-mandated gradient a hardened suite cannot express.",
     "recall-free; convention axes (7=Sunday, bare a/n) excluded from the primary number per contract citation.",
-    "judge critique cost 74k tokens here -- the cost asymmetry vs automated selection is itself load-bearing for the verdict."
+    "judge critique cost 74k tokens here -- the cost asymmetry vs automated selection / draw-more is itself load-bearing for the verdict."
   ]
 }

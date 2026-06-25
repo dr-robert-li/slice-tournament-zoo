@@ -179,10 +179,14 @@ build (the harness hardcodes x86_64 and can't build on ARM).
   selection/authoring** instrument that mines those classes from the contract — NOT as a per-slice
   loop. The `runs/judge-arm/score.mjs` 13-form must-throw battery is the seed for it.
 
-- **Only thing that could reopen 0.8.0:** a task whose correctness is genuinely *non-enumerable*
-  (open-ended quality / unbounded input classes a finite suite cannot express) AND where sampling
-  reliably misses it. cron/hexcolor/ipv4 are not such tasks. If STZ ever targets one, re-run the
-  signal-matched B-vs-C arm there; until then, the loop stays shelved.
+- **Only thing that could reopen 0.8.0 (the boundary, stated once):** the loop loses whenever the
+  gradient is *suite-expressible* AND the base rate is *not tiny* (`> ~0.20`, so draw-more is cheap) —
+  cron is **both**. A loop could win only where correctness is genuinely *non-enumerable* (a finite
+  suite cannot express it) **OR** the base rate is *tiny* enough that draw-more's `(1/p)·gen` exceeds
+  the loop's flat cost. Same door; cron walks through neither (single `5abc` axis, base rate
+  ~0.33–0.50). If STZ ever targets such a task, re-run the signal-matched B-vs-C arm there; until
+  then, the loop stays shelved. (Probative detail: in this run's all-buggy cell {j3,j4}, B wins the
+  binary but draw-more still beats it on cost — see `PILOT-RESULTS-JUDGE.md`.)
 
 ---
 
