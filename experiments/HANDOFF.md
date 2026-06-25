@@ -94,7 +94,18 @@ cheaper thing matches). Build the loop only if best-of-N plateaus *below* fronti
 
 ## ▶ NEXT STEP (CURRENT): build benchmark substrate + SWE-Bench pilot
 
-> **UPDATE 2026-06-25 — substrate DONE + validated; pilot BLOCKED on this host.**
+> **UPDATE 2026-06-25 (later) — pilot UNBLOCKED on this aarch64 host.** The ARM blocker is solved
+> without leaving SWE-Bench: **prebuilt arm64 eval images exist** (Epoch AI — all 500 Verified
+> instances). Proven end-to-end here on `psf__requests-1142`: the arm64 image runs natively and
+> ships the pinned **Python 3.9.20** + deps; gold patch → adapter `resolved=true` (6/6); base (no
+> gold) → `resolved=false`, correct F2P failure isolated. Both blockers below are dead. **Run the
+> pilot on SWE-bench Verified** using Epoch arm64 images (or the epoch-research fork /
+> `swe-bench-fast`, which feed a normal `report.json` → `eval-adapter.mjs report`). The host-x86
+> conclusion below is SUPERSEDED. Detail + runbook + caveat: `swebench-pilot/ENV-FINDINGS.md`
+> (✅ RESOLVED section).
+
+> **UPDATE 2026-06-25 — substrate DONE + validated; pilot BLOCKED on this host.** *(superseded by
+> the UNBLOCKED update above — kept for the chain.)*
 > Steps 1–2 complete and committed: HANDOFF decision locked, and the pytest eval adapter
 > (`swebench-pilot/eval-adapter.mjs`, dual-mode, 16/16 tests) is built and **validated against a
 > real SWE-Bench Lite instance** (`pallets__flask-4045` + `astropy__astropy-12907` node-ids).
