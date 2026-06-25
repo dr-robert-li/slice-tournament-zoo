@@ -1,0 +1,52 @@
+{
+  "substrate": "cron (recall-free)",
+  "budget_B_tokens": 89403,
+  "best_of_N": {
+    "N": 4,
+    "tokens": 89403,
+    "candidates": {
+      "c1": {
+        "sealed": 0.9992,
+        "truth": 0.9767,
+        "tok": 19530
+      },
+      "c2": {
+        "sealed": 1.0,
+        "truth": 0.9767,
+        "tok": 26796
+      },
+      "c3": {
+        "sealed": 0.9646,
+        "truth": 0.8605,
+        "tok": 19682
+      },
+      "c4": {
+        "sealed": 0.9501,
+        "truth": 0.9767,
+        "tok": 23395
+      }
+    },
+    "selected": "c2",
+    "selected_truth": 0.9767
+  },
+  "iterate": {
+    "start": "c3",
+    "rounds": 1,
+    "tokens": 60693,
+    "final_sealed": 1.0,
+    "final_truth": 0.9767,
+    "halted_on": "sealed=1.0"
+  },
+  "equal_budget": {
+    "best_of_N_truth": 0.9767,
+    "iterate_truth": 0.9767,
+    "delta": 0.0
+  },
+  "verdict": "iterate ~= best-of-N at matched budget -> 0.8.0 NOT warranted; binding constraint is sealed-signal quality not rounds. First clean (recall-free, blind, budget-matched) result; agrees with cron/hexcolor.",
+  "bounds": [
+    "n=2 seeds directional",
+    "one operator field-semantics nudge that HELPED iterate (null result robust)",
+    "recall-free",
+    "cheap critic weaker here than on pytest -> pytest critic strength was partly retrieval"
+  ]
+}
