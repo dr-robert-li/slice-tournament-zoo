@@ -40,32 +40,54 @@ signal), hard → all-fail (nothing to select). Signal lives only in 6197.
 
 **A (0.667) > B (0.444); A ≈ C (0.667).**
 
-## Reading against the pre-registered table
+## Reading against the pre-registered table — and why this run does NOT update 0.8.0
 
-- **A > B (same pool):** the judge distinguishes candidates that pass the existing public suite
-  WITHOUT fixing the bug (here, no-op/regressing diffs) — the public suite is non-discriminating.
-  → *core STZ claim (selection signal beats public pass-rate) — directionally confirmed*, and it
-  reproduces the cron-pilot finding on a real SWE-Bench instance.
-- **A ≈ C:** Haiku best-of-N + judge selection matches frontier Opus best-of-1.
-  → *weak model + good selection reaches frontier via samples → the 0.8.0 convergence loop (more
-  rounds) is NOT warranted; scale samples + sharpen selection.* Consistent with the locked
-  3-model decision.
+The headline numbers (A>B, A≈C) look like the pre-registered "don't build 0.8.0" branch. They are
+**not** evidence for it. Three structural reasons (this is the honest read after review):
 
-## Honest caveats (non-negotiable — these bound the claim hard)
+- **A > B is a tautology, not a discovery.** B selects by PASS_TO_PASS. In SWE-Bench the bug's test
+  lives in FAIL_TO_PASS, which is **held out** — so PASS_TO_PASS is blind to the fix *by
+  construction*. B literally cannot see which candidate fixes the bug, on **any** instance. A>B was
+  guaranteed the moment B was defined this way; the empties just inflate it. This is **weaker** than
+  cron, where the public suite actually *passed leaky specimens* (a real false signal). So this does
+  **not** reproduce the cron finding.
+- **A ≈ C is n=1, met by number not mechanism.** A and C are *forced* equal on 8399 (all-pass→both 1)
+  and 10356 (all-fail→both 0). The only instance where they *could* diverge is 6197 — where both
+  happened to hit 1 because a correct Haiku candidate existed and both the judge and Opus found it.
+  "Best-of-N+judge reaches frontier" is established on exactly one instance. Same trap as the cron
+  tie-break: a mean equality that is an artifact of instance composition.
+- **10356 is the one instance that actually probes 0.8.0 — and the pilot is SILENT on it.** It has a
+  real correctness gradient that best-of-4 (0/4) *and* frontier-best-of-1 both missed. That is
+  precisely the regime where a convergence loop was hypothesized to earn its cost: iterate toward a
+  fix none of the N samples got. Opus-best-of-1 failing tells us **nothing** about whether
+  *iteration* would succeed. Do not file this as "frontier ceiling, orthogonal" — it is the open
+  question, left open.
 
-1. **n=1 mixed pool.** 8399 (all-pass) and 10356 (all-fail) have A=B=C by construction; the entire
-   A−B gap comes from ONE instance (6197). This is **directional, not significant.**
-2. **A>B is inflated by stalled-agent empties.** 2 of 6197's 4 candidates were empty diffs (mid-run
-   API stalls), not substantive attempts. Empties pass PASS_TO_PASS (no-op on base) but don't fix —
-   they are exactly what B can't distinguish. That IS a real failure mode (a candidate green on the
-   existing suite yet not fixing the bug), but the *magnitude* here is partly a stall artifact, not
-   a clean 4-substantive-candidate contest.
-3. **The judge's 6197 pick was easy** (only c2 was a real change). No hard discrimination was tested
-   — **no judge "accuracy rate" is claimed** (pre-reg discipline).
-4. **10356: even Opus fails** → a frontier ceiling on some Verified instances, orthogonal to A/B/C.
-5. Verdict is **directional and consistent with prior pilots**, NOT independently sufficient to
-   settle 0.8.0. To harden: more MIXED pools (≥5–10), N=4 fully-substantive candidates (retry
-   stalled agents), multiple repos.
+**Net: this run does not move the 0.8.0 decision in either direction.** The deferral of 0.8.0
+continues to rest on cron/hexcolor, NOT on this pilot.
+
+## What this run genuinely establishes
+
+1. The **aarch64 substrate + the full A/B/C pipeline work end-to-end** (generate → grade whole pool
+   via official harness → selectors). Real, durable, reusable.
+2. **Mixed pools are rare at N=4** — 1/3 here, and only after hunting to medium-hard instances
+   (easy→all-pass, hard→all-fail). This is the most decision-relevant finding: if selection rarely
+   has anything to select *among*, the lever is neither "more rounds" nor "best-of-N selection" —
+   it's getting candidates into the mixed band at all.
+3. A micro-illustration on 6197 that a judge ignores no-op/regressing candidates — but see the
+   tautology above; treat as anecdote, not evidence.
+
+## Honest caveats (bound the claim hard)
+
+1. **n=1 mixed pool** — directional at best, not significant.
+2. **A>B inflated by 2 stalled-agent empty candidates** (mid-run API stalls), on top of B being
+   structurally blind.
+3. **Judge's 6197 pick was trivial** (only c2 was a real change). **No judge accuracy claim.**
+4. **No "consistent with the locked decision" credit** — consistency with a prior belief is not
+   evidence.
+5. **The only path to a conclusive pilot** is ≥5–10 MIXED pools with 4 *substantive* candidates
+   each — a real scope/spend escalation, and it must include the iterate-on-an-all-fail-pool case to
+   actually test 0.8.0. Surface as a user choice; do not treat this run as enough.
 
 ## Pipeline (reusable, committed)
 

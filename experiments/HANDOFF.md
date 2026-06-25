@@ -94,7 +94,25 @@ cheaper thing matches). Build the loop only if best-of-N plateaus *below* fronti
 
 ## ▶ NEXT STEP (CURRENT): build benchmark substrate + SWE-Bench pilot
 
-> **UPDATE 2026-06-25 (later) — pilot UNBLOCKED on this aarch64 host.** The ARM blocker is solved
+> **UPDATE 2026-06-25 (latest) — A/B/C pilot RAN; it does NOT update the 0.8.0 decision.**
+> Full pipeline executed on aarch64 (filter network-bound → hermetic pytest instances; N=4 blind
+> Haiku pool per instance → grade whole pool via official harness → selectors A=STZ gate+judge,
+> B=naive max-PASS_TO_PASS, C=Opus best-of-1). Numbers (A=0.667, B=0.444, C=0.667) LOOK like the
+> "don't build 0.8.0" branch but are **not evidence** for it (post-review):
+>   • **A>B is tautological** — B selects by PASS_TO_PASS, which is held-out-blind to the fix by
+>     construction (bug test is in FAIL_TO_PASS); B can never see a fix on any instance.
+>   • **A≈C is n=1** — A,C forced equal on the all-pass(8399) and all-fail(10356) pools; only the
+>     single mixed pool (6197) could diverge.
+>   • **10356** (correctness gradient missed by best-of-4 AND Opus-best-of-1) is the exact regime
+>     0.8.0 targets, and the pilot is **silent** on whether *iteration* would solve it.
+> **0.8.0 deferral continues to rest on cron/hexcolor, NOT this run.** What this run DID establish:
+> the substrate + A/B/C pipeline work end-to-end (durable), and **mixed pools are rare at N=4 (1/3,
+> only after hunting medium-hard)** — the most decision-relevant finding. A conclusive pilot needs
+> ≥5–10 mixed pools with 4 substantive candidates each, INCLUDING an iterate-on-an-all-fail-pool
+> arm to actually test 0.8.0 (scope/spend escalation — user choice). Full write-up + honest caveats:
+> `swebench-pilot/PILOT-RESULTS.md`, `PILOT-PREREG.md`, `results/`.
+
+> **UPDATE 2026-06-25 (earlier) — pilot UNBLOCKED on this aarch64 host.** The ARM blocker is solved
 > without leaving SWE-Bench: **prebuilt arm64 eval images exist** (Epoch AI — all 500 Verified
 > instances). Proven end-to-end here on `psf__requests-1142`: the arm64 image runs natively and
 > ships the pinned **Python 3.9.20** + deps; gold patch → adapter `resolved=true` (6/6); base (no

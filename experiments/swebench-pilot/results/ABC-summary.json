@@ -34,11 +34,17 @@
       "note": "all-pass; selection moot"
     }
   },
-  "verdict": "A>B (judge beats public-suite); A~=C (best-of-N+judge ~ frontier). DIRECTIONAL ONLY, n=1 mixed pool, A>B inflated by stalled-agent empties.",
+  "verdict": "DOES NOT update the 0.8.0 decision. A>B is tautological (B selects by PASS_TO_PASS, which is held-out-blind to the fix by construction -> B can never see a fix). A~=C is n=1 (A,C forced equal on all-pass/all-fail; only 6197 could differ). 10356 (correctness gradient missed by best-of-4 AND Opus-best-of-1) is the regime 0.8.0 targets, and the pilot is SILENT on whether iteration would solve it. 0.8.0 deferral continues to rest on cron/hexcolor, not this run.",
   "caveats": [
     "n=1 mixed pool",
-    "A>B inflated by 2 empty candidates (API stalls)",
-    "judge pick was easy; no accuracy claim",
-    "10356 frontier ceiling"
+    "A>B is tautological + inflated by 2 stalled-agent empties",
+    "judge pick trivial; no accuracy claim",
+    "10356: pilot silent on iteration (the actual 0.8.0 question)",
+    "conclusive pilot needs >=5-10 mixed pools w/ 4 substantive candidates incl. iterate-on-all-fail case"
+  ],
+  "genuinely_establishes": [
+    "aarch64 substrate + A/B/C pipeline work end-to-end (durable)",
+    "mixed pools rare at N=4 (1/3, only after hunting medium-hard) - most decision-relevant finding",
+    "6197 judge-ignores-no-op is anecdote, not evidence (A>B is structural)"
   ]
 }
