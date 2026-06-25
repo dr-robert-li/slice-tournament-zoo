@@ -3,8 +3,34 @@
 Pre-registered before any candidate/critic/suite is generated. This is the escalation the scaled
 run (`PILOT-RESULTS-SCALED.md`) said was required: the iterate arm there was confounded because the
 critic was not blind to FAIL_TO_PASS, the prompts encoded the diagnosis, and recall went
-uncontrolled. This design fixes the first two and partially controls the third, and adds the
-budget-matched comparison the original A/B/C table called for.
+uncontrolled. This design fixes the first two and adds the budget-matched comparison the original
+A/B/C table called for.
+
+## SUBSTRATE DECISION (corrected on review — runs on SYNTHETIC tasks, not SWE-Bench)
+
+SWE-Bench has been silent on 0.8.0 three times now (cron-confound, A/B/C-tautology,
+scaled-iterate-confound). It structurally cannot decide this build, for two reasons the blind arm
+does NOT fix and that both bias toward a false "iterate wins → build":
+
+- **Recall is asymmetric, not cancelling.** The conditions differ in retrieval-anchoring context.
+  Cold best-of-N gets issue+code once; the iterate loop gets issue+code+*a concrete wrong candidate*+
+  sealed failures across rounds — a far better prompt for *retrieving* pytest's memorized real fix.
+  So an iterate win on SWE-Bench cannot be separated from "iterate is a better retrieval harness."
+  This is live, not hypothetical: scaled-run critics cited "upstream pytest 7.2.0," and
+  Haiku-as-critic succeeded where Haiku-as-implementer failed 4× (equally explained by "candidate+
+  code is a better retrieval prompt" as by "critique is an easier sub-task").
+- **An issue-authored sealed suite is the train-on-test the A/B/C pre-reg already rejected.** The
+  issue describes the bug, so a faithful blind suite targets the same behavior as FAIL_TO_PASS. If
+  sealed ≈ F2P, "iterate until sealed passes" = "iterate until the oracle passes" and iterate wins
+  trivially. "Base repo fails it" is too weak to rule this out.
+
+**Therefore the arm runs on the synthetic STZ tasks — cron first, then hexcolor/ipv4.** They are
+not in anyone's training data (recall-free), and they ALREADY have the sealed/truth split this needs:
+`cron-pilot/suites-v2/cron.sealed.mjs` is the blind loop signal, `cron-pilot/truth-suite/cron.truth.mjs`
+is the scorer, `cron-pilot/slice/CONTRACT-VAGUE.md` is what specimens see. A win there is unambiguous
+about iteration-vs-sampling, and it is the load-bearing STZ evidence anyway. SWE-Bench is kept for
+*demonstrating* a decided win later; it cannot *decide* the build. The methodology below
+(equal+absolute budget) is unchanged — the redirect is substrate, not method.
 
 ## Question
 
@@ -13,77 +39,89 @@ Does a convergence loop (iterate with a BLIND critic steered only by a sealed si
 - **equal-budget:** iterate and best-of-N each get the SAME total token budget B per instance.
 - **absolute:** each method at its natural budget, report resolved-rate and resolved-per-token.
 
-## The sealed signal (fixes the obstacle SWE-Bench creates)
+## The sealed signal (already exists on the synthetic substrate)
 
-SWE-Bench gives you a public suite (PASS_TO_PASS) and a held-out oracle (FAIL_TO_PASS). On the
-instances that matter the public suite is already fully green, so a loop blind to F2P has nothing to
-fire on. So we AUTHOR one, exactly as STZ does in-tournament:
+On cron the split this needs already exists, authored in the original pilot BLIND to the truth
+oracle — so there is no fresh issue-derived authoring and confound 2 does not apply:
 
-- Per instance, `stz-test-author` writes a **sealed suite** from the issue text plus a contract
-  derived from the issue, **BLIND to FAIL_TO_PASS and test_patch**. This suite is the loop's ONLY
-  feedback signal. It stands in for the 0.8.0 pressure-log / sealed suite.
-- **Train-on-test guard (load-bearing):** the author never sees F2P or test_patch. Suite quality is
-  checked two ways that do NOT leak the oracle: (a) satisfiable — the gold patch passes it;
-  (b) discriminating — the base repo (no fix) fails it. A suite that passes base, or fails gold, is
-  rejected and re-authored. We do NOT copy F2P cases in, and we record the author transcript so the
-  blindness is auditable.
-- The sealed suite is NEVER the grading oracle. Grading is always the SWE-Bench truth oracle
-  (F2P + P2P) via the official harness, used only to SCORE after the fact.
+- **Blind loop signal:** `cron-pilot/suites-v2/cron.sealed.mjs`, run via the existing eval runner
+  (`node <sealed> <impl>` → final JSON line, the same contract the bridge uses). This is the loop's
+  ONLY feedback. It was authored blind to truth in the original cron pilot, not derived now from the
+  answer.
+- **Scorer (never steers):** `cron-pilot/truth-suite/cron.truth.mjs`, run the same way. Used only to
+  score the final patch of each condition. The loop never reads it.
+- **What specimens see:** `cron-pilot/slice/CONTRACT-VAGUE.md` only. Never the sealed suite, never the
+  truth suite.
+- The sealed suite is known to be imperfect (the original pilot found it ties some truth-mixed
+  specimens). That is fine and on purpose: a realistic, fallible sealed signal is exactly what a real
+  0.8.0 loop would steer on. If the loop can convert a fallible sealed signal into truth-resolved
+  wins that sampling cannot, that is the result; if it chases the sealed signal into truth-wrong
+  code, that is also the result.
 
-## Conditions (per instance, fixed token budget B)
+For hexcolor/ipv4, reuse their existing sealed + truth suites the same way.
 
-Both conditions draw blind candidates (issue + repo only; never F2P/test_patch). Both are scored by
-the truth oracle. Token spend is summed from `subagent_tokens`.
+## Conditions (per seed, fixed token budget B)
 
-- **best-of-N:** spend B generating N independent candidates. Select by sealed-suite pass-rate, after
-  a no-PASS_TO_PASS-regression gate. No iteration, no critic. Score the selected patch.
+Task: implement `nextRun(expr, after)` from `CONTRACT-VAGUE.md`. Both conditions draw blind
+candidates (contract only; never the sealed or truth suite). Both are scored by the truth suite.
+Token spend is summed from `subagent_tokens` per agent.
+
+- **best-of-N:** spend B generating N independent candidates. Select the one with the highest
+  **sealed** pass-rate (ties broken by an explicit rule, recorded). No iteration, no critic. Score
+  the selected impl on truth.
 - **iterate:** spend B on a loop. Generate 1 candidate; run the SEALED suite; if it fails, a critic
-  that sees ONLY {issue, candidate diff, code, sealed-suite failures} — never F2P, no operator
-  pointed questions — writes a critique; a reviser revises; repeat until the sealed suite passes or B
-  is exhausted. Continue/stop is driven ONLY by the sealed signal. Score the final patch.
+  that sees ONLY {contract, candidate code, sealed-suite failure output} — never the truth suite, no
+  operator pointed questions — writes a critique; a reviser revises; re-run sealed; repeat until the
+  sealed suite passes or B is exhausted. Continue/stop is driven ONLY by the sealed signal. Score the
+  final impl on truth.
 
-Same B for both = the equal-budget arm. Run each at 1x, 2x, 4x B for the absolute curve.
+Same B for both = the equal-budget arm. Run each at 1x, 2x, 4x B for the absolute curve. B is a token
+ceiling enforced by summing `subagent_tokens`; a condition stops spawning once the next agent would
+exceed B.
 
 ## Blindness (non-negotiable, audited)
 
-- Specimens, reviser, critic, and sealed-suite author NEVER see FAIL_TO_PASS or test_patch.
-- Critic prompts carry NO operator diagnosis and NO leading questions — only the sealed-suite
-  failure output and the code. (This is the specific fix for the scaled-run confound.)
-- The loop's stop/continue decision reads the sealed suite ONLY, never the truth oracle.
+- Specimens, reviser, and critic NEVER see the sealed suite source or the truth suite. Specimens see
+  CONTRACT-VAGUE only; the critic additionally sees the candidate code and the sealed suite's pass/
+  fail OUTPUT (not its source).
+- Critic prompts carry NO operator diagnosis and NO leading questions — only the sealed failure
+  output and the candidate code. (The specific fix for the scaled-run confound.)
+- The loop's stop/continue decision reads the sealed suite ONLY, never the truth suite.
 
-## Recall (acknowledged, partially controlled)
+## Recall — removed by construction
 
-SWE-Bench pytest fixes are plausibly in-weights; we cannot fully remove that. We reduce its leverage
-by (a) making the loop signal an authored sealed suite rather than the recalled canonical test, and
-(b) reporting the comparison as RELATIVE (both conditions share the same recall), not as absolute
-difficulty. We still flag any critique that names the upstream fix/version as recall-contaminated.
+The synthetic substrate is the point. `nextRun` on this vague contract, and this specific
+sealed/truth split, are not in any training corpus. There is no canonical fix to retrieve, so the
+asymmetric-retrieval confound that kills the SWE-Bench version does not exist here. Any win is
+attributable to iteration-vs-sampling, not memorization.
 
 ## Metrics + pre-registered decision
 
-Per condition: resolved-rate (truth), total tokens, resolved-per-token. Report n and mixed-pool
-count. Use the GAP/NEITHER buckets from the scaled run as the instance set (that is where signal
-lives), plus fresh instances to dilute recall.
+Per condition: truth pass-rate of the scored impl (and resolved = truth pass-rate 1.0 if a binary is
+wanted), total tokens, truth-per-token. 3 seeds minimum; report each seed, not just the mean
+(seed-level is where tie-break luck hid before).
 
 | outcome (equal budget) | reading | action |
 |------------------------|---------|--------|
-| iterate resolved > best-of-N | the loop reaches fixes sampling does not, at the same cost | **0.8.0 warranted** — spec/build it |
-| iterate ≈ best-of-N | more rounds add nothing sampling does not | **0.8.0 not warranted** — scale samples |
-| iterate < best-of-N | the loop wastes budget chasing a sealed signal that misleads | 0.8.0 harmful here; investigate the sealed-signal quality |
+| iterate truth > best-of-N | the loop reaches correctness sampling does not, at the same cost | **0.8.0 warranted** — spec/build it |
+| iterate ≈ best-of-N | more rounds add nothing sampling does not | **0.8.0 not warranted** — scale samples + sharpen selection |
+| iterate < best-of-N | the loop chases a fallible sealed signal into truth-wrong code | 0.8.0 harmful as-designed; the sealed-signal quality is the real lever, not rounds |
 
-Absolute arm refines: if iterate only wins at >1x budget, note the token premium (disclosed by
-design per README §47-50) and whether resolved-per-token still favors it.
+Absolute arm refines: if iterate only wins at >1x budget, note the token premium (disclosed by design
+per README §47-50) and whether truth-per-token still favors it.
 
 ## Discipline carried from every prior pilot
 
 - Symmetric-error rule: a confounded result leaning pro-build is the same error as one leaning
-  anti-build. If blindness/recall control fails, the run is SILENT, not supportive.
+  anti-build. If a confound survives, the run is SILENT, not supportive.
 - No judge/critic "accuracy rate" claim.
 - n=slice is directional; expand only on a clean signal.
 
 ## Execution order
 
-1. Vertical slice on ONE instance: author a sealed suite, verify satisfiable (gold passes) +
-   discriminating (base fails). If the author can't produce one blind, that itself is a finding.
-2. Run best-of-N and iterate at equal B; score both by truth.
-3. Expand to the GAP/NEITHER set + fresh instances; absolute-budget curve.
-4. Apply the table.
+1. Vertical slice on cron, 1 seed: best-of-N vs iterate at equal B, score both on truth. Confirm the
+   harness drives the loop on the sealed signal and the truth scorer is never read inside the loop.
+2. 3 seeds on cron; equal-budget table + absolute curve.
+3. Replicate on hexcolor/ipv4 (existing sealed/truth suites) for breadth.
+4. Apply the table. Only if a clean win shows here, demonstrate it on SWE-Bench (recall-contaminated,
+   so demonstration only, never decision).
