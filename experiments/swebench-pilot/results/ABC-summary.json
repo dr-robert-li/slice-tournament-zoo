@@ -1,0 +1,44 @@
+{
+  "instances": [
+    "pytest-dev__pytest-6197",
+    "pytest-dev__pytest-10356",
+    "pytest-dev__pytest-8399"
+  ],
+  "pool_kind": {
+    "pytest-dev__pytest-6197": "MIXED (1/4)",
+    "pytest-dev__pytest-10356": "all-fail (0/4)",
+    "pytest-dev__pytest-8399": "all-pass (4/4)"
+  },
+  "resolved_rate": {
+    "A_stz_judge": 0.667,
+    "B_naive_p2p": 0.444,
+    "C_frontier_opus": 0.667
+  },
+  "per_instance": {
+    "pytest-dev__pytest-6197": {
+      "A": 1,
+      "B": 0.333,
+      "C": 1,
+      "note": "judge picks c2; B ties empties w/ fix"
+    },
+    "pytest-dev__pytest-10356": {
+      "A": 0,
+      "B": 0,
+      "C": 0,
+      "note": "even Opus fails"
+    },
+    "pytest-dev__pytest-8399": {
+      "A": 1,
+      "B": 1,
+      "C": 1,
+      "note": "all-pass; selection moot"
+    }
+  },
+  "verdict": "A>B (judge beats public-suite); A~=C (best-of-N+judge ~ frontier). DIRECTIONAL ONLY, n=1 mixed pool, A>B inflated by stalled-agent empties.",
+  "caveats": [
+    "n=1 mixed pool",
+    "A>B inflated by 2 empty candidates (API stalls)",
+    "judge pick was easy; no accuracy claim",
+    "10356 frontier ceiling"
+  ]
+}
