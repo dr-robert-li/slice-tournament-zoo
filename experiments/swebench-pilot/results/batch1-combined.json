@@ -1,0 +1,79 @@
+{
+  "pytest-dev__pytest-5631": {
+    "haiku_pool": [
+      true,
+      true,
+      true,
+      true
+    ],
+    "haiku_bestof4": true,
+    "haiku_resolved_n": 4,
+    "opus_bestof1": true
+  },
+  "pytest-dev__pytest-10051": {
+    "haiku_pool": [
+      true,
+      false,
+      true,
+      true
+    ],
+    "haiku_bestof4": true,
+    "haiku_resolved_n": 3,
+    "opus_bestof1": false
+  },
+  "pytest-dev__pytest-7324": {
+    "haiku_pool": [
+      false,
+      false,
+      false,
+      false
+    ],
+    "haiku_bestof4": false,
+    "haiku_resolved_n": 0,
+    "opus_bestof1": true
+  },
+  "pytest-dev__pytest-7236": {
+    "haiku_pool": [
+      false,
+      false,
+      false,
+      true
+    ],
+    "haiku_bestof4": true,
+    "haiku_resolved_n": 1,
+    "opus_bestof1": true
+  },
+  "pytest-dev__pytest-7490": {
+    "haiku_pool": [
+      true,
+      true,
+      false,
+      true
+    ],
+    "haiku_bestof4": true,
+    "haiku_resolved_n": 3,
+    "opus_bestof1": false
+  },
+  "pytest-dev__pytest-5840": {
+    "haiku_pool": [
+      false,
+      false,
+      false,
+      false
+    ],
+    "haiku_bestof4": false,
+    "haiku_resolved_n": 0,
+    "opus_bestof1": false
+  },
+  "pytest-dev__pytest-5787": {
+    "haiku_pool": [
+      false,
+      false,
+      false,
+      false
+    ],
+    "haiku_bestof4": false,
+    "haiku_resolved_n": 0,
+    "opus_bestof1": true
+  }
+}

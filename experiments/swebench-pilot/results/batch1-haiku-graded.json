@@ -1,0 +1,268 @@
+{
+  "pytest-dev__pytest-5631": [
+    {
+      "slot": 0,
+      "resolved": true,
+      "status": "ran",
+      "f2p_pass": 1,
+      "f2p_total": 1,
+      "p2p_pass": 15,
+      "p2p_total": 15
+    },
+    {
+      "slot": 1,
+      "resolved": true,
+      "status": "ran",
+      "f2p_pass": 1,
+      "f2p_total": 1,
+      "p2p_pass": 15,
+      "p2p_total": 15
+    },
+    {
+      "slot": 2,
+      "resolved": true,
+      "status": "ran",
+      "f2p_pass": 1,
+      "f2p_total": 1,
+      "p2p_pass": 15,
+      "p2p_total": 15
+    },
+    {
+      "slot": 3,
+      "resolved": true,
+      "status": "ran",
+      "f2p_pass": 1,
+      "f2p_total": 1,
+      "p2p_pass": 15,
+      "p2p_total": 15
+    }
+  ],
+  "pytest-dev__pytest-10051": [
+    {
+      "slot": 0,
+      "resolved": true,
+      "status": "ran",
+      "f2p_pass": 1,
+      "f2p_total": 1,
+      "p2p_pass": 15,
+      "p2p_total": 15
+    },
+    {
+      "slot": 1,
+      "resolved": false,
+      "status": "ran",
+      "f2p_pass": 0,
+      "f2p_total": 1,
+      "p2p_pass": 14,
+      "p2p_total": 15
+    },
+    {
+      "slot": 2,
+      "resolved": true,
+      "status": "ran",
+      "f2p_pass": 1,
+      "f2p_total": 1,
+      "p2p_pass": 15,
+      "p2p_total": 15
+    },
+    {
+      "slot": 3,
+      "resolved": true,
+      "status": "ran",
+      "f2p_pass": 1,
+      "f2p_total": 1,
+      "p2p_pass": 15,
+      "p2p_total": 15
+    }
+  ],
+  "pytest-dev__pytest-7324": [
+    {
+      "slot": 0,
+      "resolved": false,
+      "status": "ran",
+      "f2p_pass": 1,
+      "f2p_total": 3,
+      "p2p_pass": 58,
+      "p2p_total": 58
+    },
+    {
+      "slot": 1,
+      "resolved": false,
+      "status": "ran",
+      "f2p_pass": 1,
+      "f2p_total": 3,
+      "p2p_pass": 58,
+      "p2p_total": 58
+    },
+    {
+      "slot": 2,
+      "resolved": false,
+      "status": "ran",
+      "f2p_pass": 1,
+      "f2p_total": 3,
+      "p2p_pass": 58,
+      "p2p_total": 58
+    },
+    {
+      "slot": 3,
+      "resolved": false,
+      "status": "ran",
+      "f2p_pass": 1,
+      "f2p_total": 3,
+      "p2p_pass": 58,
+      "p2p_total": 58
+    }
+  ],
+  "pytest-dev__pytest-7236": [
+    {
+      "slot": 0,
+      "resolved": false,
+      "status": "ran",
+      "f2p_pass": 0,
+      "f2p_total": 1,
+      "p2p_pass": 51,
+      "p2p_total": 51
+    },
+    {
+      "slot": 1,
+      "resolved": false,
+      "status": "ran",
+      "f2p_pass": 0,
+      "f2p_total": 1,
+      "p2p_pass": 20,
+      "p2p_total": 51
+    },
+    {
+      "slot": 2,
+      "resolved": false,
+      "status": "ran",
+      "f2p_pass": 0,
+      "f2p_total": 1,
+      "p2p_pass": 20,
+      "p2p_total": 51
+    },
+    {
+      "slot": 3,
+      "resolved": true,
+      "status": "ran",
+      "f2p_pass": 1,
+      "f2p_total": 1,
+      "p2p_pass": 51,
+      "p2p_total": 51
+    }
+  ],
+  "pytest-dev__pytest-7490": [
+    {
+      "slot": 0,
+      "resolved": true,
+      "status": "ran",
+      "f2p_pass": 2,
+      "f2p_total": 2,
+      "p2p_pass": 78,
+      "p2p_total": 78
+    },
+    {
+      "slot": 1,
+      "resolved": true,
+      "status": "ran",
+      "f2p_pass": 2,
+      "f2p_total": 2,
+      "p2p_pass": 78,
+      "p2p_total": 78
+    },
+    {
+      "slot": 2,
+      "resolved": false,
+      "status": "ran",
+      "f2p_pass": 2,
+      "f2p_total": 2,
+      "p2p_pass": 77,
+      "p2p_total": 78
+    },
+    {
+      "slot": 3,
+      "resolved": true,
+      "status": "ran",
+      "f2p_pass": 2,
+      "f2p_total": 2,
+      "p2p_pass": 78,
+      "p2p_total": 78
+    }
+  ],
+  "pytest-dev__pytest-5840": [
+    {
+      "slot": 0,
+      "resolved": false,
+      "status": "ran",
+      "f2p_pass": 0,
+      "f2p_total": 2,
+      "p2p_pass": 51,
+      "p2p_total": 51
+    },
+    {
+      "slot": 1,
+      "resolved": false,
+      "status": "ran",
+      "f2p_pass": 0,
+      "f2p_total": 2,
+      "p2p_pass": 51,
+      "p2p_total": 51
+    },
+    {
+      "slot": 2,
+      "resolved": false,
+      "status": "ran",
+      "f2p_pass": 0,
+      "f2p_total": 2,
+      "p2p_pass": 51,
+      "p2p_total": 51
+    },
+    {
+      "slot": 3,
+      "resolved": false,
+      "status": "ran",
+      "f2p_pass": 0,
+      "f2p_total": 2,
+      "p2p_pass": 51,
+      "p2p_total": 51
+    }
+  ],
+  "pytest-dev__pytest-5787": [
+    {
+      "slot": 0,
+      "resolved": false,
+      "status": "ran",
+      "f2p_pass": 2,
+      "f2p_total": 2,
+      "p2p_pass": 122,
+      "p2p_total": 123
+    },
+    {
+      "slot": 1,
+      "resolved": false,
+      "status": "ran",
+      "f2p_pass": 2,
+      "f2p_total": 2,
+      "p2p_pass": 121,
+      "p2p_total": 123
+    },
+    {
+      "slot": 2,
+      "resolved": false,
+      "status": "ran",
+      "f2p_pass": 2,
+      "f2p_total": 2,
+      "p2p_pass": 121,
+      "p2p_total": 123
+    },
+    {
+      "slot": 3,
+      "resolved": false,
+      "status": "ran",
+      "f2p_pass": 2,
+      "f2p_total": 2,
+      "p2p_pass": 121,
+      "p2p_total": 123
+    }
+  ]
+}
