@@ -94,6 +94,24 @@ cheaper thing matches). Build the loop only if best-of-N plateaus *below* fronti
 
 ## ▶ NEXT STEP (CURRENT): build benchmark substrate + SWE-Bench pilot
 
+> **UPDATE 2026-06-26 — SCALED pilot (batch-1 + iterate arm); STILL silent on 0.8.0.**
+> Scaled to 10 instances + an iterate arm (subscription-billed in-session agents). What scaled
+> cleanly: pipeline handles it; **mixed pools rare at N=4** (~4/10); **best-of-N-Haiku ≈
+> frontier-Opus-best-of-1 in aggregate (6/10 each) but COMPLEMENTARY** (different instances —
+> 2 Haiku-only, 2 Opus-only, 4 both, 2 neither). The iterate arm raw outcome (1 round closed 3/4
+> gap instances incl. one neither) **LOOKS pro-0.8.0 but is NOT evidence** — corrected on review,
+> triple-confounded: (1) the critic was **not blind to FAIL_TO_PASS** — candidates passed 100% of
+> PASS_TO_PASS, so a real loop would STOP and never iterate; the "it's wrong" signal came from the
+> operator peeking at held-out F2P; (2) operator-authored pointed questions encoded the diagnosis;
+> (3) training recall (critics cited "upstream pytest 7.2.0"; iterate is the most recall-sensitive
+> arm). **Symmetric-error discipline:** a confounded run leaning pro-build is the same mistake as
+> one leaning anti-build — refuse both. **0.8.0 deferral continues to rest on cron/hexcolor, not
+> this run.** Genuine seed: these models critique a concrete wrong candidate better than they
+> generate from scratch — interesting but confounded; needs a BLIND iterate arm (critic sees only
+> issue+candidate+code+a SEALED verdict, never F2P; note P2P=100% instances give the loop nothing
+> to fire on → need a sealed held-out signal SWE-Bench doesn't provide; no pointed questions;
+> control recall; compare at equal token budget). Detail: `swebench-pilot/PILOT-RESULTS-SCALED.md`.
+
 > **UPDATE 2026-06-25 (latest) — A/B/C pilot RAN; it does NOT update the 0.8.0 decision.**
 > Full pipeline executed on aarch64 (filter network-bound → hermetic pytest instances; N=4 blind
 > Haiku pool per instance → grade whole pool via official harness → selectors A=STZ gate+judge,

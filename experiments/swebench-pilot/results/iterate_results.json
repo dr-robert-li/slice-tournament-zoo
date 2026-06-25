@@ -1,0 +1,36 @@
+{
+  "raw_outcomes": {
+    "pytest-dev__pytest-7324": {
+      "category": "GAP",
+      "bestof4_haiku": false,
+      "opus_bestof1": true,
+      "iterate_opus_critic": true,
+      "iterate_haiku_critic": true,
+      "rounds": 1
+    },
+    "pytest-dev__pytest-5787": {
+      "category": "GAP",
+      "bestof4_haiku": false,
+      "opus_bestof1": true,
+      "iterate_opus_critic": true,
+      "rounds": 1
+    },
+    "pytest-dev__pytest-10356": {
+      "category": "NEITHER",
+      "bestof4_haiku": false,
+      "opus_bestof1": false,
+      "iterate_opus_critic": true,
+      "rounds": 1
+    },
+    "pytest-dev__pytest-5840": {
+      "category": "NEITHER",
+      "bestof4_haiku": false,
+      "opus_bestof1": false,
+      "iterate_opus_critic": false,
+      "rounds": 1
+    }
+  },
+  "VERDICT": "CONFOUNDED \u2014 NOT evidence for 0.8.0. (1) critic not blind to FAIL_TO_PASS (candidates passed 100% PASS_TO_PASS; a real blind loop would stop and never iterate; 'wrong' signal came from operator peeking at held-out F2P). (2) operator pointed questions encoded the diagnosis. (3) training recall (cited upstream pytest 7.2.0). Run is SILENT on 0.8.0; deferral rests on cron/hexcolor.",
+  "genuine_seed": "models critique a concrete wrong candidate better than they generate from scratch (Haiku failed 7324 0/4 as implementer, diagnosed it as critic) - confounded by recall, needs a blind iterate arm.",
+  "clean_arm_spec": "critic sees only issue+candidate+code+sealed-verdict, never F2P; loop fires only on sealed signal (P2P=100% instances need a sealed held-out signal SWE-Bench lacks); no pointed questions; control recall; compare vs best-of-N at equal token budget."
+}
