@@ -1,5 +1,9 @@
 # HANDOFF — STZ-vs-naive validation (resume here after context clear)
 
+> **READ `experiments/HANDOFF-CURRENT.md` FIRST.** It is the single, self-contained resume doc
+> (state, assets, how-to-run, discipline, next step). This file is the layered decision log / full
+> chain, kept for history; the UPDATE blocks below are chronological and newest-relevant at the top.
+
 > **UPDATE 2026-06-22 (steps 2+3 DONE on a 2nd fresh task — see `hexcolor-pilot/FINDINGS.md`):**
 > Both roadmap steps ran on `parseHexColor` (fresh, un-burned; reproduces cron's `5abc` soft spot via
 > `parseInt("cg",16)=12`, so `#aabbcg` leaks in a per-byte slicer / is rejected by a validator).
