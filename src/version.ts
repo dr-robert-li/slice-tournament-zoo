@@ -27,7 +27,7 @@ export const PACKAGE_NAME = "slice-tournament-zoo";
  * Schema version of the `.stz/` taxonomy tree. Bump when `TIERS` (or the
  * manifest shape) changes so `stz migrate` can detect an out-of-date project.
  */
-export const SCHEMA_VERSION = 1;
+export const SCHEMA_VERSION = 2;
 
 /** Read the package version from the shipped package.json (never hardcoded). */
 function readPackageVersion(): string {

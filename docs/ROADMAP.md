@@ -245,7 +245,29 @@ ephemeral observability**, a prebuilt **`dist/`** to drop the runtime `tsx`
 dependency, **OS-level sealing** of the held-out suite, Python eval drivers, and
 cross-slice RAG/embeddings.
 
-### Multi-round convergence: iterative selection-pressure → design-feedback loop (0.8.0)
+### Multi-round convergence: iterative selection-pressure → design-feedback loop (0.8.0) — ⛔ SHELVED, SUPERSEDED BY 0.9.0
+
+> **STATUS (0.9.0): SHELVED — empirically ruled out, energy relocated to the harness altitude.**
+> The per-slice convergence loop below was tested against its own pre-registered
+> decision table on the recall-free synthetic substrate, budget-matched, twice:
+> - **Sealed-steered arm** (`experiments/swebench-pilot/PILOT-RESULTS-BLIND.md`):
+>   `iterate ≈ best-of-N` at matched budget — a loop that stops at "sealed = 1.0"
+>   cannot cross a gradient the suite cannot see.
+> - **Judge-beyond-suite arm** (`PILOT-RESULTS-JUDGE.md`): signal-matched,
+>   `judge+iterate == hardened-suite+best-of-N` at the same truth ceiling; the
+>   gradient the judge crosses (the `5abc` `parseInt` silent-truncation trap) is
+>   **suite-expressible**, so a hardened suite + best-of-N reaches it at ~0
+>   marginal cost while the loop paid ~74k judge tokens/round.
+>
+> **Verdict:** the lever is **selection-signal quality + suite sharpening**, NOT
+> per-slice iteration. 0.8.0 is not built as specced. Its design ideas are
+> **relocated** to the **0.9.0 harness-level RSI meta-loop** (next section), where
+> the 2024–2026 literature (Darwin Gödel Machine, HarnessX, SIA) actually shows
+> gains: `rewardDelta`/`convergenceRate` → variant-fitness deltas; `diversityFloor`
+> → the variance-collapse guard (`src/diversity.ts`); `interfaceHash` → the
+> harness-contract parity (`src/harness-hash.ts`); `RoundSnapshot` → `ArchiveEntry`;
+> the ICRL pressure log → the cross-variant mining log. The prose below is kept as
+> the design record of WHY the per-slice form was shelved.
 
 #### Background and framing
 
@@ -631,3 +653,81 @@ the rolling document fed to that round) alongside the existing `tokenCost` field
 | `interfaceHashMatch: false` | Contract ambiguity exposed | Escalate to `/stz:slice` for re-planning; round not promoted |
 | `activeStrategyTokens` growing | Rolling doc not summarising correctly | Inspect `50-pressure/active-strategy.md`; reduce manually if needed |
 | Convergence halt before `maxRounds` | Loop converged early | Normal; prior winner retained as slice winner |
+
+---
+
+### Harness-level recursive self-improvement: the meta-loop (0.9.0) — ✅ BUILT
+
+The relocation of the shelved 0.8.0 energy to the altitude where RSI actually
+pays. The per-slice tournament is **untouched** (earned-correct: best-of-N + good
+selection). 0.9.0 adds a separate, **opt-in, default-off** meta-loop that evolves
+the **harness itself** — a DGM/HarnessX-style population of harness variants,
+selected by GRPO group-relative advantage on **held-out, recall-free** pilot
+fitness, with a five-gate promotion guard.
+
+#### Grounding (2024–2026 literature)
+
+| System | Mechanism adopted | STZ realization |
+|---|---|---|
+| Darwin Gödel Machine (arXiv:2505.22954) | branching archive; parent-sampling P ∝ fitness/(1+children); held-out fitness replaces formal proof | `src/harness.ts` archive + `sampleParents` in `.stz/60-harness/` |
+| HarnessX (arXiv:2606.14249) | typed substitution algebra; Critic validates on held-out before promotion | the harness **genome** (genes G1–G6) + `agents/stz-harness-critic.md` |
+| GRPO + RC-GRPO/AceGRPO | group-relative advantage; variance-collapse guard; learnability-frontier curriculum | `src/grpo.ts` reused one altitude up + `src/diversity.ts` |
+| Self-Play SWE-RL / SSR (arXiv:2512.18552) | bug-injector adversary vs the suite | `agents/stz-injector.md` + `injectMutants` (`src/eval-runner.ts`) |
+| Judge-reliability crisis (arXiv:2606.10315 / 2505.19477) | one robust judge + consistency CI; **no naive ensembles** | `src/judge-reliability.ts` + `bridge judge-stress` |
+
+#### The harness genome (mutable genes) — `HarnessGenome` in `src/types.ts`
+
+`G1` test-author negative-case heuristic (the flagship) · `G2` suite battery
+mutators · `G3` specimen strategy set · `G4` judge rubric · `G5` selection-weight
+tuple · `G6` fan-out + votes. Frozen (never a gene): `seal.ts` integrity, the
+`hack-detector` RULES floor, the `grpo.ts` formula, the escalation ceilings, the
+truth suites, and the N6 contract. A variant mutating any frozen file is rejected
+at the gate before its fitness is even read.
+
+#### Flagship: automated suite sharpening
+
+The pilots' lever made mechanical. `eval-runner.ts measureMutation` **is** the
+objective verifier: a surviving mutant is a suite blind spot. A discovered
+bug-class (e.g. `5abc`) becomes (a) a promoted `MutatorSpec` in the expanding
+`60-harness/battery` and (b) a negative-case heuristic appended to
+`stz-test-author.md` — promoted only when TWICE-verified (`harness-mine`: the
+mutator **survives** the incumbent suite ✓ AND **is killed** by suites authored
+with the new heuristic ✓). Caught once at ~0 marginal/slice instead of re-derived
+per slice — the entire redirect.
+
+#### New bridge commands (deterministic spine; the bridge owns all compute, N6)
+
+`inject` (blind-spot discovery + bounded FSM) · `harness-mine` (skill verifier
+half i) · `harness-promote-mutator` (append a verified mutator to the battery) ·
+`harness-spawn` (DGM parent-sampling) · `harness-fitness` (AceGRPO-weighted
+held-out fitness → `ArchiveEntry`) · `harness-select` (GRPO advantage + diversity
+guard) · `harness-promote` (five-gate) · `harness-status` · `judge-stress`
+(consistency CI). Driven by `commands/stz-evolve.md` and `commands/stz-inject.md`;
+config via the optional `harness` block in `run-config.json`.
+
+#### The five-gate promotion guard (DGM hack-resistance built in)
+
+A variant becomes the incumbent ONLY if it (1) beats the incumbent on held-out
+fitness AND (2) is **hack-clean on its OWN outputs** (it cannot win by weakening
+its own gate — the DGM self-detector-bypass failure) AND (3) preserved sealing
+integrity (`verifySeal`) AND (4) interface parity (`harness-hash.ts`) AND (5)
+came from a diverse (non-collapsed) generation. Kill-switches **halt and surface**;
+nothing ever auto-rewrites its own guard.
+
+#### Discipline (earned, not asserted)
+
+Held-out & recall-free · budget-matched · 3-seed minimum · symmetric-error null
+("no variant beats the incumbent → keep it" is a SUCCESS) · convention-axis
+discount · N6 replay from `60-harness/MANIFEST.json` append-order. The pilots are
+burned as blind-spot substrates (non-regression only); a fresh, pre-registered,
+unprobed contract is required for any generalization claim.
+
+#### Operator table (0.9.0 meta-loop)
+
+| Signal | Interpretation | Response |
+|---|---|---|
+| `harness-select` σ < `diversityFloor` | Variance collapse — generation is non-discriminating | Do not promote; re-sample with forced gene diversity (RC-GRPO) |
+| two BARREN generations in a row | Converged — nothing beats the incumbent | Halt; incumbent stands (anti-build null — a SUCCESS) |
+| `harness-mine` mutator killed by incumbent suite | Not a blind spot | Reject the candidate skill as a no-op |
+| five-gate `promote:false` with `hack-findings-on-own-outputs` | Variant tried to win by weakening its gate | Reject; the DGM failure mode, caught |
+| `judge-stress` consistency below threshold for a slice-type | Judge unreliable here | Down-weight the judge; lean on the sealed/truth divergence backstop |

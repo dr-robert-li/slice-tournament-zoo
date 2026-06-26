@@ -84,6 +84,20 @@ export interface EvalResult {
   mutationScore: number;
   /** Hack-pattern findings (F10/L3). Non-empty ⇒ disqualified. */
   hackFindings: HackFinding[];
+  /**
+   * 0..1 code-health score (0.9.0, CodeClash-informed). Rewards parsimony and
+   * penalizes bloat/redundancy/branch-sprawl. Optional: absent ⇒ treated as the
+   * neutral best (1) so legacy callers are unaffected and a perfect specimen
+   * still scores reward 1.0.
+   */
+  codeHealth?: number;
+  /**
+   * 0..1 graded "soft-suspicion" sub-DQ signal (0.9.0). Weaker than the hard
+   * `hackFindings` gate — a specimen that passes the gate can still carry a
+   * non-zero suspicion (e.g. fixture-name proximity that doesn't trip the hard
+   * rule). Higher is worse. Optional: absent ⇒ treated as 0 (clean).
+   */
+  suspicion?: number;
 }
 
 /** A single anti-reward-hacking finding (F10 / L3). */
@@ -302,4 +316,77 @@ export interface RunConfig {
    * `stz bridge project-dark-factory` (the invoke-anytime flag).
    */
   darkFactory: boolean;
+  /**
+   * Harness-level recursive self-improvement (0.9.0). Optional + default-off:
+   * absent or `enabled:false` ⇒ STZ runs exactly as before (the per-slice
+   * tournament is untouched and earned-correct). When enabled, `stz:evolve`
+   * runs the DGM/HarnessX-style meta-loop that evolves the harness genome
+   * against held-out pilot fitness. See `HarnessConfig`.
+   */
+  harness?: HarnessConfig;
+}
+
+// ── 0.9.0 Harness-level recursive self-improvement (meta-loop) ───────────────
+
+/**
+ * Configuration of the harness-evolution meta-loop (0.9.0). Every field is
+ * bounded; the meta-loop is opt-in (default `enabled:false`) so existing runs
+ * behave identically. The per-slice tournament is NOT a gene — only the harness
+ * genome (prompts, batteries, weights, fan-out) evolves.
+ */
+export interface HarnessConfig {
+  /** Master switch. Default false ⇒ no behaviour change. */
+  enabled: boolean;
+  /** K variants per generation (the GRPO "group"). Bounded [2, 8]. */
+  generationSize: number;
+  /** Hard ceiling on generations (meta-FSM, mirrors escalation MAX_*). */
+  maxGenerations: number;
+  /** Archive cap; lowest fitness/(1+childCount) retired when full (never incumbent). */
+  archiveMax: number;
+  /** Minimum group fitness stddev; below it a generation is a variance-collapse artifact. */
+  diversityFloor: number;
+  /** Recall-free held-out fitness substrates (pilot task names). */
+  substrates: string[];
+  /** SIA/BYO-LLM v2 seam: a future LoRA lever plugs in here. Off in 0.9.0. */
+  weightsLever: "off";
+}
+
+/** The mutable genes of a harness variant (HarnessX substitution algebra). */
+export interface HarnessGenome {
+  /** G1: test-author negative-case heuristic id (the flagship gene). */
+  heuristicId: string;
+  /** G2: appended bug-class mutator ids active in the battery. */
+  mutatorIds: string[];
+  /** G3: specimen strategy-label set. */
+  strategySet: string[];
+  /** G4: judge rubric id. */
+  rubricId: string;
+  /** G5: selection weights tuple (must sum to 1, each [0,1]). */
+  weights: { pass: number; coverage: number; kill: number; codeHealth: number; clean: number };
+  /** G6: fan-out + votes per pair (bounded ints). */
+  fanout: number;
+  votesPerPair: number;
+}
+
+/**
+ * One archived harness variant (DGM stepping-stone). N6-CLEAN: no timestamps —
+ * append-order in `60-harness/MANIFEST.json` is the audit sequence (mirrors
+ * `seal.ts`). `variantId` is the content-addressed harness-contract hash.
+ */
+export interface ArchiveEntry {
+  schemaVersion: 1;
+  variantId: string;
+  /** Stepping-stone lineage (DGM); null for the seed/incumbent. */
+  parent: string | null;
+  genome: HarnessGenome;
+  /** Held-out pilot fitness (AceGRPO-weighted mean over substrates). */
+  fitness: number;
+  /** Per-substrate truth scores (cron/hexcolor/ipv4 …). */
+  perSubstrate: Record<string, number>;
+  /** GRPO advantage within its generation. */
+  advantage: number;
+  /** For parent-sampling P ∝ fitness/(1+childCount). */
+  childCount: number;
+  /** The five-gate promotion verdict snapshot. */
+  gates: { hackClean: boolean; sealOk: boolean; interfaceParity: boolean; diversityOk: boolean; beatsIncumbent: boolean };
 }

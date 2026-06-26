@@ -261,6 +261,32 @@ You, the session, become the orchestrator. The command:
 
 Every exact decision is made by the CLI, never by the agent's own arithmetic.
 
+### Evolve the harness itself (0.9.0, opt-in)
+
+STZ can improve **its own harness**, not just the code it produces. The per-slice
+tournament stays exactly as above; a separate, default-off meta-loop evolves the
+harness *genome* (test-author heuristics, specimen strategies, judge rubric,
+selection weights, fan-out, the suite battery) against **held-out, recall-free**
+pilot fitness — a DGM/HarnessX-style archive selected by GRPO advantage with a
+five-gate promotion guard.
+
+```text
+/stz:inject slice-01     # adversarially harden the sealed suite (find blind spots)
+/stz:evolve              # run the bounded harness-evolution meta-loop (needs harness.enabled)
+```
+
+The flagship is **automated suite sharpening**: a blind-spot bug-class the judge
+finds past a green suite (e.g. the `5abc` malformed-token trap) is mined *once*
+into the test-author's repertoire + the mutation battery, so every future suite is
+born sharper at ~0 marginal cost — instead of re-deriving it per slice. This is
+the empirically-grounded relocation of the shelved 0.8.0 per-slice convergence
+loop (ruled out budget-matched and recall-free; see `docs/ROADMAP.md` and
+`experiments/swebench-pilot/PILOT-RESULTS-{BLIND,JUDGE}.md`). Bridge primitives:
+`inject`, `harness-mine`, `harness-promote-mutator`, `harness-spawn`,
+`harness-fitness`, `harness-select`, `harness-promote`, `harness-status`,
+`judge-stress`. Every kill-switch halts and surfaces; nothing auto-rewrites its
+own guard.
+
 ## Example commands and workflows
 
 ### A whole project (the full pipeline)

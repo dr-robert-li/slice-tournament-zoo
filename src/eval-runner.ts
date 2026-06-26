@@ -19,7 +19,7 @@
  * the first live run must never reach a user).
  */
 import { spawnSync } from "node:child_process";
-import { readFileSync, writeFileSync, mkdtempSync, rmSync, readdirSync, mkdirSync } from "node:fs";
+import { readFileSync, writeFileSync, mkdtempSync, rmSync, readdirSync, mkdirSync, existsSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve, join } from "node:path";
 
@@ -146,6 +146,58 @@ function mutateFirst(src: string, re: RegExp, repl: string): string | null {
   return out === src ? null : out;
 }
 
+export interface Mutator {
+  name: string;
+  apply: (s: string) => string | null;
+}
+
+/**
+ * A serializable, promoted bug-class mutator (0.9.0, gene G2). The harness
+ * meta-loop mines a discovered blind-spot (e.g. the `5abc` `parseInt` silent
+ * truncation the JUDGE pilot found past a green suite) into one of these and
+ * appends it to the expanding battery under `60-harness/battery`. Regex-driven
+ * so it stays deterministic and tool-free (N10).
+ */
+export interface MutatorSpec {
+  name: string;
+  /** Regex source applied via `String.replace` (first match only). */
+  find: string;
+  flags?: string;
+  replace: string;
+}
+
+function specToMutator(spec: MutatorSpec): Mutator {
+  const re = new RegExp(spec.find, spec.flags ?? "");
+  return { name: spec.name, apply: (s) => mutateFirst(s, re, spec.replace) };
+}
+
+/**
+ * The active mutation battery = built-in deterministic mutators UNION any
+ * promoted bug-class mutators loaded from `batteryDir` (JSON arrays of
+ * `MutatorSpec`). Built-ins always come first so ordering — and therefore
+ * mutant ids — stay stable (N6). A malformed/duplicate-name spec is skipped,
+ * never throws, so a corrupt battery file can't break a tournament.
+ */
+export function loadBattery(batteryDir?: string): Mutator[] {
+  const battery: Mutator[] = [...MUTATORS];
+  if (!batteryDir || !existsSync(batteryDir)) return battery;
+  const seen = new Set(battery.map((m) => m.name));
+  for (const f of readdirSync(batteryDir).sort()) {
+    if (!f.endsWith(".json")) continue;
+    try {
+      const specs = JSON.parse(readFileSync(join(batteryDir, f), "utf8")) as MutatorSpec[];
+      for (const spec of specs) {
+        if (!spec?.name || seen.has(spec.name)) continue;
+        battery.push(specToMutator(spec));
+        seen.add(spec.name);
+      }
+    } catch {
+      /* a corrupt battery file is skipped, not fatal */
+    }
+  }
+  return battery;
+}
+
 /** Remove block and line comments so mutators only touch executable code. */
 function stripComments(src: string): string {
   return src
@@ -160,7 +212,11 @@ function stripComments(src: string): string {
  * skipped. Returns 1 (worst) when no mutant could be applied so a degenerate
  * file is never rewarded.
  */
-export function measureMutation(sealedPath: string, implPath: string): { mutationScore: number; mutants: number; survivors: number } {
+export function measureMutation(
+  sealedPath: string,
+  implPath: string,
+  battery: Mutator[] = MUTATORS,
+): { mutationScore: number; mutants: number; survivors: number } {
   const abs = resolve(implPath);
   // Mutate executable code, not comments. A `Math.min` inside a doc comment
   // would otherwise yield a behaviour-identical mutant that always "survives"
@@ -170,7 +226,7 @@ export function measureMutation(sealedPath: string, implPath: string): { mutatio
   let mutants = 0;
   let survivors = 0;
   try {
-    for (const m of MUTATORS) {
+    for (const m of battery) {
       const mutated = m.apply(src);
       if (mutated === null) continue;
       mutants++;
@@ -187,25 +243,100 @@ export function measureMutation(sealedPath: string, implPath: string): { mutatio
   return { mutationScore, mutants, survivors };
 }
 
+export interface SurvivingMutant {
+  name: string;
+  /** The mutated source the sealed suite FAILED to distinguish from the impl. */
+  mutantSource: string;
+  sealedResult: SealedResult;
+}
+
+/**
+ * Adversarial suite-hardening primitive (0.9.0, SSR-style). Runs the SAME loop
+ * as `measureMutation` but RETURNS the surviving mutant *sources* — each a
+ * candidate suite blind spot (the sealed suite + judge could not tell it from
+ * the winner). A survivor is only a real defect if it violates a named contract
+ * clause; that adjudication + general-case authoring + reference re-verify is
+ * the bridge `inject` command's job (the mutant-promotion oracle gate), never
+ * automatic. Blind by construction: derives mutants from the impl + battery,
+ * never from the truth oracle.
+ */
+export function injectMutants(
+  sealedPath: string,
+  implPath: string,
+  battery: Mutator[] = MUTATORS,
+): SurvivingMutant[] {
+  const abs = resolve(implPath);
+  const src = stripComments(readFileSync(abs, "utf8"));
+  const dir = mkdtempSync(join(tmpdir(), "stz-inject-"));
+  const survivors: SurvivingMutant[] = [];
+  try {
+    for (const m of battery) {
+      const mutated = m.apply(src);
+      if (mutated === null) continue;
+      const mutPath = join(dir, `mutant-${m.name}.mjs`);
+      writeFileSync(mutPath, mutated, "utf8");
+      const res = runSealed(sealedPath, mutPath);
+      if (res.passRate === 1) survivors.push({ name: m.name, mutantSource: mutated, sealedResult: res });
+    }
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+  return survivors;
+}
+
+/**
+ * Code-health score in [0,1] (0.9.0, CodeClash-informed: iterative agents
+ * degrade codebases while winning rounds). Self-contained per-file proxies —
+ * deterministic, source-only, no group context needed:
+ *   - duplicated non-trivial-line ratio (textual redundancy), and
+ *   - branch-density excess (cyclomatic proxy) above a parsimony threshold.
+ * 1 = healthy/parsimonious, lower = bloated/redundant. Scoped honestly to what
+ * computes on a single file; multi-file slices add file-count terms later.
+ */
+export function measureCodeHealth(implPath: string): number {
+  const src = stripComments(readFileSync(resolve(implPath), "utf8"));
+  const lines = src.split("\n").map((l) => l.trim()).filter((l) => l.length > 2);
+  if (lines.length === 0) return 1;
+  const counts = new Map<string, number>();
+  for (const l of lines) counts.set(l, (counts.get(l) ?? 0) + 1);
+  let dup = 0;
+  for (const n of counts.values()) if (n > 1) dup += n - 1;
+  const dupRatio = dup / lines.length;
+  const branchTokens = (src.match(/\b(if|for|while|case|catch)\b|&&|\|\||\?[^.]/g) ?? []).length;
+  const branchDensity = branchTokens / lines.length;
+  // A modest branch density is normal; only the excess above ~0.35/line is penalized.
+  const branchExcess = Math.max(0, branchDensity - 0.35);
+  const score = 1 - 0.6 * Math.min(1, dupRatio) - 0.4 * Math.min(1, branchExcess);
+  return Math.max(0, Math.min(1, score));
+}
+
 export interface FullEval {
   testPassRate: number;
   coverage: number;
   mutationScore: number;
+  /** 0..1 code-health (0.9.0). */
+  codeHealth: number;
   passed: number;
   total: number;
   mutants: number;
   survivors: number;
 }
 
-/** Run all three real measurements for one specimen implementation. */
-export function fullEval(sealedPath: string, implPath: string): FullEval {
+/**
+ * Run all real measurements for one specimen implementation. `batteryDir` (the
+ * promoted bug-class mutators under `60-harness/battery`) is unioned with the
+ * built-ins so a sharpened battery participates; omit it for legacy behaviour.
+ */
+export function fullEval(sealedPath: string, implPath: string, batteryDir?: string): FullEval {
   const sealed = runSealed(sealedPath, implPath);
   const coverage = measureCoverage(sealedPath, implPath);
-  const mutation = measureMutation(sealedPath, implPath);
+  const mutation = measureMutation(sealedPath, implPath, loadBattery(batteryDir));
+  const codeHealth = measureCodeHealth(implPath);
   return {
     testPassRate: sealed.passRate,
     coverage,
     mutationScore: mutation.mutationScore,
+    codeHealth,
     passed: sealed.passed,
     total: sealed.total,
     mutants: mutation.mutants,
@@ -216,5 +347,13 @@ export function fullEval(sealedPath: string, implPath: string): FullEval {
 /** Write a metrics.json the bridge `record-eval` consumes. */
 export function writeMetrics(path: string, e: FullEval): void {
   mkdirSync(join(path, ".."), { recursive: true });
-  writeFileSync(path, JSON.stringify({ testPassRate: e.testPassRate, coverage: e.coverage, mutationScore: e.mutationScore }, null, 2), "utf8");
+  writeFileSync(
+    path,
+    JSON.stringify(
+      { testPassRate: e.testPassRate, coverage: e.coverage, mutationScore: e.mutationScore, codeHealth: e.codeHealth },
+      null,
+      2,
+    ) + "\n",
+    "utf8",
+  );
 }

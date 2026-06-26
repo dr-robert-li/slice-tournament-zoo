@@ -79,12 +79,25 @@ export function rankByVotes(
 }
 
 /**
- * Scalar reward for a passer: blend of test pass rate, coverage, and mutation
- * kill rate (1 − survival). Bounded to [0,1]. Feeds GRPO + tie-breaks.
+ * Multi-objective scalar reward for a passer (0.9.0). Blend of test pass rate,
+ * coverage, mutation kill rate (1 − survival), code-health, and cleanliness
+ * (1 − soft-suspicion). Correctness-dominant (0.45) so health/suspicion never
+ * override a real correctness gap. All terms rule-based, bounded [0,1],
+ * deterministic — preserving the verifiable-reward principle GRPO consumes.
+ * `codeHealth` absent ⇒ neutral best (1); `suspicion` absent ⇒ clean (0), so a
+ * legacy `EvalResult` with a perfect specimen still scores exactly 1.0 and the
+ * weights sum to 1.
  */
+export const REWARD_WEIGHTS = { pass: 0.45, coverage: 0.2, kill: 0.2, codeHealth: 0.1, clean: 0.05 } as const;
+
 export function evalReward(r: EvalResult): number {
   const killRate = 1 - r.mutationScore;
-  return 0.5 * r.testPassRate + 0.25 * r.coverage + 0.25 * killRate;
+  const codeHealth = r.codeHealth ?? 1;
+  const clean = 1 - (r.suspicion ?? 0);
+  const w = REWARD_WEIGHTS;
+  const reward =
+    w.pass * r.testPassRate + w.coverage * r.coverage + w.kill * killRate + w.codeHealth * codeHealth + w.clean * clean;
+  return Math.max(0, Math.min(1, reward));
 }
 
 /** Full two-stage selection producing a Judgment (F7 + F8). */

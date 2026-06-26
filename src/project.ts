@@ -27,6 +27,7 @@ import {
   type MutationPolicy,
   type ConventionStrictness,
   type StzRole,
+  type HarnessConfig,
 } from "./types.js";
 import { STZ_DIR } from "./taxonomy.js";
 import { loadState, stateExists, isComplete } from "./state.js";
@@ -293,6 +294,10 @@ export function normalizeRunConfig(partial: Partial<RunConfig> | undefined): Run
     darkFactory = p.darkFactory === true || String(p.darkFactory).trim().toLowerCase() === "true";
   }
 
+  // Harness-level RSI (0.9.0) is opt-in: only attached when present, so existing
+  // serialized configs (and their tests) keep their exact shape when it is absent.
+  const harness = p.harness !== undefined ? normalizeHarnessConfig(p.harness) : undefined;
+
   return {
     schemaVersion: 1,
     granularity,
@@ -304,6 +309,55 @@ export function normalizeRunConfig(partial: Partial<RunConfig> | undefined): Run
       conventions: s.conventions ?? base.strictness.conventions,
     },
     darkFactory,
+    ...(harness ? { harness } : {}),
+  };
+}
+
+/** Default harness-evolution config (0.9.0). Disabled — no behaviour change. */
+export function defaultHarnessConfig(): HarnessConfig {
+  return {
+    enabled: false,
+    generationSize: 4,
+    maxGenerations: 5,
+    archiveMax: 64,
+    diversityFloor: 0.02,
+    substrates: ["cron", "hexcolor", "ipv4"],
+    weightsLever: "off",
+  };
+}
+
+const GEN_SIZE_MIN = 2;
+const GEN_SIZE_MAX = 8;
+
+/** Merge + bound a partial harness config over the defaults. All fields clamped. */
+export function normalizeHarnessConfig(partial: Partial<HarnessConfig> | undefined): HarnessConfig {
+  const base = defaultHarnessConfig();
+  const p = partial ?? {};
+  const enabled = p.enabled === true || String(p.enabled).trim().toLowerCase() === "true";
+  const clampInt = (v: unknown, lo: number, hi: number, dflt: number): number => {
+    if (v === undefined) return dflt;
+    const n = Math.round(Number(v));
+    if (!Number.isFinite(n)) throw new Error(`invalid harness numeric field: ${String(v)}`);
+    return Math.max(lo, Math.min(hi, n));
+  };
+  let diversityFloor = base.diversityFloor;
+  if (p.diversityFloor !== undefined) {
+    const f = Number(p.diversityFloor);
+    if (!Number.isFinite(f)) throw new Error(`invalid diversityFloor: ${String(p.diversityFloor)}`);
+    diversityFloor = Math.max(0, Math.min(1, f));
+  }
+  const substrates =
+    Array.isArray(p.substrates) && p.substrates.length > 0
+      ? p.substrates.map((x) => String(x).trim()).filter(Boolean)
+      : base.substrates;
+  return {
+    enabled,
+    generationSize: clampInt(p.generationSize, GEN_SIZE_MIN, GEN_SIZE_MAX, base.generationSize),
+    maxGenerations: clampInt(p.maxGenerations, 1, 50, base.maxGenerations),
+    archiveMax: clampInt(p.archiveMax, 2, 4096, base.archiveMax),
+    diversityFloor,
+    substrates,
+    weightsLever: "off",
   };
 }
 

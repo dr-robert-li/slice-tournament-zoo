@@ -31,6 +31,9 @@ export const TIERS = [
   "30-tests/held-out",
   "40-slices",
   "50-pressure",
+  "60-harness",
+  "60-harness/variants",
+  "60-harness/battery",
   "90-audit",
   "90-audit/calls",
 ] as const;

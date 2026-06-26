@@ -114,6 +114,77 @@ function stripComments(line: string): string {
   return line;
 }
 
+/**
+ * Soft-suspicion signals (0.9.0) — the GRADED sub-DQ layer beneath the hard
+ * `RULES` gate. These are weaker patterns that do NOT disqualify (a gate-passer
+ * can carry them) but legitimately lower confidence: behaviour that smells like
+ * fixture-coupling or output-shaping without crossing the hard line. The reward
+ * (selection.ts) consumes `(1 - suspicion)`. Deterministic and rule-based — no
+ * LLM — so the verifiable-reward principle and N6 replay hold.
+ *
+ * Resolution of the no-op the hard gate creates: among the specimens the reward
+ * actually scores (gate-passers), hard `hackFindings` is empty by construction,
+ * so a graded term over those would discriminate nothing. The soft signals here
+ * are the distinct, weaker pattern set that passers CAN still carry.
+ */
+const SOFT_RULES: { id: string; weight: number; test: (line: string, ctx: ScanContext) => boolean }[] = [
+  {
+    // A sealed fixture name merely MENTIONED (not in a branch — that would be the
+    // hard fixture-keyed-branch rule). Proximity to fixtures is a faint smell.
+    id: "fixture-name-mention",
+    weight: 0.25,
+    test: (l, ctx) =>
+      ctx.fixtureNames.length > 0 &&
+      ctx.fixtureNames.some((f) => f.length >= 3 && l.includes(f)) &&
+      !/\b(if|switch|case|when|elif)\b/.test(l),
+  },
+  {
+    // A literal that looks like a hardcoded expected value without a test
+    // sentinel (the hard rule needs the sentinel). E.g. a bare `return 42` next
+    // to an equality against a constant — weak alone, suspicious in aggregate.
+    id: "magic-return-near-eq",
+    weight: 0.2,
+    test: (l) => /return\s+["'][^"']{0,40}["']\s*;?\s*$/.test(l) && /==|===/.test(l),
+  },
+  {
+    // A catch block that swallows everything and returns a constant — a way to
+    // make any failing path "pass" without solving it. Not the hard test-skip.
+    id: "swallow-catch-return",
+    weight: 0.3,
+    test: (l) => /catch\s*(\([^)]*\))?\s*\{\s*return\b/.test(l),
+  },
+  {
+    // Broad always-truthy guard short-circuiting validation.
+    id: "always-true-guard",
+    weight: 0.25,
+    test: (l) => /\bif\s*\(\s*(true|1)\s*\)/.test(l) || /\|\|\s*true\b/.test(l),
+  },
+];
+
+/**
+ * Graded [0,1] soft-suspicion score for one specimen's source. Sums the weights
+ * of distinct soft signals it trips, capped at 1. 0 = clean. Higher is worse.
+ * Independent of the hard gate (`detectHacks`): a hard-passer can score > 0.
+ */
+export function suspicionScore(
+  files: Record<string, string>,
+  ctx: ScanContext = { fixtureNames: [] },
+): number {
+  const tripped = new Set<string>();
+  for (const content of Object.values(files)) {
+    for (const line of content.split("\n")) {
+      const stripped = stripComments(line);
+      if (stripped === "") continue;
+      for (const rule of SOFT_RULES) {
+        if (rule.test(stripped, ctx)) tripped.add(rule.id);
+      }
+    }
+  }
+  let score = 0;
+  for (const id of tripped) score += SOFT_RULES.find((r) => r.id === id)!.weight;
+  return Math.min(1, score);
+}
+
 /** Aggregate all specimens' remediations for a replan prompt (F14). */
 export function remediationContext(findings: HackFinding[]): string {
   const unique = new Map<HackPattern, string>();

@@ -106,10 +106,25 @@ describe("pairings + evalReward", () => {
     ]);
   });
 
-  it("reward is bounded [0,1] and rewards kills + coverage", () => {
+  it("multi-objective reward is bounded [0,1]; perfect → 1, fully-bad → 0", () => {
+    // A perfect specimen with default (absent) codeHealth(→1)/suspicion(→0) still
+    // scores exactly 1.0 — the weights sum to 1.
     const r = evalReward(mk("a", { testPassRate: 1, coverage: 1, mutationScore: 0 }));
     expect(r).toBeCloseTo(1, 9);
-    const low = evalReward(mk("a", { testPassRate: 0, coverage: 0, mutationScore: 1 }));
+    // Fully-bad on every axis (incl. codeHealth 0 and max suspicion) → 0.
+    const low = evalReward(mk("a", { testPassRate: 0, coverage: 0, mutationScore: 1, codeHealth: 0, suspicion: 1 }));
     expect(low).toBeCloseTo(0, 9);
+  });
+
+  it("code-health and cleanliness terms move the reward (0.9.0)", () => {
+    // With correctness/coverage/kill all zero, the neutral floor is the
+    // codeHealth(0.10) + clean(0.05) contribution = 0.15.
+    const floor = evalReward(mk("a", { testPassRate: 0, coverage: 0, mutationScore: 1 }));
+    expect(floor).toBeCloseTo(0.15, 9);
+    // Soft-suspicion erodes the clean term; low codeHealth erodes its term.
+    const suspicious = evalReward(mk("a", { testPassRate: 1, coverage: 1, mutationScore: 0, suspicion: 1 }));
+    expect(suspicious).toBeCloseTo(0.95, 9);
+    const unhealthy = evalReward(mk("a", { testPassRate: 1, coverage: 1, mutationScore: 0, codeHealth: 0 }));
+    expect(unhealthy).toBeCloseTo(0.9, 9);
   });
 });

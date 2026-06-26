@@ -1,7 +1,7 @@
 {
   "name": "slice-tournament-zoo",
-  "version": "0.7.3",
-  "description": "STZ: a contract-bounded slice pipeline that implements each slice adversarially via an N-specimen tournament with frozen sealed tests, GRPO-style selection, layered anti-reward-hacking, and a replayable markdown audit trail.",
+  "version": "0.9.0",
+  "description": "STZ: a contract-bounded slice pipeline that implements each slice adversarially via an N-specimen tournament with frozen sealed tests, GRPO-style selection, layered anti-reward-hacking, a replayable markdown audit trail, and (0.9.0) a bounded harness-level recursive-self-improvement meta-loop that evolves the harness against held-out pilot fitness.",
   "license": "Apache-2.0",
   "homepage": "https://github.com/dr-robert-li/slice-tournament-zoo#readme",
   "repository": {

@@ -1,5 +1,23 @@
 # HANDOFF-CURRENT — read this first to resume (2026-06-26)
 
+> **UPDATE 2026-06-27 — 0.9.0 SHIPPED the harness-level RSI meta-loop.** The §7
+> conclusion below ("sharpen the suite, not the per-slice loop") is now BUILT, at
+> the harness altitude. The per-slice 0.8.0 convergence loop is formally shelved
+> in `docs/ROADMAP.md`; its energy is relocated to a DGM/HarnessX-style meta-loop
+> that evolves the harness genome against held-out recall-free pilot fitness, with
+> GRPO variant selection, a variance-collapse guard, a five-gate promotion guard,
+> an SSR-style bug-injector for suite hardening, judge-reliability profiling (no
+> naive ensembles), and a multi-objective anti-hack reward. New code:
+> `src/{harness,harness-hash,diversity,injector,judge-reliability}.ts` +
+> `eval-runner`/`hack-detector`/`selection` extensions + 9 `harness-*`/`inject`/
+> `judge-stress` bridge commands + `agents/stz-{injector,harness-critic}.md` +
+> `commands/stz-{evolve,inject}.md`. The flagship — automated suite sharpening —
+> mines a discovered blind-spot bug-class once into the test-author repertoire +
+> mutation battery (twice-verified via `harness-mine`), catching it at ~0
+> marginal/slice. 183 tests green; the meta-loop spine validated end-to-end on the
+> cron pilot with real execution. See ROADMAP §"Harness-level RSI (0.9.0)".
+
+
 Self-contained resume doc for the STZ benchmark-evidence line. The older `HANDOFF.md` is the layered
 decision log (stacked UPDATE blocks, full chain). This file is the single entry point: state, what is
 built, how to run it, the discipline, and the exact next step. Branch: `main`. Everything below is

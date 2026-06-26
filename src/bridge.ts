@@ -56,14 +56,32 @@ import {
   runConfigExists,
   defaultRunConfig,
 } from "./project.js";
-import { detectHacks } from "./hack-detector.js";
+import { detectHacks, suspicionScore } from "./hack-detector.js";
 import { STZ_VERSION, SCHEMA_VERSION, PACKAGE_NAME } from "./version.js";
 import { onNoPassers, type EscalationState } from "./escalation.js";
 import { evalGate, select, pairings } from "./selection.js";
 import { diffSpecs, renderSpecDiff, isFaithful, unmatchedIntentIds, mismatchedAsBuiltIds, type Spec } from "./specdiff.js";
 import { seal, verifySeal, amendSeal, heldOutFiles } from "./seal.js";
 import { renderPressureLog, refinementContext, type CulledSpecimen } from "./pressure.js";
-import { fullEval, crossReference } from "./eval-runner.js";
+import { fullEval, crossReference, injectMutants, loadBattery, type MutatorSpec } from "./eval-runner.js";
+import { groupRelativeAdvantage } from "./grpo.js";
+import { checkDiversity, frontierWeights, weightedFitness } from "./diversity.js";
+import { checkParity } from "./harness-hash.js";
+import {
+  readArchive,
+  appendArchiveEntry,
+  bumpChildCount,
+  incumbent,
+  sampleParents,
+  makeArchiveEntry,
+  promotionGate,
+  batteryDir,
+  defaultGenome,
+  type MetaState,
+} from "./harness.js";
+import { initialInject, onInjectRound, summarizeSurvivors } from "./injector.js";
+import { consistencyScore, bucketOf, type JudgeReliabilityProfile } from "./judge-reliability.js";
+import type { ArchiveEntry, HarnessGenome } from "./types.js";
 import {
   loadCompat,
   saveCompat,
@@ -193,12 +211,15 @@ function commitEval(
   root: string,
   slice: string,
   specimen: string,
-  metrics: { testPassRate: number; coverage: number; mutationScore: number },
+  metrics: { testPassRate: number; coverage: number; mutationScore: number; codeHealth?: number },
   fixtureNames: string[],
   extra: Record<string, unknown> = {},
 ): void {
   const files = readSpecimenFiles(root, slice, specimen);
   const hackFindings = detectHacks(specimen, files, { fixtureNames });
+  // 0.9.0: graded soft-suspicion (a hard-passer can still carry it) + code-health
+  // feed the multi-objective reward. codeHealth absent ⇒ neutral best (1).
+  const suspicion = suspicionScore(files, { fixtureNames });
   const result: EvalResult = {
     specimen,
     passedGate: metrics.testPassRate >= 1 && hackFindings.length === 0,
@@ -206,6 +227,8 @@ function commitEval(
     coverage: metrics.coverage,
     mutationScore: metrics.mutationScore,
     hackFindings,
+    ...(metrics.codeHealth !== undefined ? { codeHealth: metrics.codeHealth } : {}),
+    suspicion,
   };
   const out = evalResultPath(root, slice, specimen);
   mkdirSync(join(out, ".."), { recursive: true });
@@ -227,14 +250,16 @@ function recordEval(args: Record<string, string>): void {
  */
 function evalCmd(args: Record<string, string>): void {
   const { root, slice, specimen } = args as { root: string; slice: string; specimen: string };
-  const e = fullEval(args.sealed!, args.impl!);
+  // Promoted bug-class mutators under 60-harness/battery participate in mutation
+  // scoring when present (the sharpened battery), so a hardened suite is rewarded.
+  const e = fullEval(args.sealed!, args.impl!, existsSync(batteryDir(root)) ? batteryDir(root) : undefined);
   commitEval(
     root,
     slice,
     specimen,
-    { testPassRate: e.testPassRate, coverage: e.coverage, mutationScore: e.mutationScore },
+    { testPassRate: e.testPassRate, coverage: e.coverage, mutationScore: e.mutationScore, codeHealth: e.codeHealth },
     args.fixtures ? args.fixtures.split(",") : [],
-    { measured: { passed: e.passed, total: e.total, mutants: e.mutants, survivors: e.survivors } },
+    { measured: { passed: e.passed, total: e.total, mutants: e.mutants, survivors: e.survivors, codeHealth: e.codeHealth } },
   );
 }
 
@@ -1039,6 +1064,286 @@ async function mergeValidate(args: Record<string, string>): Promise<void> {
   print(verdict);
 }
 
+// ════════════════════════════════════════════════════════════════════════════
+// 0.9.0 — Harness-level recursive self-improvement (meta-loop) bridge commands.
+// The bridge owns ALL compute (N6): agents feed numbers in, never do arithmetic.
+// ════════════════════════════════════════════════════════════════════════════
+
+/** Read JSON from a file path OR an inline JSON string arg. */
+function readJSONArg<T>(v: string | undefined): T | null {
+  if (!v || v === "true") return null;
+  if (existsSync(v)) return readJSON<T>(v);
+  try {
+    return JSON.parse(v) as T;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * inject: adversarial suite hardening (SSR-style). Run the mutation battery
+ * (built-ins ∪ promoted) against a winning impl; mutants the SEALED suite still
+ * passes are candidate blind spots. Reports survivors + the bounded-FSM next
+ * action. Promotion of a survivor into a sealed test is a SEPARATE, gated step
+ * (adjudicate clause → general PBT case → seal-amend → reference re-verify) —
+ * this command only DISCOVERS, it never amends.
+ */
+function injectCmd(args: Record<string, string>): void {
+  const sealed = args.sealed;
+  const impl = args.impl;
+  if (!sealed || !impl) {
+    process.stderr.write("inject requires --sealed <suite> and --impl <winning-specimen>.\n");
+    process.exitCode = 1;
+    return;
+  }
+  const battery = loadBattery(args.root ? batteryDir(args.root) : args.battery);
+  const survivors = injectMutants(sealed, impl, battery);
+  const { action } = onInjectRound(initialInject(), { survivors: survivors.length, promoted: 0 });
+  print({
+    batterySize: battery.length,
+    survivors: summarizeSurvivors(survivors),
+    blindSpotFound: survivors.length > 0,
+    nextAction: action,
+    note:
+      survivors.length > 0
+        ? "Blind spot(s) found. Adjudicate each against a NAMED contract clause; only a clause-violating survivor becomes a GENERAL (not mutant-keyed) sealed test via seal-amend + reference re-verify."
+        : "No survivor — the sealed suite caught every injected variant.",
+  });
+}
+
+/**
+ * harness-mine: the test-author skill-mining verifier (promotion gate half i).
+ * Given a candidate bug-class mutator spec, does it SURVIVE the given sealed
+ * suite (a genuine, currently-uncaught blind spot)? A mutator the incumbent
+ * suite already kills is a no-op and rejected. The complementary half (ii) — the
+ * sharpened suite KILLS it — is a second call against the amended suite expecting
+ * `survives:false`.
+ */
+function harnessMine(args: Record<string, string>): void {
+  const sealed = args.sealed;
+  const impl = args.impl;
+  // Accept either a single MutatorSpec or a battery-style array (take the first).
+  const raw = readJSONArg<MutatorSpec | MutatorSpec[]>(args.mutator ?? args["mutator-spec"]);
+  const spec = Array.isArray(raw) ? raw[0] : raw;
+  if (!sealed || !impl || !spec?.name || !spec.find) {
+    process.stderr.write("harness-mine requires --sealed, --impl, and --mutator <spec.json|inline> ({name,find,replace}).\n");
+    process.exitCode = 1;
+    return;
+  }
+  const survivors = injectMutants(sealed, impl, [
+    { name: spec.name, apply: (s) => (new RegExp(spec.find, spec.flags ?? "")).test(s) ? s.replace(new RegExp(spec.find, spec.flags ?? ""), spec.replace) : null },
+  ]);
+  const survives = survivors.length > 0;
+  print({
+    mutator: spec.name,
+    survives,
+    verdict: survives
+      ? "SURVIVES — a genuine, currently-uncaught blind spot (promotion gate half i ✓). Author the general heuristic, then re-run against the sharpened suite expecting survives:false."
+      : "killed — the suite already catches this class; not a blind spot. Rejected as a no-op.",
+  });
+}
+
+/** harness-promote-mutator: append a TWICE-verified mutator spec to the battery. */
+async function harnessPromoteMutator(args: Record<string, string>): Promise<void> {
+  const root = args.root;
+  const rawSpec = readJSONArg<MutatorSpec | MutatorSpec[]>(args.spec);
+  const spec = Array.isArray(rawSpec) ? rawSpec[0] : rawSpec;
+  if (!root || !spec?.name) {
+    process.stderr.write("harness-promote-mutator requires --root and --spec <mutator.json> with a name.\n");
+    process.exitCode = 1;
+    return;
+  }
+  const dir = batteryDir(root);
+  mkdirSync(dir, { recursive: true });
+  const file = join(dir, `${spec.name.replace(/[^A-Za-z0-9_-]/g, "_")}.json`);
+  await writeFile(file, JSON.stringify([spec], null, 2) + "\n", "utf8");
+  print({ promoted: spec.name, battery: file, batterySize: loadBattery(dir).length });
+}
+
+/**
+ * harness-spawn: deterministically sample K parents from the archive (DGM rule
+ * P ∝ fitness/(1+childCount)) and emit their genomes as mutation seeds. An empty
+ * archive yields the default/incumbent genome as the sole seed.
+ */
+function harnessSpawn(args: Record<string, string>): void {
+  const root = args.root!;
+  const k = Math.max(1, Math.round(Number(args.k ?? "4")));
+  const archive = readArchive(root);
+  const parents = archive.length === 0
+    ? [{ variantId: "seed", genome: defaultGenome() }]
+    : sampleParents(archive, k).map((p) => ({ variantId: p.variantId, genome: p.genome }));
+  print({ count: parents.length, parents, note: "Mutate ONE gene per child (HarnessX substitution); realize via the agent layer, then score with harness-fitness." });
+}
+
+/**
+ * harness-fitness: compute a variant's held-out fitness from per-substrate truth
+ * scores (the agent layer ran the variant's tournament on each recall-free pilot
+ * and passes the numbers in), AceGRPO-weighted toward the learnable frontier
+ * (substrates where the incumbent is mid-band), then append a content-addressed
+ * ArchiveEntry. The bridge owns the math; agents never compute it.
+ */
+async function harnessFitness(args: Record<string, string>): Promise<void> {
+  const root = args.root!;
+  const genome = readJSONArg<HarnessGenome>(args.genome);
+  const scores = readJSONArg<Record<string, number>>(args.scores);
+  if (!genome || !scores) {
+    process.stderr.write("harness-fitness requires --root, --genome <genome.json>, --scores <{substrate:score}>.\n");
+    process.exitCode = 1;
+    return;
+  }
+  const substrates = Object.keys(scores).sort();
+  const inc = incumbent(root);
+  const incPer = substrates.map((s) => inc?.perSubstrate[s] ?? 0.5);
+  const weights = frontierWeights(incPer);
+  const fitness = weightedFitness(substrates.map((s) => scores[s]!), weights);
+  const entry = makeArchiveEntry({
+    genome,
+    parent: args.parent && args.parent !== "true" ? args.parent : inc?.variantId ?? null,
+    fitness,
+    perSubstrate: scores,
+    advantage: 0, // filled by harness-select within its generation
+    gates: { hackClean: false, sealOk: false, interfaceParity: false, diversityOk: false, beatsIncumbent: false },
+  });
+  appendArchiveEntry(root, entry);
+  if (entry.parent) bumpChildCount(root, entry.parent);
+  print({ variantId: entry.variantId, fitness, weights, perSubstrate: scores, incumbentFitness: inc?.fitness ?? null });
+}
+
+/**
+ * harness-select: GRPO group-relative advantage over a generation of variants
+ * (the harness altitude), with the variance-collapse guard. Returns the
+ * max-advantage winner and whether the generation carried enough spread to rank.
+ */
+function harnessSelect(args: Record<string, string>): void {
+  const variants = readJSONArg<{ variantId: string; fitness: number }[]>(args.variants);
+  if (!variants || variants.length === 0) {
+    process.stderr.write("harness-select requires --variants <[{variantId,fitness}]>.\n");
+    process.exitCode = 1;
+    return;
+  }
+  const floor = Number(args.floor ?? "0.02");
+  const diversity = checkDiversity(variants.map((v) => v.fitness), floor);
+  const advantages = groupRelativeAdvantage(variants.map((v) => ({ specimen: v.variantId, reward: v.fitness })));
+  const ranked = [...advantages].sort((a, b) => b.advantage - a.advantage);
+  print({
+    diversity,
+    winner: diversity.ok ? ranked[0]?.specimen ?? null : null,
+    advantages: ranked,
+    note: diversity.ok
+      ? "Generation has spread; winner is the max-advantage variant."
+      : "VARIANCE COLLAPSE — σ below floor. Do NOT promote; re-sample with forced gene diversity (RC-GRPO).",
+  });
+}
+
+/**
+ * harness-promote: the five-gate promotion decision (DGM hack-resistance). A
+ * variant becomes incumbent only if it beats the incumbent on held-out fitness
+ * AND is hack-clean on its OWN outputs AND preserved sealing integrity AND
+ * interface parity AND came from a diverse generation.
+ */
+function harnessPromote(args: Record<string, string>): void {
+  const root = args.root!;
+  const variantId = args.variant;
+  const archive = readArchive(root);
+  const variant = archive.find((e) => e.variantId === variantId);
+  if (!variant) {
+    process.stderr.write(`harness-promote: variant ${variantId} not in archive.\n`);
+    process.exitCode = 1;
+    return;
+  }
+  const bool = (k: string): boolean => args[k] === "true" || args[k] === undefined ? args[k] === "true" : String(args[k]).toLowerCase() === "true";
+  // "Beats incumbent" must compare against the prior incumbent, NOT this variant
+  // itself (it may already be the max-fitness archived entry). Prefer an explicit
+  // baseline fitness from the caller; else the best fitness among OTHER entries.
+  const others = archive.filter((e) => e.variantId !== variantId);
+  const baseline =
+    args["baseline-fitness"] !== undefined && args["baseline-fitness"] !== "true"
+      ? Number(args["baseline-fitness"])
+      : others.length
+        ? Math.max(...others.map((e) => e.fitness))
+        : -Infinity;
+  const beatsIncumbent = variant.fitness > baseline;
+  // Interface parity: the variant must not change the bridge command surface.
+  const incumbentCommands = BRIDGE_COMMANDS;
+  const variantCommands = readJSONArg<string[]>(args["variant-commands"]) ?? BRIDGE_COMMANDS;
+  const parity = checkParity(incumbentCommands, variantCommands);
+  const inputs = {
+    beatsIncumbent,
+    hackClean: bool("hack-clean"),
+    sealOk: bool("seal-ok"),
+    interfaceParity: parity.ok,
+    diversityOk: bool("diversity-ok"),
+  };
+  const verdict = promotionGate(inputs);
+  // Record the gate snapshot on the entry (audit), append-rewrite is fine: the
+  // archive is the durable record and this is the gate result for THIS variant.
+  variant.gates = { ...inputs };
+  writeFileSync(join(stzPath(root, "60-harness"), "MANIFEST.json"), JSON.stringify(archive, null, 2) + "\n", "utf8");
+  print({ variantId, inputs, ...verdict, parity, baselineFitness: baseline === -Infinity ? null : baseline, variantFitness: variant.fitness });
+}
+
+/** harness-status: archive summary, incumbent, and meta-loop view. */
+function harnessStatus(args: Record<string, string>): void {
+  const root = args.root!;
+  const archive = readArchive(root);
+  const inc = incumbent(root);
+  const meta: Pick<MetaState, "generation"> = { generation: archive.length };
+  print({
+    archiveSize: archive.length,
+    incumbent: inc ? { variantId: inc.variantId, fitness: inc.fitness, perSubstrate: inc.perSubstrate } : null,
+    battery: loadBattery(batteryDir(root)).map((m) => m.name),
+    variants: archive.map((e) => ({ variantId: e.variantId, parent: e.parent, fitness: e.fitness, childCount: e.childCount, promoted: e.gates.beatsIncumbent })),
+    meta,
+  });
+}
+
+/**
+ * judge-stress: consistency CI check (no labels). Given pairwise judgments re-run
+ * under an order/verbosity swap, score the fraction whose winner is invariant —
+ * a reliability signal grounded in the real cron order-effect. Writes a
+ * per-slice-type profile under 90-audit/judge-reliability.md. NEVER aggregates
+ * multiple judges (naive ensembles amplify bias — arXiv:2505.19477).
+ */
+async function judgeStress(args: Record<string, string>): Promise<void> {
+  const pairs = readJSONArg<{ original: string; perturbed: string }[]>(args.pairs);
+  const sliceType = args["slice-type"] ?? "unknown";
+  if (!pairs) {
+    process.stderr.write("judge-stress requires --pairs <[{original,perturbed}]> and optional --slice-type.\n");
+    process.exitCode = 1;
+    return;
+  }
+  const result = consistencyScore(pairs);
+  const bucket = bucketOf(result.score);
+  if (args.root) {
+    const profile: JudgeReliabilityProfile = {
+      schemaVersion: 1,
+      perSliceType: [{ sliceType, consistency: result.score, blindAccuracyBucket: null, n: result.total }],
+    };
+    await writeDoc(args.root, join("90-audit", "judge-reliability.md"), {
+      frontmatter: { summary: `Judge consistency for ${sliceType}: ${(result.score * 100).toFixed(0)}% invariant under perturbation (n=${result.total}, ${bucket}).` },
+      body:
+        `# Judge reliability profile\n\n` +
+        `Single robust judge, stress-tested for consistency (NO naive ensembling — more judges amplify bias).\n\n` +
+        `- **slice-type:** ${sliceType}\n- **consistency (order/verbosity invariance):** ${result.invariant}/${result.total} = ${result.score.toFixed(3)} (${bucket})\n` +
+        `- **blind-battery accuracy:** pending (must be authored blind to judge rationales — a self-built battery is circular)\n\n` +
+        `Below ${0.7} ⇒ down-weight the judge for this slice-type and lean on the sealed/truth divergence backstop.\n`,
+      ...({} as Record<string, never>),
+    });
+  }
+  print({ sliceType, ...result, bucket });
+}
+
+/** The pinned bridge command surface — the interface a variant must preserve. */
+const BRIDGE_COMMANDS = [
+  "version", "begin", "record-eval", "eval", "gate", "escalate", "record-votes", "select", "finalize",
+  "project-init", "project-phase", "project-write-intent", "project-record-area", "project-set-config",
+  "project-dark-factory", "project-config", "slice-add", "project-seed-slices", "project-status", "summary",
+  "seal", "seal-verify", "seal-crosscheck", "seal-amend", "merge-validate", "merge-compat-propose",
+  "merge-compat-approve", "merge-compat-retire", "merge-compat-list",
+  "inject", "harness-mine", "harness-promote-mutator", "harness-spawn", "harness-fitness", "harness-select",
+  "harness-promote", "harness-status", "judge-stress",
+];
+
 export async function runBridge(argv: string[]): Promise<void> {
   const [sub, ...rest] = argv;
   const args = parseArgs(rest);
@@ -1072,6 +1377,16 @@ export async function runBridge(argv: string[]): Promise<void> {
     case "merge-compat-approve": await mergeCompatApprove(args); break;
     case "merge-compat-retire": await mergeCompatRetire(args); break;
     case "merge-compat-list": mergeCompatList(args); break;
+    // ── 0.9.0 harness-level RSI meta-loop ──────────────────────────────────
+    case "inject": injectCmd(args); break;
+    case "harness-mine": harnessMine(args); break;
+    case "harness-promote-mutator": await harnessPromoteMutator(args); break;
+    case "harness-spawn": harnessSpawn(args); break;
+    case "harness-fitness": await harnessFitness(args); break;
+    case "harness-select": harnessSelect(args); break;
+    case "harness-promote": harnessPromote(args); break;
+    case "harness-status": harnessStatus(args); break;
+    case "judge-stress": await judgeStress(args); break;
     default:
       process.stderr.write(`unknown bridge subcommand: ${sub}\n`);
       process.exitCode = 1;
