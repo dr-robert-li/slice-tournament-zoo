@@ -1,0 +1,61 @@
+{
+  "arm": "harness-evolve on a fresh non-enumerable contract",
+  "prereg": "experiments/streamstats-pilot/PREREG.md (committed 9bc2e25, before any specimen existed)",
+  "machinery": "0.9.0 — src/harness.ts + stz bridge harness-{fitness,select,promote,status}",
+  "design": "single-gene (heuristicId) substitution: baseline-v0 (explicit-examples-v0 -> fixed_suite) vs sharper-v1 (property-fuzz-v1 -> property_suite). 3 distinct blind generation seeds, budget-matched (shared K=5 pool per seed), selection = expected truth over each genome's indifference set.",
+
+  "separation_gate": {
+    "note": "proven BEFORE pre-reg; the substrate CAN discriminate correct from buggy.",
+    "ref_correct_welford": { "fixed": 1.0, "property": 1.0, "truth": 1.0 },
+    "ref_naive_sumsq":     { "fixed": 1.0, "property": 0.6667, "truth": 0.8992 }
+  },
+
+  "blind_pools": {
+    "streamStats": {
+      "seeds": 3, "specimens_per_seed": 5, "model": "haiku",
+      "outcome": "RECALL-SATURATED — every specimen is Welford's online algorithm; all score truth=1.0.",
+      "fingerprint": "15/15 welford, 0/15 naive-sumsq",
+      "blindness_audit": "0/15 reference any suite/oracle constant — clean",
+      "per_seed_fitness": [
+        { "seed": 1, "incumbent_indifference_set": 5, "sharper_argmax_set": 5, "fitness_inc": 1.0, "fitness_mut": 1.0, "win": false },
+        { "seed": 2, "incumbent_indifference_set": 5, "sharper_argmax_set": 5, "fitness_inc": 1.0, "fitness_mut": 1.0, "win": false },
+        { "seed": 3, "incumbent_indifference_set": 5, "sharper_argmax_set": 5, "fitness_inc": 1.0, "fitness_mut": 1.0, "win": false }
+      ],
+      "mean_fitness_incumbent": 1.0,
+      "mean_fitness_sharper": 1.0
+    },
+    "shuffle_switch_probe": {
+      "reason": "streamStats blind spread was rate-0 (recall); one pre-registered substrate switch to a TRULY non-enumerable task (uniformity is statistical). Cheap fingerprint-only probe before building the chi-square apparatus (advisor protocol).",
+      "specimens": 5, "model": "haiku",
+      "outcome": "RECALL-SATURATED — 5/5 correct Fisher-Yates (j in [0,i]); 0/5 sort(()=>Math.random()-0.5).",
+      "decision": "probe-killed: no clean-fingerprint blind spread, so no full run built. Cross-substrate null."
+    }
+  },
+
+  "machinery_run": {
+    "root": "experiments/streamstats-pilot/.stz/60-harness/MANIFEST.json (N6 artifact)",
+    "harness_fitness": {
+      "baseline-v0": { "variantId": "008ec06ffaa1d4e6", "fitness": 1.0, "parent": null },
+      "sharper-v1":  { "variantId": "63089087a032df8f", "fitness": 1.0, "parent": "008ec06ffaa1d4e6" }
+    },
+    "harness_select": { "sigma": 0, "floor": 0.02, "ok": false, "winner": null, "verdict": "VARIANCE COLLAPSE" },
+    "harness_promote": {
+      "variant": "63089087a032df8f",
+      "promote": false,
+      "failed": ["does-not-beat-incumbent", "generation-variance-collapsed"],
+      "interface_parity": true
+    },
+    "incumbent_after": "008ec06ffaa1d4e6 (baseline-v0 stands)"
+  },
+
+  "verdict": "NULL — recall saturation, not a promotion. On two fresh non-enumerable contracts, blind pools of a capable implementer were 100% correct, so selection had nothing to discriminate and the 0.9.0 gate CORRECTLY promoted nothing (the symmetric-error anti-build outcome, executed end-to-end). The headline 'promoted variant beats incumbent' was NOT achieved with genuinely blind specimens.",
+
+  "boundary_sharpened": "The judge-arm left the door: a win needs correctness that is genuinely NON-ENUMERABLE. This arm narrows it: a win additionally needs the failure to be OUT-OF-RECALL for the implementer pool. Textbook non-enumerable tasks (variance->Welford, shuffle->Fisher-Yates) are exactly the ones a capable model has memorized, so blind specimens do not split. Door is now: non-enumerable AND out-of-recall AND base-rate-not-tiny -> strictly narrower than before.",
+
+  "bounds": [
+    "n=2 substrates, both textbook; 1 capable-but-small implementer (haiku). A frontier-vs-frontier tournament on a genuinely novel non-enumerable task is the untested cell.",
+    "the separation gate proves the substrate is discriminating; the null is about the IMPLEMENTERS not failing, not about the suite being blind.",
+    "constructed-pool promotion (inserting the naive reference) was explicitly REJECTED as experimenter-controlled rigging, not an evolve.",
+    "N6: all scores recomputed deterministically from stored artifacts (score_evolve.mjs); MANIFEST.json append-order is the audit trail."
+  ]
+}

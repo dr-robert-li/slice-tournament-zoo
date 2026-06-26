@@ -1,0 +1,21 @@
+export function streamStats(numbers) {
+  let n = 0;
+  let mean = 0;
+  let m2 = 0; // Sum of squared differences from running mean
+
+  for (const x of numbers) {
+    n += 1;
+    const delta = x - mean;
+    mean += delta / n;
+    const delta2 = x - mean;
+    m2 += delta * delta2;
+  }
+
+  const variance = n === 0 ? 0 : m2 / n;
+
+  return {
+    n: n,
+    mean: mean,
+    variance: variance
+  };
+}

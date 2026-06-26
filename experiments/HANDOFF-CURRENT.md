@@ -1,5 +1,21 @@
 # HANDOFF-CURRENT — read this first to resume (2026-06-26)
 
+> **UPDATE 2026-06-27 — the harness-evolve arm RAN on a fresh non-enumerable
+> contract and returned a faithful NULL (recall saturation).** `streamstats-pilot/`:
+> a 3-seed, budget-matched, pre-registered single-gene (`heuristicId`) evolve on
+> `streamStats` (single-pass population variance — magnitude-dependent correctness,
+> Welford vs naive sum-of-squares). Separation gate proven before pre-reg (naive
+> passes the good-faith fixed suite 1.0, fails property 0.667 / truth 0.899). But all
+> 15 blind haiku specimens were Welford (truth 1.0); one pre-registered switch to
+> `shuffle` also saturated (5/5 Fisher-Yates). The 0.9.0 machinery was driven
+> end-to-end and **correctly declined** — `harness-select` σ=0 → variance collapse,
+> `harness-promote` failed on `does-not-beat-incumbent`+`generation-variance-collapsed`,
+> incumbent stands. A constructed pool (inserting the naive ref) was REJECTED as
+> rigging. **Boundary sharpened:** a search/evolve win needs non-enumerable AND
+> out-of-recall AND base-rate-not-tiny — strictly narrower than the judge-arm's
+> "non-enumerable" door. See `streamstats-pilot/{PREREG,PILOT-RESULTS}.md`,
+> `results/evolve-result.json`, `.stz/60-harness/MANIFEST.json`. JOURNAL last entry.
+
 > **UPDATE 2026-06-27 — 0.9.0 SHIPPED the harness-level RSI meta-loop.** The §7
 > conclusion below ("sharpen the suite, not the per-slice loop") is now BUILT, at
 > the harness altitude. The per-slice 0.8.0 convergence loop is formally shelved

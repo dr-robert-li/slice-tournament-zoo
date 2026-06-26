@@ -1,0 +1,166 @@
+{
+  "substrate": "streamStats (single-pass population variance) — fresh, non-enumerable",
+  "metric": "expected truth over each genome's selector-indifference set (PREREG §3)",
+  "perSeed": [
+    {
+      "seed": 1,
+      "specimens": [
+        {
+          "id": "s1c1",
+          "fixed": 1,
+          "prop": 1,
+          "truth": 1
+        },
+        {
+          "id": "s1c2",
+          "fixed": 1,
+          "prop": 1,
+          "truth": 1
+        },
+        {
+          "id": "s1c3",
+          "fixed": 1,
+          "prop": 1,
+          "truth": 1
+        },
+        {
+          "id": "s1c4",
+          "fixed": 1,
+          "prop": 1,
+          "truth": 1
+        },
+        {
+          "id": "s1c5",
+          "fixed": 1,
+          "prop": 1,
+          "truth": 1
+        }
+      ],
+      "incumbent_indifference_set": [
+        "s1c1",
+        "s1c2",
+        "s1c3",
+        "s1c4",
+        "s1c5"
+      ],
+      "sharper_argmax_set": [
+        "s1c1",
+        "s1c2",
+        "s1c3",
+        "s1c4",
+        "s1c5"
+      ],
+      "fitness_inc": 1,
+      "fitness_mut": 1,
+      "win": false
+    },
+    {
+      "seed": 2,
+      "specimens": [
+        {
+          "id": "s2c1",
+          "fixed": 1,
+          "prop": 1,
+          "truth": 1
+        },
+        {
+          "id": "s2c2",
+          "fixed": 1,
+          "prop": 1,
+          "truth": 1
+        },
+        {
+          "id": "s2c3",
+          "fixed": 1,
+          "prop": 1,
+          "truth": 1
+        },
+        {
+          "id": "s2c4",
+          "fixed": 1,
+          "prop": 1,
+          "truth": 1
+        },
+        {
+          "id": "s2c5",
+          "fixed": 1,
+          "prop": 1,
+          "truth": 1
+        }
+      ],
+      "incumbent_indifference_set": [
+        "s2c1",
+        "s2c2",
+        "s2c3",
+        "s2c4",
+        "s2c5"
+      ],
+      "sharper_argmax_set": [
+        "s2c1",
+        "s2c2",
+        "s2c3",
+        "s2c4",
+        "s2c5"
+      ],
+      "fitness_inc": 1,
+      "fitness_mut": 1,
+      "win": false
+    },
+    {
+      "seed": 3,
+      "specimens": [
+        {
+          "id": "s3c1",
+          "fixed": 1,
+          "prop": 1,
+          "truth": 1
+        },
+        {
+          "id": "s3c2",
+          "fixed": 1,
+          "prop": 1,
+          "truth": 1
+        },
+        {
+          "id": "s3c3",
+          "fixed": 1,
+          "prop": 1,
+          "truth": 1
+        },
+        {
+          "id": "s3c4",
+          "fixed": 1,
+          "prop": 1,
+          "truth": 1
+        },
+        {
+          "id": "s3c5",
+          "fixed": 1,
+          "prop": 1,
+          "truth": 1
+        }
+      ],
+      "incumbent_indifference_set": [
+        "s3c1",
+        "s3c2",
+        "s3c3",
+        "s3c4",
+        "s3c5"
+      ],
+      "sharper_argmax_set": [
+        "s3c1",
+        "s3c2",
+        "s3c3",
+        "s3c4",
+        "s3c5"
+      ],
+      "fitness_inc": 1,
+      "fitness_mut": 1,
+      "win": false
+    }
+  ],
+  "mean_fitness_incumbent": 1,
+  "mean_fitness_sharper": 1,
+  "promote_by_decision_rule": false,
+  "all_correct_pools": true
+}

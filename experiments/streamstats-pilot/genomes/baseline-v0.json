@@ -1,0 +1,9 @@
+{
+  "heuristicId": "explicit-examples-v0",
+  "mutatorIds": [],
+  "strategySet": ["explicit-allowed-set", "field-expander", "strict-validation"],
+  "rubricId": "contract-conformance-v0",
+  "weights": { "pass": 0.45, "coverage": 0.2, "kill": 0.2, "codeHealth": 0.1, "clean": 0.05 },
+  "fanout": 4,
+  "votesPerPair": 8
+}

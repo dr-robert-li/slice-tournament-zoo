@@ -1,0 +1,78 @@
+[
+  {
+    "schemaVersion": 1,
+    "variantId": "008ec06ffaa1d4e6",
+    "parent": null,
+    "genome": {
+      "heuristicId": "explicit-examples-v0",
+      "mutatorIds": [],
+      "strategySet": [
+        "explicit-allowed-set",
+        "field-expander",
+        "strict-validation"
+      ],
+      "rubricId": "contract-conformance-v0",
+      "weights": {
+        "pass": 0.45,
+        "coverage": 0.2,
+        "kill": 0.2,
+        "codeHealth": 0.1,
+        "clean": 0.05
+      },
+      "fanout": 4,
+      "votesPerPair": 8
+    },
+    "fitness": 1,
+    "perSubstrate": {
+      "streamStats": 1
+    },
+    "advantage": 0,
+    "childCount": 1,
+    "gates": {
+      "hackClean": false,
+      "sealOk": false,
+      "interfaceParity": false,
+      "diversityOk": false,
+      "beatsIncumbent": false
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "variantId": "63089087a032df8f",
+    "parent": "008ec06ffaa1d4e6",
+    "genome": {
+      "heuristicId": "property-fuzz-v1",
+      "mutatorIds": [
+        "streamstats-shift-invariance"
+      ],
+      "strategySet": [
+        "explicit-allowed-set",
+        "field-expander",
+        "strict-validation"
+      ],
+      "rubricId": "contract-conformance-v0",
+      "weights": {
+        "pass": 0.45,
+        "coverage": 0.2,
+        "kill": 0.2,
+        "codeHealth": 0.1,
+        "clean": 0.05
+      },
+      "fanout": 4,
+      "votesPerPair": 8
+    },
+    "fitness": 1,
+    "perSubstrate": {
+      "streamStats": 1
+    },
+    "advantage": 0,
+    "childCount": 0,
+    "gates": {
+      "beatsIncumbent": false,
+      "hackClean": true,
+      "sealOk": true,
+      "interfaceParity": true,
+      "diversityOk": false
+    }
+  }
+]
