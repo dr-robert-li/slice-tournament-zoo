@@ -14,7 +14,22 @@
 > rigging. **Boundary sharpened:** a search/evolve win needs non-enumerable AND
 > out-of-recall AND base-rate-not-tiny — strictly narrower than the judge-arm's
 > "non-enumerable" door. See `streamstats-pilot/{PREREG,PILOT-RESULTS}.md`,
-> `results/evolve-result.json`, `.stz/60-harness/MANIFEST.json`. JOURNAL last entry.
+> `results/evolve-result.json`, `.stz/60-harness/MANIFEST.json`.
+>
+> **THEN the OUT-OF-RECALL arm (`wsample-pilot/`) closed the cell the above left
+> untested.** `weightedSample` (weighted sampling w/o replacement) is non-enumerable
+> AND recall-resistant (Efraimidis–Spirakis is not reflexive; naive `weight*random`
+> is the natural wrong answer). Separation gate cleanest yet (naive: fixed 1.0,
+> property 0.091, truth 0.158; correct 1.0/1.0/1.0). K=8 blind specimens: **all
+> correct, via a MIX of algorithms** — out-of-recall did NOT yield failure; blind
+> haiku *reasoned* to correct impls from the precise contract. Machinery declined a
+> third time. **Boundary DOUBLY sharpened:** the binding precondition is not recall
+> but **implementer fallibility on the axis** — a win needs specimens at their genuine
+> competence frontier, which clever substrate choice does not supply (and inducing
+> errors via a vague contract is the opposite-direction confound, refused). Three
+> fresh non-enumerable substrates → three honest nulls, gate correct each time. See
+> `wsample-pilot/{PREREG,PILOT-RESULTS}.md`, `results/evolve-result.json`. JOURNAL
+> last entry covers all three arms.
 
 > **UPDATE 2026-06-27 — 0.9.0 SHIPPED the harness-level RSI meta-loop.** The §7
 > conclusion below ("sharpen the suite, not the per-slice loop") is now BUILT, at

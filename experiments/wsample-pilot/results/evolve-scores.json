@@ -1,0 +1,79 @@
+{
+  "substrate": "weightedSample (weighted sampling without replacement) — fresh, non-enumerable, OUT-OF-RECALL",
+  "metric": "expected truth over each genome's selector-indifference set (PREREG §2)",
+  "specimens": [
+    {
+      "id": "c1",
+      "fixed": 1,
+      "prop": 1,
+      "truth": 1
+    },
+    {
+      "id": "c2",
+      "fixed": 1,
+      "prop": 1,
+      "truth": 1
+    },
+    {
+      "id": "c3",
+      "fixed": 1,
+      "prop": 1,
+      "truth": 1
+    },
+    {
+      "id": "c4",
+      "fixed": 1,
+      "prop": 1,
+      "truth": 1
+    },
+    {
+      "id": "c5",
+      "fixed": 1,
+      "prop": 1,
+      "truth": 1
+    },
+    {
+      "id": "c6",
+      "fixed": 1,
+      "prop": 1,
+      "truth": 1
+    },
+    {
+      "id": "c7",
+      "fixed": 1,
+      "prop": 1,
+      "truth": 1
+    },
+    {
+      "id": "c8",
+      "fixed": 1,
+      "prop": 1,
+      "truth": 1
+    }
+  ],
+  "incumbent_indifference_set": [
+    "c1",
+    "c2",
+    "c3",
+    "c4",
+    "c5",
+    "c6",
+    "c7",
+    "c8"
+  ],
+  "sharper_argmax_set": [
+    "c1",
+    "c2",
+    "c3",
+    "c4",
+    "c5",
+    "c6",
+    "c7",
+    "c8"
+  ],
+  "fitness_inc": 1,
+  "fitness_mut": 1,
+  "win": false,
+  "all_correct_pool": true,
+  "buggy_specimens": []
+}

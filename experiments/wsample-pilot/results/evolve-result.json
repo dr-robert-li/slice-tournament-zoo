@@ -1,0 +1,41 @@
+{
+  "arm": "harness-evolve — the OUT-OF-RECALL arm",
+  "prereg": "experiments/wsample-pilot/PREREG.md (committed ad4e1bf, before any specimen existed)",
+  "substrate": "weightedSample — weighted sampling without replacement; non-enumerable (distributional correctness) AND recall-resistant (no single memorized canonical; Efraimidis-Spirakis is not reflexive; naive weight*random is the tempting wrong answer).",
+
+  "separation_gate": {
+    "ref_correct_efraimidis_spirakis": { "fixed": 1.0, "property": 1.0, "truth": 1.0 },
+    "ref_naive_weight_times_random":   { "fixed": 1.0, "property": 0.0909, "truth": 0.1579 },
+    "note": "large gap (truth 1.0 vs 0.158) — a split would clear the diversity floor easily."
+  },
+
+  "blind_pool": {
+    "K": 8, "model": "haiku",
+    "outcome": "ALL-CORRECT — every specimen scores truth=1.0; zero buggy specimens.",
+    "algorithms_observed": "MIXED: exp-key/Efraimidis-Spirakis (c2,c7,c8), correct cumulative/roulette-with-renormalization (c3,c4,c5), other-correct (c1,c6).",
+    "key_finding": "out-of-recall did NOT produce failure: with a faithful PRECISE contract (stating P(first=i)=w/Sigma and the pairwise law), blind specimens REASONED to correct implementations via several different algorithms rather than recalling one. The naive weight*random heuristic — the natural wrong answer — was written by none.",
+    "blindness_audit": "0/8 reference any suite/oracle constant — clean",
+    "fitness_inc": 1.0, "fitness_mut": 1.0, "win": false
+  },
+
+  "machinery_run": {
+    "harness_fitness": {
+      "baseline-v0": { "variantId": "008ec06ffaa1d4e6", "fitness": 1.0 },
+      "sharper-v1":  { "variantId": "63089087a032df8f", "fitness": 1.0 }
+    },
+    "harness_select": { "sigma": 0, "ok": false, "winner": null, "verdict": "VARIANCE COLLAPSE" },
+    "harness_promote": { "promote": false, "failed": ["does-not-beat-incumbent", "generation-variance-collapsed"], "interface_parity": true },
+    "incumbent_after": "008ec06ffaa1d4e6 (baseline-v0 stands)"
+  },
+
+  "verdict": "THIRD NULL — and the most informative. Out-of-recall is NOT sufficient to produce blind spread: a capable implementer reasoning from a faithful precise contract succeeds even without a memorized algorithm. The five-gate machinery again correctly promoted nothing.",
+
+  "boundary_doubly_sharpened": "Earlier (streamStats/shuffle) the door was narrowed to 'non-enumerable AND out-of-recall'. This arm narrows it again: the binding precondition is not recall at all but IMPLEMENTER FALLIBILITY ON THE AXIS. A suite-sharpening / search win requires blind specimens to actually FALL INTO the blind spot. Competent specimens reasoning from a faithful precise contract do not — by recall on famous tasks (streamStats, shuffle) OR by reasoning on unfamiliar-but-precisely-specified tasks (weightedSample). The win-cell therefore needs specimens at their genuine competence frontier (a task hard enough that they err), NOT merely a non-enumerable or unmemorized task. Making a contract vague on the failing axis to manufacture errors is the opposite-direction confound and was not done.",
+
+  "bounds": [
+    "n=3 substrates; one capable-but-small implementer (haiku); the precise contract is deliberately faithful (vagueness-to-induce-failure rejected as a confound).",
+    "the separation gate proves each substrate discriminates; all three nulls are about implementers not failing, not about blind suites.",
+    "constructed-pool promotion rejected throughout.",
+    "N6: deterministic re-scoring from stored artifacts (seeded Math.random monkeypatch); MANIFEST.json append-order is the audit trail."
+  ]
+}
