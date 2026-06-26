@@ -86,9 +86,11 @@ harness-promote sharper-v1  -> promote:false  failed:[does-not-beat-incumbent,
 Manufacturing errors by making the contract vague on the failing axis is the
 opposite-direction confound (coaching toward failure) and was **not** done. The honest
 conclusion is that, with capable implementers and faithful contracts, the blind spot the
-sharper genome exploits does not arise — so the 0.9.0 promotion machinery, run three
-times on three fresh non-enumerable substrates, correctly promotes nothing. That is the
-symmetric-error anti-build null, and it is the result.
+sharper genome exploits does not arise — so the 0.9.0 promotion machinery, run across two
+full arms (streamStats, 3 seeds; weightedSample, one K=8 pool) plus one fingerprint-only
+probe (shuffle, 5 specimens), correctly promotes nothing. Scope: what executed on real
+data is the no-gap **decline** path; the promotion path was exercised only in unit tests.
+That is the symmetric-error anti-build null, and it is the result.
 
 ## 5. Bounds
 

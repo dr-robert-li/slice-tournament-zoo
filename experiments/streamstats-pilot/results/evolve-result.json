@@ -48,7 +48,7 @@
     "incumbent_after": "008ec06ffaa1d4e6 (baseline-v0 stands)"
   },
 
-  "verdict": "NULL — recall saturation, not a promotion. On two fresh non-enumerable contracts, blind pools of a capable implementer were 100% correct, so selection had nothing to discriminate and the 0.9.0 gate CORRECTLY promoted nothing (the symmetric-error anti-build outcome, executed end-to-end). The headline 'promoted variant beats incumbent' was NOT achieved with genuinely blind specimens.",
+  "verdict": "NULL — recall saturation, not a promotion. On two fresh non-enumerable contracts, blind pools of a capable implementer were 100% correct, so selection had nothing to discriminate and the 0.9.0 gate CORRECTLY promoted nothing. SCOPE: only the no-gap DECLINE path (fitness->select-collapse->promote-refuse) ran on real specimen data; the PROMOTION path (the goal's literal mechanism) was never reached on real specimens, only in unit tests, because no blind pool produced a gap. This was one generation that collapsed (gen-2 moot; harness-status 'generation':2 is archive.length=2 entries, not 2 generations). The headline 'promoted variant beats incumbent' was NOT achieved.",
 
   "boundary_sharpened": "The judge-arm left the door: a win needs correctness that is genuinely NON-ENUMERABLE. This arm narrows it: a win additionally needs the failure to be OUT-OF-RECALL for the implementer pool. Textbook non-enumerable tasks (variance->Welford, shuffle->Fisher-Yates) are exactly the ones a capable model has memorized, so blind specimens do not split. Door is now: non-enumerable AND out-of-recall AND base-rate-not-tiny -> strictly narrower than before.",
 

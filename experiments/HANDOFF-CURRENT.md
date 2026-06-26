@@ -7,10 +7,11 @@
 > Welford vs naive sum-of-squares). Separation gate proven before pre-reg (naive
 > passes the good-faith fixed suite 1.0, fails property 0.667 / truth 0.899). But all
 > 15 blind haiku specimens were Welford (truth 1.0); one pre-registered switch to
-> `shuffle` also saturated (5/5 Fisher-Yates). The 0.9.0 machinery was driven
-> end-to-end and **correctly declined** — `harness-select` σ=0 → variance collapse,
-> `harness-promote` failed on `does-not-beat-incumbent`+`generation-variance-collapsed`,
-> incumbent stands. A constructed pool (inserting the naive ref) was REJECTED as
+> `shuffle` also saturated (5/5 Fisher-Yates fingerprint-probe — no suites/machinery).
+> The 0.9.0 machinery's **no-gap decline path** ran on real data and **correctly
+> declined** — `harness-select` σ=0 → variance collapse, `harness-promote` failed on
+> `does-not-beat-incumbent`+`generation-variance-collapsed`, incumbent stands (the
+> PROMOTION path itself never ran on real specimens — no gap; one generation, collapsed). A constructed pool (inserting the naive ref) was REJECTED as
 > rigging. **Boundary sharpened:** a search/evolve win needs non-enumerable AND
 > out-of-recall AND base-rate-not-tiny — strictly narrower than the judge-arm's
 > "non-enumerable" door. See `streamstats-pilot/{PREREG,PILOT-RESULTS}.md`,
@@ -26,8 +27,11 @@
 > third time. **Boundary DOUBLY sharpened:** the binding precondition is not recall
 > but **implementer fallibility on the axis** — a win needs specimens at their genuine
 > competence frontier, which clever substrate choice does not supply (and inducing
-> errors via a vague contract is the opposite-direction confound, refused). Three
-> fresh non-enumerable substrates → three honest nulls, gate correct each time. See
+> errors via a vague contract is the opposite-direction confound, refused). Two full
+> arms (streamStats 3-seed, weightedSample K=8) + one probe (shuffle) across three
+> non-enumerable substrates → three honest nulls, gate correct each time. **Plainly:
+> the requested positive promotion was NOT achieved; a positive needs implementers
+> fallible on the axis (a competence-frontier experiment, materially larger).** See
 > `wsample-pilot/{PREREG,PILOT-RESULTS}.md`, `results/evolve-result.json`. JOURNAL
 > last entry covers all three arms.
 

@@ -12,8 +12,9 @@ meta-loop** (`stz:evolve` / `stz bridge harness-*`) on a **fresh non-enumerable
 contract**. Outcome: **a faithful NULL — recall saturation, not a promotion.** Blind
 implementer pools on *two* fresh non-enumerable tasks were 100% correct, so selection
 had nothing to discriminate and the five-gate promotion machinery **correctly promoted
-nothing** — the symmetric-error anti-build outcome, executed end-to-end through the real
-bridge. The headline "a promoted variant beats the incumbent" was **not** achieved with
+nothing** — the symmetric-error anti-build outcome, with the no-gap decline path executed
+on real specimen data through the real bridge (the promotion path itself, the goal's
+literal mechanism, was never reached because no blind pool produced a gap). The headline "a promoted variant beats the incumbent" was **not** achieved with
 genuinely blind specimens, and the honest reason is reported below. The §7 boundary is
 **sharpened**: a search/evolve win needs correctness that is non-enumerable **AND
 out-of-recall** for the implementer pool — strictly narrower than "non-enumerable" alone.
@@ -82,7 +83,16 @@ distributional oracle just to *detect* spread is the rigging surface the advisor
 
 **Cross-substrate null:** two textbook non-enumerable tasks, both 100% recall-saturated.
 
-## 4. The machinery ran end-to-end and correctly declined
+## 4. The machinery ran the no-gap decline path and correctly declined
+
+> Scope note (precision): what ran on real specimen data is the **no-gap decline**
+> path — `harness-fitness` → `harness-select` (collapse) → `harness-promote` (refuse).
+> The actual **promotion** path (a variant beating the incumbent and passing all five
+> gates) was never exercised on real specimens here — only in the unit suite — because
+> no blind pool produced a gap. And this was **one** generation that collapsed; the
+> pre-reg's gen-2 was moot (the FSM halts on collapse). `harness-status` reports
+> `"generation": 2`, but that field is `archive.length` (two entries, one generation),
+> not two generations.
 
 Driven on the real bridge against the blind all-correct pool (`.stz/60-harness/MANIFEST.json`):
 
