@@ -1,0 +1,8 @@
+[
+  {
+    "name": "malformed-trailing-token",
+    "find": "\\\\d\\+\\$",
+    "replace": "\\d+",
+    "flags": "g"
+  }
+]

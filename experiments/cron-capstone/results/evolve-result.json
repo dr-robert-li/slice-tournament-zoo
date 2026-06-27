@@ -1,0 +1,31 @@
+{
+  "arm": "automated-suite-sharpening CAPSTONE (cron)",
+  "prereg": "experiments/cron-capstone/PREREG.md",
+  "mechanism_harness_mine": {
+    "mutator": "malformed-trailing-token (drops the $ end-anchor in /^\\d+$/ numeric validation -> accepts trailing garbage like 5abc)",
+    "half_i_permissive_sealed": { "survives": true, "meaning": "genuine uncaught blind spot" },
+    "half_ii_sharpened": { "survives": false, "meaning": "sharpened suite catches it" },
+    "promoted_to_battery": true, "battery_size": 9,
+    "verdict": "MECHANISM WORKS — the harness automatically discovered, twice-verified, and baked in a real blind spot."
+  },
+  "competency_measurement": {
+    "metric": "held-out truth_full (the established functional oracle) — NOT the 5abc axis that was sharpened (anti-circularity, pre-registered)",
+    "pool": "8 fresh blind haiku cron specimens; natural 5abc split (c6 rejects=correct; 7 accept; base rate ~1/8)",
+    "incumbent_baseline_cron": { "variantId": "7a9606e92f7576d4", "selects": "sealed-best {c1,c6}", "fitness_truth_full": 0.9767 },
+    "sharper_cron_v1":        { "variantId": "3271b6c5ab401f0a", "selects": "c6 (sealed + must-throw battery tiebreak)", "fitness_truth_full": 0.9767 },
+    "selection_changed": "yes — sharper picks c6 (spec-correct on 5abc) over c1",
+    "competency_changed": "no — both selected winners have identical truth_full 0.9767",
+    "note": "the true truth-best specimen c5 (truth_full 1.0) ACCEPTS 5abc and is selected by neither genome; the 5abc axis is orthogonal to functional truth."
+  },
+  "gate": {
+    "harness_select": { "sigma": 0, "ok": false, "verdict": "VARIANCE COLLAPSE" },
+    "harness_promote": { "promote": false, "failed": ["does-not-beat-incumbent", "generation-variance-collapsed"] }
+  },
+  "verdict": "Mechanism positive + competency null. The automated suite-sharpening mechanism fires end-to-end and bakes in a real blind spot; the five-gate promotion correctly declines because the sharpened axis (5abc) is decoupled from held-out truth_full. Mechanism-works != competency-improves.",
+  "corroborates": "the judge-arm verdict (5abc suite-expressible, truth-neutral, B==C) — now confirmed through the meta-loop lens.",
+  "bounds": [
+    "n=1 pool (K=8); the gate decision is structural (truth_full values are decoupled from 5abc), not seed-dependent.",
+    "promoting would require weighting the sharpened axis (rigging) — refused.",
+    "N6: pool scores reproducible via cron-pilot/runs/judge-arm/score.mjs; MANIFEST.json + battery are the audit trail."
+  ]
+}

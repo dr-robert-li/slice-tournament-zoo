@@ -1,0 +1,78 @@
+[
+  {
+    "schemaVersion": 1,
+    "variantId": "7a9606e92f7576d4",
+    "parent": null,
+    "genome": {
+      "heuristicId": "permissive-sealed-v0",
+      "mutatorIds": [],
+      "strategySet": [
+        "explicit-allowed-set",
+        "field-expander",
+        "strict-validation"
+      ],
+      "rubricId": "contract-conformance-v0",
+      "weights": {
+        "pass": 0.45,
+        "coverage": 0.2,
+        "kill": 0.2,
+        "codeHealth": 0.1,
+        "clean": 0.05
+      },
+      "fanout": 4,
+      "votesPerPair": 8
+    },
+    "fitness": 0.9767,
+    "perSubstrate": {
+      "cron": 0.9767
+    },
+    "advantage": 0,
+    "childCount": 1,
+    "gates": {
+      "hackClean": false,
+      "sealOk": false,
+      "interfaceParity": false,
+      "diversityOk": false,
+      "beatsIncumbent": false
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "variantId": "3271b6c5ab401f0a",
+    "parent": "7a9606e92f7576d4",
+    "genome": {
+      "heuristicId": "malformed-token-hardened-v1",
+      "mutatorIds": [
+        "malformed-trailing-token"
+      ],
+      "strategySet": [
+        "explicit-allowed-set",
+        "field-expander",
+        "strict-validation"
+      ],
+      "rubricId": "contract-conformance-v0",
+      "weights": {
+        "pass": 0.45,
+        "coverage": 0.2,
+        "kill": 0.2,
+        "codeHealth": 0.1,
+        "clean": 0.05
+      },
+      "fanout": 4,
+      "votesPerPair": 8
+    },
+    "fitness": 0.9767,
+    "perSubstrate": {
+      "cron": 0.9767
+    },
+    "advantage": 0,
+    "childCount": 0,
+    "gates": {
+      "beatsIncumbent": false,
+      "hackClean": true,
+      "sealOk": true,
+      "interfaceParity": true,
+      "diversityOk": false
+    }
+  }
+]

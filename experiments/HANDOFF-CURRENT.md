@@ -32,8 +32,26 @@
 > non-enumerable substrates → three honest nulls, gate correct each time. **Plainly:
 > the requested positive promotion was NOT achieved; a positive needs implementers
 > fallible on the axis (a competence-frontier experiment, materially larger).** See
-> `wsample-pilot/{PREREG,PILOT-RESULTS}.md`, `results/evolve-result.json`. JOURNAL
-> last entry covers all three arms.
+> `wsample-pilot/{PREREG,PILOT-RESULTS}.md`, `results/evolve-result.json`.
+>
+> **THEN the competence-frontier experiment ran (`expr-pilot/` + `cron-capstone/`),
+> and the answer is now DEFINITIVE — see `experiments/EXPERIMENT-SUMMARY.md`.**
+> expr-eval (frontier task): 5/5 blind specimens made the SAME unary-`**` bug —
+> errors are CORRELATED, so no split. The real blocker, across all 5 substrates, is
+> **error correlation**: a homogeneous capable pool makes the same mistakes. cron is
+> the one substrate with a real natural split (`5abc`), so the **flagship automated
+> sharpening** ran end-to-end there for the first time: `harness-mine` twice-verified
+> the `malformed-trailing-token` blind spot (survives permissive, killed by sharpened),
+> `harness-promote-mutator` baked it in — **MECHANISM WORKS**. But measured on held-out
+> `truth_full` (NOT the sharpened `5abc` axis — that would be teach-to-the-test), the
+> sharper genome's selected winner ties the incumbent (0.9767) → gate **correctly
+> declines**. **Structural finding:** a competency gain needs an axis that is
+> substantial ∧ split ∧ suite-invisible at once, and these are mutually exclusive
+> (substantial⟹core⟹uniform; split⟹edge⟹small; invisible⟹edge⟹small). **The broad
+> competency positive is NOT earned and structurally not obtainable with a homogeneous
+> capable pool; the mechanism works; heterogeneous frontier pool is the open cell
+> (user's call).** Mechanism-works ≠ competency-improves, kept separate. JOURNAL last
+> two entries.
 
 > **UPDATE 2026-06-27 — 0.9.0 SHIPPED the harness-level RSI meta-loop.** The §7
 > conclusion below ("sharpen the suite, not the per-slice loop") is now BUILT, at
