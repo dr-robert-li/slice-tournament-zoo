@@ -30,6 +30,14 @@ sharpened axis (`5abc`) is decoupled from held-out functional truth.
 the documented "catch the bug class once, bake it in" flagship, run on a genuine
 auto-discovered blind spot — not a hand-placed axis.
 
+**Manual seam, stated honestly:** the load-bearing *automated* step is `harness-mine`'s
+two-sided verification (survives-permissive ∧ killed-by-sharpened) plus the battery bake.
+Turning the promoted class into the concrete `MUST_THROW` cases inside
+`cron.sealed-sharpened.mjs` is the **test-author step that the battery normally drives an
+agent to do** — here it was hand-authored (I stood in for that agent). So "the mechanism
+works" rests on the automated verification + bake; the must-throw *generation* from the
+baked class was done by hand, not code-derived.
+
 ## 2. The competency measurement (held-out truth_full)
 
 8 fresh blind `haiku` cron specimens; natural `5abc` split (c6 rejects = spec-correct;

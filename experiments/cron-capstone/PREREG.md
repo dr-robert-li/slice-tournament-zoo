@@ -1,7 +1,14 @@
 # PRE-REGISTRATION — the automated-suite-sharpening CAPSTONE (cron)
 
-**Status:** committed before driving `harness-promote-mutator` / `harness-select` /
-`harness-promote`. The `harness-mine` verification (below) is read-only and already run.
+**Status:** *written* before driving `harness-promote-mutator` / `harness-select` /
+`harness-promote`, but — unlike the earlier arms (9bc2e25, ad4e1bf) — **not separately
+committed beforehand**; it lands in the same commit as the results. This is acceptable
+here only because the outcome was **data-forced**: the decline follows from per-specimen
+scores already observed before this file existed (c1 and c6 both `truth_full` 0.9767, so
+both genomes' selected-winner truth is identical regardless). The `harness-mine`
+verification (below) is read-only and was already run. The load-bearing discipline this
+pre-reg locks is the **metric choice** (truth_full, not the sharpened 5abc axis), which is
+independent of commit timing.
 
 ## 0. Why this run exists, and what it can and cannot claim
 

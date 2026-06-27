@@ -61,9 +61,18 @@ battery. The flagship automated suite-sharpening **runs end to end and works**
 (`cron-capstone/`). That is a true statement about the *mechanism*: the harness can
 discover and bake in a real blind spot.
 
-It is **not** the competency claim. On the same pool the sharper genome's selected winner
-has **identical** held-out truth_full to the incumbent's (0.9767), so `harness-select`/
-`harness-promote` **correctly decline**. Mechanism-works ≠ competency-improves.
+(Honest seam: `harness-mine`'s two-sided verification and the battery bake are automated;
+turning the promoted class into the concrete must-throw cases is the test-author step the
+battery normally drives an agent to do — here hand-authored. "Mechanism works" rests on
+the automated verify+bake.)
+
+It is **not** the competency claim. The sharper genome *did* deterministically ship the
+**spec-correct** winner (c6 — rejects `5abc`) where the incumbent picks c1/c6 on a coin
+flip: a real contract-conformance change. But on the held-out functional oracle
+`truth_full` — independent of the sharpened axis — the selected winner is **identical** to
+the incumbent's (0.9767), so `harness-select`/`harness-promote` **correctly decline**. The
+precise statement is *no measurable broad-competency gain on an oracle independent of the
+sharpened axis* — not "sharpening did nothing." Mechanism-works ≠ competency-improves.
 
 ## The open cell (honest, not a quick win)
 
