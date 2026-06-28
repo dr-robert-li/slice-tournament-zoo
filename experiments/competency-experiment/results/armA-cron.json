@@ -17,5 +17,7 @@
   "truth_best_is_argmax_of_any_proxy": false,
   "baseline_shipped_winner_truth": 0.9767,
   "best_achievable_over_all_weight_tuples": 0.9767,
-  "verdict": "NULL by proxy exhaustion — no weight tuple ships the truth-best specimen (c5); the residual truth signal is in no computable proxy. Selection-gene evolution cannot beat baseline in-sample, so train/test is moot. A real ceiling result for selection-based self-improvement."
+  "deviation_from_prereg": "SCOPED PROBE, not the pre-registered test. Pre-reg = evolve 5 reward weights {pass,coverage,kill,codeHealth,clean} on TRAIN={cron,ipv4} -> TEST=hexcolor. Ran = cron-only, in-sample, 3 CHEAP proxies {sealed,malformed,codeHealth}; dropped coverage and kill (not cheaply per-specimen computable); ipv4/hex truth oracles not built; cross-slice train/test NOT run.",
+  "verdict": "Proxy exhaustion for the THREE CHEAP proxies on cron: no weight tuple over them ships the truth-best c5; baseline already at the achievable max (0.9767). NOT a definitive selection ceiling — mutation-kill (the STZ proxy designed to encode the functional correctness that separates c5) was NOT tested, and the cross-slice train/test was not run. 'Selection cannot reach competency' is unproven; only 'these three cheap proxies do not, on cron'.",
+  "open": "full reward-weight set incl. mutation-kill + coverage, across the cross-slice train/test"
 }
