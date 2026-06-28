@@ -37,15 +37,21 @@ third is decisive:
    most-thorough-*looking* specimen (Opus o2) *happens* to also be truth-best, so the
    heuristic accidentally aligns with truth. This is "Opus beats Haiku + judge likes
    Opus-style" — a **pool** effect, the exact confound pre-flagged.
-3. **Not robust — the divergence control reverses it.** On the homogeneous Haiku pool the
-   truth-best (c5, functional 43/43) does **not** look most thorough, and the judge shipped
-   c4 (0.9643) — **below** the numeric baseline (0.9732). When appearance and truth
-   **diverge**, the judge tracks **appearance, not truth.** The hetero "win" exists only
-   because they coincide.
+3. **Not robust — the divergence corroboration.** On the homogeneous Haiku pool the
+   truth-best (c5, functional 43/43) is not the showiest, and the judge shipped c4 (0.9643)
+   — **below** the numeric baseline (0.9732). So the judge is **not reliably
+   truth-tracking**: below numeric on homo, at-ceiling on hetero only where the strongest
+   specimen was also the best. (This is cross-prompt, cross-run corroboration, not a single
+   clean manipulation — suggestive, not proof of a mechanism.)
 
-The judge's behaviour is *consistent*: it ships the most-thorough-**looking** specimen —
-c4 on homo (wrong), o2 on hetero (right). Competency lift happens **iff appearance = truth**,
-which a strong model in the pool tends to produce but the harness does not *detect*.
+**Caveat against the opposite overclaim:** the judge signal is **not pure appearance**
+either. On the hetero pool it picked o2 over o1 **unanimously**, though both are Opus, both
+sealed 1.0, both 13/13 malformed, differing *only* by one hidden functional case
+(o2 43/43 vs o1 42/43). A pure appearance-tracker shouldn't cleanly separate two
+near-identical-style specimens by their one correctness difference — mild evidence of a
+**weak, real** correctness signal. The honest read is a **noisy, weak, not-reliably-
+truth-tracking** signal, not "tracks appearance." Either way: no competency lift the harness
+*reliably* produces.
 
 ## Exhaustive verdict
 
@@ -58,16 +64,21 @@ which a strong model in the pool tends to produce but the harness does not *dete
   appearance ≠ truth.
 
 **Every selection signal and pool composition is now exhausted:** numeric proxies
-(sealed-derived → structurally blind), judge on homogeneous pool (tracks appearance →
-negative when truth ≠ appearance), judge on heterogeneous pool (positive only because the
-strong model's specimen is both best and best-looking). The one conceivable remaining lever
-— a judge rubric that tracks held-out correctness rather than visible rigor — is exactly
-the appearance-bias that is fundamental to LLM code-judging; tuning rubrics until c5 wins is
-the shopping trap, refused.
+(sealed-derived → structurally blind), judge on homogeneous pool (not reliably
+truth-tracking → below numeric when truth ≠ the showiest candidate), judge on heterogeneous
+pool (at-ceiling only because the strong model's specimen was both best and best-looking).
+The one conceivable remaining lever — a judge rubric engineered to track held-out
+correctness — is out of scope (tuning rubrics until c5 wins is the shopping trap, refused).
 
 ## Bottom line
-The meta-improving harness does **not** produce a robust competency lift on these
-substrates. The apparent heterogeneous positive is a strong-model pool effect riding the
-judge's appearance-bias, and it collapses on the divergence control. The sharpening
-*mechanism* still works; converting it (or any selection signal) into *detected* better
-code does not.
+The meta-improving harness does **not** produce a *reliable* competency lift on these
+substrates. The apparent heterogeneous positive is a strong-model pool effect plus a noisy,
+weak judge signal that lands on the truth-best only when it is also the best-looking; it is
+below the numeric baseline when those diverge. The sharpening *mechanism* still works;
+converting it (or any selection signal) into *reliably-detected* better code does not.
+
+## Scope of "exhausted"
+Signal × pool space covered ({numeric, judge} × {homogeneous, heterogeneous}) **plus** a
+structural argument (numeric proxies are sealed-derived; pool composition changes the pool,
+not the signal). A universal negative cannot be *proven*; the one residual lever (a
+correctness-tracking rubric) is excluded as shopping. That is the terminus.
