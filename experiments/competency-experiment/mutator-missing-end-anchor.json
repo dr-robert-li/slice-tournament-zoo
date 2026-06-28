@@ -1,0 +1,6 @@
+{
+  "name": "missing-end-anchor",
+  "find": "\\$/",
+  "replace": "/",
+  "flags": "g"
+}

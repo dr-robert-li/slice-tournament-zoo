@@ -1,0 +1,21 @@
+{
+  "arm": "A — selection-gene, proxy-exhaustion test (cron, in-sample)",
+  "prereg": "PREREG.md (abc4240)",
+  "proxies": ["sealed_passRate", "malformed_conformance", "codeHealth(inverse-LOC)"],
+  "pool": [
+    {"id":"c1","sealed":1.0,"malformed":0.923,"codeHealth":0.538,"truth":0.9767},
+    {"id":"c2","sealed":0.9936,"malformed":0.923,"codeHealth":0.495,"truth":0.9767},
+    {"id":"c3","sealed":0.9992,"malformed":0.923,"codeHealth":0.559,"truth":0.9535},
+    {"id":"c4","sealed":0.9992,"malformed":0.923,"codeHealth":0.533,"truth":0.9767},
+    {"id":"c5","sealed":0.9992,"malformed":0.923,"codeHealth":0.557,"truth":1.0},
+    {"id":"c6","sealed":1.0,"malformed":1.0,"codeHealth":0.525,"truth":0.9767},
+    {"id":"c7","sealed":0.9606,"malformed":0.923,"codeHealth":0.567,"truth":0.9767},
+    {"id":"c8","sealed":0.9485,"malformed":0.923,"codeHealth":0.563,"truth":0.9767}
+  ],
+  "truth_best": "c5 (truth 1.0)",
+  "argmax_by_proxy": {"sealed":"c1","malformed":"c6","codeHealth":"c7"},
+  "truth_best_is_argmax_of_any_proxy": false,
+  "baseline_shipped_winner_truth": 0.9767,
+  "best_achievable_over_all_weight_tuples": 0.9767,
+  "verdict": "NULL by proxy exhaustion — no weight tuple ships the truth-best specimen (c5); the residual truth signal is in no computable proxy. Selection-gene evolution cannot beat baseline in-sample, so train/test is moot. A real ceiling result for selection-based self-improvement."
+}

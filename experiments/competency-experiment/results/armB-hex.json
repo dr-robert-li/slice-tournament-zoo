@@ -1,0 +1,12 @@
+{
+  "arm": "B — amortization / transfer of one harness-mine discovery across a parser family",
+  "prereg": "PREREG.md (abc4240)",
+  "mutator": "missing-end-anchor ($/ -> /; accept trailing garbage), discovered+twice-verified on cron (../cron-capstone)",
+  "transfer_test": {
+    "cron": {"permissive_suite_blind": true, "note": "parseInt-truncation of 5abc is subtle; permissive suite misses it"},
+    "hexcolor": {"permissive_suite_blind": false, "note": "mutant accepts #1234567/#123456xx; permissive old-1 CATCHES it (passRate 0.963, 80 cases fail) — good-faith hex suite tests trailing garbage"},
+    "ipv4": {"permissive_suite_blind": "n/a", "note": "parseInt range-validation idiom; the regex-anchor mutator does not apply"}
+  },
+  "verdict": "NULL by idiosyncratic blind spot — the cron blind spot does NOT recur across the family. Good-faith suites for obvious-malformed parsers (hex) already catch it; ipv4 uses a different idiom. Baking the cron discovery once does not harden the family. Amortization of this discovery is cron-specific.",
+  "note": "Mechanism (harness-mine discover+bake on cron) is unaffected and still works; this tests TRANSFER, which fails here."
+}
