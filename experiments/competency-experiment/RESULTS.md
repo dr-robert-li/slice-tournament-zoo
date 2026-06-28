@@ -33,16 +33,28 @@ The hypothesis needs a computable selection proxy to correlate with hidden truth
   achievable shipped-winner truth is **0.9767** — **identical to baseline**. No reweighting
   ships c5.
 
-**Conclusion (scoped).** The residual truth signal (what makes c5 best) is in **none of
-the three cheap proxies**, so a weight gene over *those* proxies cannot ship a higher-truth
-winner than baseline, **in-sample on cron**. This is proxy exhaustion *here* — for this
-pool, these proxies. It is **not** a definitive ceiling for selection-based self-improvement,
-and the most important reason is the omission: **`kill` (mutation-survival) is the STZ
-proxy designed to encode exactly this functional gap** (c5's extra correctness), and it was
-not tested. So "the selection lever can't reach it" is **not earned** — only "these three
-cheap proxies don't, on cron." The full claim needs the real reward-weight set (incl.
-mutation-kill + coverage) across the cross-slice train/test — see open cell.
-(`results/armA-cron.json`.)
+**Follow-up: mutation-kill tested (closes the flagged gap).** `kill` (mutation-survival)
+was the proxy most likely to encode c5's functional edge. Computed per specimen, it does
+**not** rank c5 first — it ties the truth-best (c5, 1.0) with the truth-**worst** (c3,
+0.9535) at 0 survivors. So the **full computable proxy set** `{sealed, malformed,
+codeHealth, mutation-kill}` cannot ship c5.
+
+**Conclusion (now earned, with a structural reason).** No weighting of the computable
+numeric proxies ships the truth-best specimen, because **all of them are
+sealed-suite-derived** (pass / coverage / mutation-kill all measure the specimen against the
+sealed suite), and **c5's truth advantage is *outside* the sealed suite by construction** —
+c5 is sealed-*worse* (0.9992) yet truth-*best* (1.0). A signal derived from the sealed suite
+cannot rank a specimen by quality the sealed suite does not test. Since evolution cannot beat
+baseline **in-sample** on cron, the cross-slice train/test is moot (nothing to generalize).
+Caveat held: this is cron-only; coverage wasn't separately computed (it is sealed-derived
+too, so the structural argument covers it). (`results/armA-cron.json`.)
+
+**The one selection lever that is NOT sealed-derived: the judge.** The only selection signal
+independent of the sealed suite is the **judge** (LLM reasoning over code + contract). Prior
+`cron-pilot/FINDINGS-CONTROLS-2.md` showed a frozen judge picks the spec-correct candidate
+3/3. Evolving/testing the **judge** as a selection gene (`rubricId`), train/test across
+slices vs the numeric-proxy baseline, is the honest path to a *possible* competency positive
+— not more numeric-weight evolution. (Open cell.)
 
 ## Arm B — amortization: NULL by **idiosyncratic (non-shared) blind spot**
 
@@ -83,15 +95,15 @@ discovery is cron-specific. (`results/armB-hex.json`.)
   probe, not a proof.
 
 ## Bounds / open cell
-- **Arm A is a scoped probe, not the pre-registered test.** The full experiment — evolve
-  the real reward-weight set **including mutation-kill and coverage** across the cross-slice
-  **train/test** (cron/ipv4 → hexcolor, with truth oracles built for each) — was **not
-  run**. It is the single most important open item: mutation-kill is the proxy designed to
-  encode functional correctness, and it could plausibly rank c5 first where the cheap
-  proxies cannot. Until then, "selection can't reach competency" is unproven.
+- **Arm A is cron-only and in-sample**, but the full computable proxy set (incl.
+  mutation-kill) is now tested and null, with a structural reason. A cross-slice
+  numeric-weight train/test would only confirm a structurally-predicted null at large cost
+  (build ipv4/hex truth oracles) — **low value**.
 - Arm B tested transfer to hexcolor + ipv4; a different recurring class on a different
   parser family could in principle share a blind spot — untested.
-- The genuinely open cells: (1) the **full reward-weight cross-slice train/test** above;
-  (2) a **heterogeneous frontier-vs-frontier** pool. Both larger experiments, the user's
-  call. Neither was staged here (refusing to build mutation-kill under the hook = the
-  shopping trap).
+- **The promising open cell:** evolve/test the **judge** as a selection gene (the one signal
+  independent of the sealed suite), train/test across slices vs the numeric-proxy baseline.
+  CONTROLS-2 already hints the judge can pick spec-correct winners. This — not more numeric
+  proxy evolution — is the honest path to a possible competency positive.
+- Also open: a **heterogeneous frontier-vs-frontier** pool. Both are the user's call; the
+  judge-selection experiment is the higher-value one.
