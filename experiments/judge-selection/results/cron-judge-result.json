@@ -1,0 +1,22 @@
+{
+  "arm": "judge-as-selection-gene — decisive cron existence test",
+  "prereg": "PREREG.md (ecdbfad)",
+  "judge": "5 independent frozen blind Sonnet judges; read contract + 8 specimen codes only (no suites/truth); pick single most spec-correct.",
+  "votes": {"c4":4, "c6":1},
+  "judge_winner": "c4 (majority 4/5)",
+  "full_truth": {
+    "judge_winner_c4": 0.9643,
+    "numeric_baseline_expected_avg_c1_c6": 0.9732,
+    "ceiling_c5_c6": 0.9821
+  },
+  "delta_judge_minus_baseline": -0.0089,
+  "verdict": "NULL (slight NEGATIVE) — the judge ships c4, which is LOWER full_truth than the numeric baseline and well below the reachable ceiling (c5/c6). Judge-selection does NOT improve competency on cron; it slightly reduces it.",
+  "why": "The judges reasoned competently and found REAL bugs (correctly downgraded c5's DOW=7 logic bug, c7/c8's restriction-detection bugs). But their quality criterion — depth of visible defensive validation (c4's explicit Feb-30/calendar-rollover guard) — diverged from held-out truth, which is dominated by functional case-coverage + malformed-rejection. They over-valued c4's rigor and under-valued c6's malformed-rejection (13/13) and c5's functional completeness (43/43), the actual ceiling. 'Looks most rigorous' != 'passes the most held-out truth cases', even with malformed-rejection named in the prompt.",
+  "consequence": "Per pre-reg, cron is the decisive existence test; it is negative, so the cross-slice train/test is NOT run (nothing to generalize). The residual held-out truth is unreachable here even by the judge — the one selection signal independent of the sealed suite.",
+  "bounds": [
+    "n=1 slice, 1 fixed pool, 5 votes (majority c4 4/5).",
+    "ONE judge rubric (generic 'most spec-correct incl. malformed rejection'); evolving/shopping rubrics on cron until c6 wins would be the shopping trap, refused.",
+    "blind (contract+code only); pairwise-order control not needed for pick-best-of-8 but single-realization noise remains.",
+    "a stronger/differently-rubric'd judge MIGHT do better — untested, and the honest read is that the DEFAULT judge signal does not reach the residual truth here."
+  ]
+}

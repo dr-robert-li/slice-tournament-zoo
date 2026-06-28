@@ -1,0 +1,16 @@
+{
+  "metric": "full_truth = (truth_full functional passed + mustThrow malformed passed)/(43+13)",
+  "specimens": {
+    "c1": {"functional":"42/43","malformed":"12/13","full_truth":0.9643,"sealed":1.0,"accepts_5abc":true},
+    "c2": {"functional":"42/43","malformed":"12/13","full_truth":0.9643,"sealed":0.9936},
+    "c3": {"functional":"41/43","malformed":"12/13","full_truth":0.9464,"sealed":0.9992},
+    "c4": {"functional":"42/43","malformed":"12/13","full_truth":0.9643,"sealed":0.9992},
+    "c5": {"functional":"43/43","malformed":"12/13","full_truth":0.9821,"sealed":0.9992,"accepts_5abc":true},
+    "c6": {"functional":"42/43","malformed":"13/13","full_truth":0.9821,"sealed":1.0,"accepts_5abc":false},
+    "c7": {"functional":"42/43","malformed":"12/13","full_truth":0.9643,"sealed":0.9606},
+    "c8": {"functional":"42/43","malformed":"12/13","full_truth":0.9643,"sealed":0.9485}
+  },
+  "numeric_baseline": {"selects":"sealed-best {c1,c6}","expected_full_truth":0.9732},
+  "full_truth_ceiling": {"value":0.9821,"specimens":["c5","c6"]},
+  "judge_opportunity": "ship c6 or c5 (0.9821) over the baseline's expected 0.9732; gain +0.0089, a re-rank within the fixed pool to a more contract-correct specimen (c6 rejects 5abc; c5 functional-best)."
+}
