@@ -731,3 +731,23 @@ unprobed contract is required for any generalization claim.
 | `harness-mine` mutator killed by incumbent suite | Not a blind spot | Reject the candidate skill as a no-op |
 | five-gate `promote:false` with `hack-findings-on-own-outputs` | Variant tried to win by weakening its gate | Reject; the DGM failure mode, caught |
 | `judge-stress` consistency below threshold for a slice-type | Judge unreliable here | Down-weight the judge; lean on the sealed/truth divergence backstop |
+
+---
+
+## 0.9.0 empirical status (2026-06-28) — the competency claim was tested and is a negative
+
+The 0.9.0 meta-loop above is built and works as a mechanism. The claim it was built to
+support, that harness self-improvement ships more correct code, was then tested directly
+and does not hold on the substrates tried. Across six substrates and every selection signal
+the harness can compute (sealed-derived numeric proxies, the judge, and a heterogeneous
+pool), no configuration produces a competency lift attributable to the harness detecting
+correctness. The reason is structural: a suite-sharpening gain needs an axis that is large,
+split across the blind pool, and invisible to a good-faith suite at the same time, and those
+properties do not co-occur. The `harness-mine` discover-and-bake mechanism is real and
+useful; converting it into reliably better shipped code is the part that does not follow.
+
+Full account: `docs/PAPER.md`. Cross-arm summary: `experiments/EXPERIMENT-SUMMARY.md`.
+Build log: `docs/JOURNAL.md`. The remaining open questions (a correctness-tracking judge
+rubric, a non-sealed-derived numeric proxy, frontier-vs-frontier at scale, cross-slice
+amortization on a family with a shared bug class, and SWE-Bench as a deciding instrument)
+are in the paper's Section 8.
