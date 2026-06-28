@@ -1,0 +1,24 @@
+{
+  "arm": "heterogeneous-pool experiment (exhaust the positive)",
+  "goal": "Run the heterogeneous-pool experiment and exhaust all possibility of positive competency lift",
+  "pool": "12 specimens: 8 Haiku (c1-c8) + 2 Sonnet (s1,s2) + 2 Opus (o1,o2), all blind, cron contract",
+  "full_truth": {
+    "c1":0.9643,"c5":0.9821,"c6":0.9821,"s1":0.9643,"s2":0.9821,"o1":0.9821,"o2":1.0,
+    "others_c2_c3_c4_c7_c8":"0.946-0.964"
+  },
+  "sealed_best_set_sealed_1.0": ["c1","c6","s1","o1","o2"],
+  "numeric_baseline_expected_full_truth": 0.9786,
+  "judge_votes_hetero": {"o2": 5},
+  "judge_winner": "o2 (unanimous 5/5)",
+  "judge_shipped_full_truth": 1.0,
+  "lift_judge_minus_numeric": 0.0214,
+  "literal_control": "PASS — judge re-ranks WITHIN the sealed-indifferent set to a functionally-better specimen (o2, full_truth 1.0) the numeric signal cannot prefer (sealed-tied). By the advisor's literal criterion this is the thing that counts.",
+  "BUT_confounds": [
+    "NOT a meta-loop improvement: the judge is part of the DEFAULT harness (F7 stage-2), not an evolved gene. The meta-loop did nothing here; this is the existing two-stage harness working.",
+    "APPEARANCE-confounded: the judges cite thoroughness cues (day-level jumping, DOW=7 normalization, regex validation, Vixie OR) — the SAME rigor heuristic that picked c4 on the homogeneous pool. Here the most-thorough-looking specimen (Opus o2) HAPPENS to also be truth-best, so the heuristic accidentally aligns with truth.",
+    "NOT robust — the divergence control reverses it: on the homogeneous Haiku pool, truth-best (c5, functional 43/43) does NOT look most thorough, and the judge shipped c4 (0.9643) < numeric baseline 0.9732. So when appearance and truth DIVERGE, the judge tracks APPEARANCE, not truth.",
+    "Strong-model confound (the advisor's named risk): the 'win' = the Opus specimen, which is most-correct AND most-impressive. This is 'Opus beats Haiku + judge prefers Opus-style', a POOL effect, not 'harness selection detects correctness'."
+  ],
+  "exhaustive_verdict": "A naive positive EXISTS (hetero + judge ships the truth-best o2, +0.0214, unanimous, passes the literal re-rank control). But it is NOT a robust, attributable competency lift: (1) it is the default harness's judge stage, not meta-loop self-improvement; (2) it is appearance-confounded — the judge tracks visible thoroughness, which coincides with truth only because a strong model wrote the best AND most-impressive specimen; (3) the divergence control (homogeneous c5-vs-c4) is NEGATIVE, proving the judge follows appearance not correctness. Competency lift attributable to harness self-improvement: NOT earned. The apparent positive collapses to a strong-model-in-pool + judge-likes-rigor correlation that reverses when appearance != truth.",
+  "what_would_be_a_clean_positive": "A pool where the truth-best specimen looks LESS impressive than a truth-worse one, AND the harness ships the truth-best anyway. The homogeneous c5-vs-c4 case IS that test, and it is negative. No configuration tested ships a truth-best that does not also look best."
+}
