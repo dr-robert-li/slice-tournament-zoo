@@ -102,3 +102,23 @@ let stand.
 
 Detail: `{streamstats,wsample,expr,cron-capstone}-pilot*/PREREG.md` + `PILOT-RESULTS.md`,
 `shuffle-pilot/`, `results/*.json`. Narrative: `docs/JOURNAL.md` last two entries.
+
+---
+
+## Update — the competency line is closed (see docs/PAPER.md)
+
+This summary predates three later arms that finish the question of whether the
+meta-improving harness ships more correct code:
+
+- **Numeric selection-gene** (`competency-experiment/`): evolving the reward weights cannot
+  ship the truth-best specimen. Every numeric proxy (pass, coverage, mutation-kill) is
+  derived from the sealed suite, and the residual held-out truth lives outside it. Null,
+  with a structural reason.
+- **Judge selection** (`judge-selection/`): the judge is the only selection signal not
+  derived from the sealed suite. On the homogeneous cron pool it shipped a worse winner than
+  numeric selection. It is noisy and not reliably truth-tracking.
+- **Heterogeneous pool** (`judge-selection/HETERO-RESULTS.md`): mixing Haiku, Sonnet, and
+  Opus produced an apparent +0.0214 lift, confounded by model strength and reversing on the
+  homogeneous contrast. Not a competency lift attributable to the harness.
+
+Full write-up, related work, discussion, and open questions: **`docs/PAPER.md`**.

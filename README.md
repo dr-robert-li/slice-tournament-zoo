@@ -431,3 +431,10 @@ For contributors and anyone going past day-to-day operation:
 ## License
 
 [Apache-2.0](https://github.com/dr-robert-li/slice-tournament-zoo/blob/main/LICENSE).
+
+## Research
+
+The full account of what STZ is, the experiments under `experiments/`, the outcomes, and
+the open questions is in **[docs/PAPER.md](docs/PAPER.md)** ("When does a self-improving
+coding harness actually improve competency? A negative result, earned"). The first-person
+build log is in [docs/JOURNAL.md](docs/JOURNAL.md).
