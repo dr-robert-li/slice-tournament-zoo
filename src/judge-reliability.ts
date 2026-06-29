@@ -98,3 +98,38 @@ export function trustGate(
   }
   return { trust: true, reason: `consistency ${entry.consistency.toFixed(2)} ≥ ${threshold}` };
 }
+
+/**
+ * Promotion-gate calibration check (FAIL-CLOSED). This is the 0.9.5 calibrated-
+ * verifier gate: a judge/verifier may steer harness PROMOTION only after its
+ * target-task accuracy has been measured on a blind, pre-registered ground-truth
+ * battery. It is deliberately stricter than `trustGate`:
+ *
+ *   - `trustGate` is the per-slice RUNTIME gate. It default-*trusts* a missing
+ *     profile so the live pipeline is never blocked by a not-yet-profiled judge.
+ *   - `calibrationGate` is the PROMOTION gate. It default-*distrusts* a missing
+ *     or un-calibrated profile, because letting an uncalibrated judge steer the
+ *     harness is exactly the failure 2606.14629 ("When Good Verifiers Go Bad")
+ *     names: a confident-but-wrong verifier silently regresses the result, and
+ *     above-threshold-on-A can be sub-threshold-on-B. Calibrate BEFORE it steers.
+ *
+ * Calibrated ⇔ a profile entry exists for the slice-type AND its blind-accuracy
+ * battery actually ran (`blindAccuracyBucket !== null`) AND `trustGate` passes
+ * (consistency ≥ threshold AND bucket not "low"). Pure (N6).
+ */
+export function calibrationGate(
+  profile: JudgeReliabilityProfile,
+  sliceType: string,
+  threshold = TRUST_THRESHOLD,
+): { calibrated: boolean; reason: string } {
+  const entry = profile.perSliceType.find((e) => e.sliceType === sliceType);
+  if (!entry) {
+    return { calibrated: false, reason: "no-profile — an uncalibrated judge may not steer promotion (fail-closed)" };
+  }
+  if (entry.blindAccuracyBucket === null) {
+    return { calibrated: false, reason: "blind-accuracy battery not run — calibration pending (fail-closed)" };
+  }
+  const t = trustGate(profile, sliceType, threshold);
+  if (!t.trust) return { calibrated: false, reason: t.reason };
+  return { calibrated: true, reason: `calibrated — ${t.reason}; blind-accuracy ${entry.blindAccuracyBucket}` };
+}

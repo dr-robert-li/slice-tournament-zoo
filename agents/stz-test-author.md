@@ -92,6 +92,43 @@ do not invent requirements the implementers were never given. That produces the
 mirror failure (failing correct code on an unstated rule), the same class the
 invariant rules above guard against.
 
+## Heuristic gene: `heuristicId` routing (the G1 gene)
+
+The slice's harness genome carries a `heuristicId` (passed to you by the
+orchestrator). It selects which negative-case repertoire you draw on. It only
+changes *which edge cases you reach for* — never the contract you test:
+
+- **`baseline-v0` / `explicit-examples-v0`** — hand-written example cases over the
+  contract clauses (the default).
+- **`property-fuzz-v1`** — prefer property-based generators over the negative
+  space (the approach the section above already recommends).
+- **`waf-playbook-autogen-v0`** — additionally consult the **AWS Well-Architected
+  playbook bank** (the AWS Well-Architected Agentic AI Lens + the
+  `aws-samples/well-architected-skills-and-steering` skills, carried as steering
+  text in `.stz/20-standards/`) to sharpen negative/edge cases for the
+  reliability-, observability-, and guardrail-shaped behaviours **the contract
+  already specifies** — e.g. a contracted retry/back-off clause gets a case
+  asserting it actually retries and eventually gives up; a contracted
+  idempotency/least-privilege/timeout clause gets a discriminating negative.
+
+### The Goodhart guard for `waf-playbook-autogen-v0` (load-bearing — do not relax)
+
+This is **one-time amortized authoring**, not a score to optimise. Two hard rules,
+both required (the survey `experiments/META-RSI-SURVEY.md` §II.3 earned why):
+
+1. **WAF practices only sharpen cases for behaviour the contract already
+   specifies. They never add a WAF requirement the contract is silent on.** A
+   WAF-flavoured test for an unstated requirement is the exact "stay within the
+   contract" violation above, *and* it would smuggle WAF-conformance into the
+   sealed suite — which then *is* the fitness signal, making conformance a reward
+   by the back door. If the contract does not mention the pillar behaviour, do not
+   test it.
+2. **No WAF-conformance score is ever computed as fitness.** The selection
+   `weights` tuple stays `{pass, coverage, kill, codeHealth, clean}`; promotion
+   stays on held-out *functional* fitness only. An LLM-judged "how Well-Architected
+   does this look" score is appearance-adjacent and must never enter selection
+   (that is the conformance-judge failure mode the survey rules out).
+
 ## Reference implementation (proves the suite is satisfiable)
 
 Also write a **minimal, correct reference implementation** of the contract into

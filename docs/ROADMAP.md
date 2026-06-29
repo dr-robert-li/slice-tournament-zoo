@@ -199,6 +199,20 @@ and 22, with a `prepublishOnly` (typecheck + test) guard before any npm publish.
 Direction for upcoming cycles. These are intent, not yet built; each moves into
 *What was built* when it ships. Ordered roughly by dependency, not date.
 
+### Post-merge exogenous grounding (door A) — pre-registered, gated on the 0.9.5 calibration gate
+
+The survey's one open door is an exogenous correctness signal (α>0) fed each round; the only
+genuinely exogenous SDLC signal is **delayed post-merge reality** (PR-acceptance + downstream
+regression across later commits) — not CI/hidden-test pass, which is the sealed suite (door B).
+`experiments/postmerge-grounding/PREREG.md` pre-registers the test on **real SWE repos** via the
+existing swebench adapter, contamination-controlled by **blind per-instance sealed suites**, and
+**gated through** the 0.9.5 `calibrationGate` (the post-merge signal is just another verifier and
+must pass calibration before it may steer). Symmetric-error null; continuity over merge cycles is
+the real test (plateau/decline is a valid, reportable result). **Scope:** a live
+prod/canary/incident **telemetry plane is a v2 item, gated on this probe** returning a non-null,
+non-degrading result — real-repo git history substitutes for it here; a null stops the line (no
+plane is built). It would breach N9 (single-repo, local) and is not built in v1.
+
 ### Additional agentic-coding runtimes
 
 Today STZ drives its specimens/judge/test-author as **Claude Code** in-session
@@ -751,3 +765,36 @@ Build log: `docs/JOURNAL.md`. The remaining open questions (a correctness-tracki
 rubric, a non-sealed-derived numeric proxy, frontier-vs-frontier at scale, cross-slice
 amortization on a family with a shared bug class, and SWE-Bench as a deciding instrument)
 are in the paper's Section 8.
+
+## 0.9.5 — calibrated-verifier gating + a Well-Architected authoring gene — ✅ BUILT
+
+The post-Opus-4.8 RSI literature was surveyed against STZ's earned negative
+(`experiments/META-RSI-SURVEY.md`). It did not rescue the negative; it corroborated it and
+handed over a proof of *why*, plus two **earned** moves that satisfy both competency-and-
+compatibility, which 0.9.5 ships:
+
+- **Calibrated-verifier gating (the sixth promotion gate).** [arXiv:2606.14629](https://arxiv.org/abs/2606.14629)
+  (*When Good Verifiers Go Bad*) sharpened the open door: an exogenous verifier each round is
+  **necessary but not sufficient** — it must be **target-task calibrated before it steers**, or
+  it silently regresses the result (above-threshold-on-A can be sub-threshold-on-B;
+  confident-but-wrong regresses worse than random). STZ's own judge-shipped-c4-worse
+  (`experiments/judge-selection/`) is an on-data instance. 0.9.5 adds `judge-calibration`
+  (measures judge target-task accuracy on a blind, pre-registered battery → persisted
+  `60-harness/judge-reliability.json`) and a **fail-closed** sixth gate `rubricCalibrated`
+  in `promotionGate` (`src/harness.ts`, `src/judge-reliability.ts:calibrationGate`). It buys
+  **bounded-safe**, not continuous, improvement — it stops the loop going negative. This
+  *validates and sharpens* the existing guard architecture (bounded depth F14 +
+  judge-reliability gating + variance floor + halt-and-surface F19).
+- **WAF authoring gene `waf-playbook-autogen-v0` (G1).** A `heuristicId` branch in
+  `agents/stz-test-author.md` lets the test author consult the AWS Well-Architected Agentic AI
+  Lens playbooks to sharpen negative/edge cases for behaviour the contract already specifies —
+  **one-time amortized authoring**, the survey's earned WAF result. **Goodhart-guarded:** WAF
+  never adds an unstated requirement and no LLM-judged WAF-conformance score is ever a fitness
+  signal (weights tuple untouched; promotion stays on held-out functional fitness). STZ already
+  maps strongly onto the Agentic AI Lens (`docs/CLAUDE.md` §5); the remaining Lens gaps
+  (AGENTCOST05 per-agent cost-attribution, AGENTSEC07 rogue-agent detection beyond static L3)
+  are conformance items, not loops.
+
+The honest headline (carried from the survey): **no validated *continuous*-competency win
+exists in the window.** 0.9.5 ships only what is earned (degradation-safety + authoring) and
+pre-registers the one speculative direction (door A) as a gated experiment (below).
