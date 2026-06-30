@@ -329,3 +329,55 @@ describe("seal-crosscheck — cross-family reference gate (0.5.0)", () => {
     process.exitCode = code;
   });
 });
+
+describe("bridge — calibrated-verifier gating (0.9.5)", () => {
+  const relFile = () => join(root, STZ_DIR, "60-harness", "judge-reliability.json");
+
+  it("judge-stress (consistency) and judge-calibration (bucket) merge into one entry", async () => {
+    captured = "";
+    await runBridge([
+      "judge-stress", "--root", root, "--slice-type", "parser",
+      "--pairs", JSON.stringify([{ original: "a", perturbed: "a" }, { original: "b", perturbed: "b" }]),
+    ]);
+    captured = "";
+    await runBridge([
+      "judge-calibration", "--root", root, "--slice-type", "parser",
+      "--verdicts", JSON.stringify(["a", "b", "a", "b"]), "--labels", JSON.stringify(["a", "b", "a", "b"]),
+    ]);
+    const prof = JSON.parse(await readFile(relFile(), "utf8")) as {
+      perSliceType: { sliceType: string; consistency: number; blindAccuracyBucket: string | null; n: number }[];
+    };
+    const e = prof.perSliceType.find((x) => x.sliceType === "parser")!;
+    expect(e.consistency).toBeCloseTo(1, 9); // from judge-stress
+    expect(e.blindAccuracyBucket).toBe("high"); // 100% accuracy from judge-calibration — not clobbered
+  });
+
+  it("harness-promote fails closed when the judge is uncalibrated, passes once calibrated", async () => {
+    const genome = {
+      heuristicId: "v", mutatorIds: [], strategySet: [], rubricId: "r",
+      weights: { pass: 1, coverage: 0, kill: 0, codeHealth: 0, clean: 0 }, fanout: 4, votesPerPair: 8,
+    };
+    captured = "";
+    await runBridge(["harness-fitness", "--root", root, "--genome", JSON.stringify(genome), "--scores", JSON.stringify({ cron: 0.9 })]);
+    const variantId = lastJSON<{ variantId: string }>().variantId;
+
+    // Uncalibrated (no profile yet) ⇒ fail-closed even with every other gate true.
+    captured = "";
+    await runBridge(["harness-promote", "--root", root, "--variant", variantId, "--slice-type", "parser", "--hack-clean", "true", "--seal-ok", "true", "--diversity-ok", "true"]);
+    const before = lastJSON<{ promote: boolean; failed: string[] }>();
+    expect(before.promote).toBe(false);
+    expect(before.failed).toContain("judge-rubric-not-calibrated");
+
+    // Calibrate the judge for this slice-type (consistency + blind accuracy).
+    captured = "";
+    await runBridge(["judge-stress", "--root", root, "--slice-type", "parser", "--pairs", JSON.stringify([{ original: "a", perturbed: "a" }, { original: "b", perturbed: "b" }])]);
+    captured = "";
+    await runBridge(["judge-calibration", "--root", root, "--slice-type", "parser", "--verdicts", JSON.stringify(["a", "b"]), "--labels", JSON.stringify(["a", "b"])]);
+
+    // Now the same promotion call passes.
+    captured = "";
+    await runBridge(["harness-promote", "--root", root, "--variant", variantId, "--slice-type", "parser", "--hack-clean", "true", "--seal-ok", "true", "--diversity-ok", "true"]);
+    const after = lastJSON<{ promote: boolean; failed: string[] }>();
+    expect(after.promote).toBe(true);
+  });
+});

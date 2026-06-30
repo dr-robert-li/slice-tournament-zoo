@@ -1,5 +1,5 @@
 ---
-description: Run the bounded harness-level recursive-self-improvement meta-loop (0.9.0). Evolves the STZ harness genome (test-author heuristics, specimen strategies, judge rubric, selection weights, fan-out, suite battery) against held-out recall-free pilot fitness, DGM/HarnessX-style, with a five-gate promotion guard. The per-slice tournament is untouched.
+description: Run the bounded harness-level recursive-self-improvement meta-loop (0.9.0). Evolves the STZ harness genome (test-author heuristics, specimen strategies, judge rubric, selection weights, fan-out, suite battery) against held-out recall-free pilot fitness, DGM/HarnessX-style, with a six-gate promotion guard (0.9.5 adds calibrated-verifier gating). The per-slice tournament is untouched.
 argument-hint: "[--generations N] [--k K] (defaults from run-config harness block)"
 ---
 
@@ -35,14 +35,24 @@ nothing here changes a normal run.
    --floor <diversityFloor>`. GRPO group-relative advantage picks the winner; if
    σ < floor the generation **collapsed** → do not promote, re-sample with forced
    gene diversity.
-5. **Critic + promote (five gates).** Spawn `stz-harness-critic` for the
+5. **Calibrate the judge first (0.9.5, fail-closed).** Before promotion, the
+   selection judge for this slice-type must be target-task calibrated, or the
+   sixth gate `rubricCalibrated` declines (an uncalibrated verifier silently
+   regresses — arXiv:2606.14629). Run the judge on a blind, pre-registered
+   ground-truth battery and feed picks + labels in:
+   `stz bridge judge-calibration --root <root> --slice-type <t> --verdicts <[picked]> --labels <[truth]>`
+   (also run `judge-stress` for the consistency half; they merge into one
+   profile). `60-harness/judge-reliability.json` is what the gate reads.
+6. **Critic + promote (six gates).** Spawn `stz-harness-critic` for the
    budget-matched, no-regression, convention-discounted read, then
-   `stz bridge harness-promote --root <root> --variant <id> --hack-clean <b>
-   --seal-ok <b> --diversity-ok <b>`. A variant becomes the incumbent ONLY if it
-   beats the incumbent on held-out fitness AND is hack-clean on its OWN outputs
-   AND preserved sealing integrity AND interface parity AND came from a diverse
-   generation.
-6. **Advance the meta-FSM.** The loop halts on: max generations, two BARREN
+   `stz bridge harness-promote --root <root> --variant <id> --slice-type <t>
+   --hack-clean <b> --seal-ok <b> --diversity-ok <b>`. A variant becomes the
+   incumbent ONLY if it beats the incumbent on held-out fitness AND is hack-clean
+   on its OWN outputs AND preserved sealing integrity AND interface parity AND
+   came from a diverse generation AND its selection judge is calibrated. Omitting
+   `--slice-type` (or an un-calibrated judge) fails closed — `promote:false`,
+   `judge-rubric-not-calibrated`.
+7. **Advance the meta-FSM.** The loop halts on: max generations, two BARREN
    generations in a row (converged — "nothing better, keep incumbent" is a
    SUCCESS, the symmetric-error null), or variance collapse. `harness.ts`
    `onGeneration` is the single source of "spawn again?" — never loop on your own.

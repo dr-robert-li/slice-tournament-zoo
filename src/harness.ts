@@ -20,6 +20,7 @@ import { readFileSync, writeFileSync, mkdirSync, existsSync } from "node:fs";
 import { join } from "node:path";
 import { createHash } from "node:crypto";
 import type { ArchiveEntry, HarnessGenome } from "./types.js";
+import type { JudgeReliabilityProfile, SliceTypeReliability } from "./judge-reliability.js";
 import { stzPath } from "./taxonomy.js";
 import { genomeHash } from "./harness-hash.js";
 
@@ -32,6 +33,10 @@ import { genomeHash } from "./harness-hash.js";
  */
 export function defaultGenome(): HarnessGenome {
   return {
+    // G1 test-author heuristic. Known values: "baseline-v0"/"explicit-examples-v0",
+    // "property-fuzz-v1", and (0.9.5) "waf-playbook-autogen-v0" — the AWS
+    // Well-Architected authoring gene (one-time amortized authoring; never a
+    // reward — see agents/stz-test-author.md). A free string; agents route it.
     heuristicId: "baseline-v0",
     mutatorIds: [],
     strategySet: ["explicit-allowed-set", "field-expander", "strict-validation"],
@@ -54,6 +59,56 @@ export function manifestPath(root: string): string {
 }
 export function batteryDir(root: string): string {
   return join(harnessDir(root), "battery");
+}
+export function reliabilityPath(root: string): string {
+  return join(harnessDir(root), "judge-reliability.json");
+}
+
+// ── judge-reliability profile I/O (0.9.5 calibrated-verifier gating) ─────────
+
+/**
+ * Read the persisted machine-readable judge-reliability profile. Distinct from
+ * the human-readable `90-audit/judge-reliability.md` prose: this JSON is what the
+ * promotion gate consumes. Missing file ⇒ empty profile (every slice-type then
+ * reads as uncalibrated — fail-closed at the gate).
+ */
+export function readReliabilityProfile(root: string): JudgeReliabilityProfile {
+  const p = reliabilityPath(root);
+  if (!existsSync(p)) return { schemaVersion: 1, perSliceType: [] };
+  return JSON.parse(readFileSync(p, "utf8")) as JudgeReliabilityProfile;
+}
+
+/**
+ * Merge one slice-type's reliability fields, preserving fields the OTHER caller
+ * owns: `judge-stress` owns `consistency`, `judge-calibration` owns
+ * `blindAccuracyBucket`. Merging (not clobbering) lets the two commands run in
+ * either order and have both fields survive — without it, whichever ran second
+ * would wipe the first's signal and the gate could never see a complete profile.
+ * N6-clean: entries kept sorted by sliceType; no timestamps (append-order-free,
+ * deterministic on replay, mirrors MANIFEST.json posture).
+ */
+export function mergeReliabilityEntry(
+  root: string,
+  patch: { sliceType: string } & Partial<Omit<SliceTypeReliability, "sliceType">>,
+): JudgeReliabilityProfile {
+  const profile = readReliabilityProfile(root);
+  const existing = profile.perSliceType.find((e) => e.sliceType === patch.sliceType);
+  if (existing) {
+    if (patch.consistency !== undefined) existing.consistency = patch.consistency;
+    if (patch.blindAccuracyBucket !== undefined) existing.blindAccuracyBucket = patch.blindAccuracyBucket;
+    if (patch.n !== undefined) existing.n = patch.n;
+  } else {
+    profile.perSliceType.push({
+      sliceType: patch.sliceType,
+      consistency: patch.consistency ?? 0,
+      blindAccuracyBucket: patch.blindAccuracyBucket ?? null,
+      n: patch.n ?? 0,
+    });
+  }
+  profile.perSliceType.sort((a, b) => (a.sliceType < b.sliceType ? -1 : a.sliceType > b.sliceType ? 1 : 0));
+  mkdirSync(harnessDir(root), { recursive: true });
+  writeFileSync(reliabilityPath(root), JSON.stringify(profile, null, 2) + "\n", "utf8");
+  return profile;
 }
 
 export function readArchive(root: string): ArchiveEntry[] {
@@ -205,6 +260,12 @@ export interface PromotionInputs {
   sealOk: boolean;
   interfaceParity: boolean;
   diversityOk: boolean;
+  /**
+   * 0.9.5: the judge/verifier that produced this variant's selection signal is
+   * target-task CALIBRATED (passed the blind-accuracy battery). Fail-closed: an
+   * uncalibrated judge may not steer promotion (2606.14629).
+   */
+  rubricCalibrated: boolean;
 }
 
 export interface PromotionVerdict {
@@ -213,11 +274,13 @@ export interface PromotionVerdict {
 }
 
 /**
- * The five-gate promotion decision (DGM hack-resistance built in). A variant
+ * The six-gate promotion decision (DGM hack-resistance built in). A variant
  * replaces the incumbent ONLY if it beats it on held-out fitness AND is
  * hack-clean on its OWN outputs (it cannot win by weakening its gate — the DGM
  * self-detector-bypass failure) AND preserved sealing integrity AND interface
- * parity AND came from a diverse (non-collapsed) generation.
+ * parity AND came from a diverse (non-collapsed) generation AND its selection
+ * judge is target-task calibrated (0.9.5 — an uncalibrated verifier silently
+ * regresses, per 2606.14629, so calibration must precede steering).
  */
 export function promotionGate(i: PromotionInputs): PromotionVerdict {
   const failed: string[] = [];
@@ -226,6 +289,7 @@ export function promotionGate(i: PromotionInputs): PromotionVerdict {
   if (!i.sealOk) failed.push("seal-integrity-drift");
   if (!i.interfaceParity) failed.push("interface-parity-broken");
   if (!i.diversityOk) failed.push("generation-variance-collapsed");
+  if (!i.rubricCalibrated) failed.push("judge-rubric-not-calibrated");
   return { promote: failed.length === 0, failed };
 }
 

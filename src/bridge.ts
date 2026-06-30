@@ -76,11 +76,13 @@ import {
   makeArchiveEntry,
   promotionGate,
   batteryDir,
+  readReliabilityProfile,
+  mergeReliabilityEntry,
   defaultGenome,
   type MetaState,
 } from "./harness.js";
 import { initialInject, onInjectRound, summarizeSurvivors } from "./injector.js";
-import { consistencyScore, bucketOf, type JudgeReliabilityProfile } from "./judge-reliability.js";
+import { consistencyScore, bucketOf, calibrationGate } from "./judge-reliability.js";
 import type { ArchiveEntry, HarnessGenome } from "./types.js";
 import {
   loadCompat,
@@ -1202,7 +1204,7 @@ async function harnessFitness(args: Record<string, string>): Promise<void> {
     fitness,
     perSubstrate: scores,
     advantage: 0, // filled by harness-select within its generation
-    gates: { hackClean: false, sealOk: false, interfaceParity: false, diversityOk: false, beatsIncumbent: false },
+    gates: { hackClean: false, sealOk: false, interfaceParity: false, diversityOk: false, beatsIncumbent: false, rubricCalibrated: false },
   });
   appendArchiveEntry(root, entry);
   if (entry.parent) bumpChildCount(root, entry.parent);
@@ -1267,19 +1269,30 @@ function harnessPromote(args: Record<string, string>): void {
   const incumbentCommands = BRIDGE_COMMANDS;
   const variantCommands = readJSONArg<string[]>(args["variant-commands"]) ?? BRIDGE_COMMANDS;
   const parity = checkParity(incumbentCommands, variantCommands);
+  // Calibrated-verifier gate (0.9.5, fail-closed): the judge that produced this
+  // variant's selection signal must be target-task calibrated before it may steer
+  // promotion (2606.14629 — an uncalibrated verifier silently regresses). A
+  // missing --slice-type, or a slice-type whose blind-accuracy battery has not
+  // run, reads as uncalibrated.
+  const sliceType = args["slice-type"];
+  const profile = readReliabilityProfile(root);
+  const calib = sliceType
+    ? calibrationGate(profile, sliceType)
+    : { calibrated: false, reason: "no --slice-type — judge calibration unknown (fail-closed)" };
   const inputs = {
     beatsIncumbent,
     hackClean: bool("hack-clean"),
     sealOk: bool("seal-ok"),
     interfaceParity: parity.ok,
     diversityOk: bool("diversity-ok"),
+    rubricCalibrated: calib.calibrated,
   };
   const verdict = promotionGate(inputs);
   // Record the gate snapshot on the entry (audit), append-rewrite is fine: the
   // archive is the durable record and this is the gate result for THIS variant.
   variant.gates = { ...inputs };
   writeFileSync(join(stzPath(root, "60-harness"), "MANIFEST.json"), JSON.stringify(archive, null, 2) + "\n", "utf8");
-  print({ variantId, inputs, ...verdict, parity, baselineFitness: baseline === -Infinity ? null : baseline, variantFitness: variant.fitness });
+  print({ variantId, inputs, ...verdict, parity, calibration: calib, baselineFitness: baseline === -Infinity ? null : baseline, variantFitness: variant.fitness });
 }
 
 /** harness-status: archive summary, incumbent, and meta-loop view. */
@@ -1315,10 +1328,10 @@ async function judgeStress(args: Record<string, string>): Promise<void> {
   const result = consistencyScore(pairs);
   const bucket = bucketOf(result.score);
   if (args.root) {
-    const profile: JudgeReliabilityProfile = {
-      schemaVersion: 1,
-      perSliceType: [{ sliceType, consistency: result.score, blindAccuracyBucket: null, n: result.total }],
-    };
+    // Persist the machine-readable profile the promotion gate consumes. Merge so
+    // a blind-accuracy bucket already written by judge-calibration is preserved
+    // (the two commands own different fields and may run in either order).
+    mergeReliabilityEntry(args.root, { sliceType, consistency: result.score, n: result.total });
     await writeDoc(args.root, join("90-audit", "judge-reliability.md"), {
       frontmatter: { summary: `Judge consistency for ${sliceType}: ${(result.score * 100).toFixed(0)}% invariant under perturbation (n=${result.total}, ${bucket}).` },
       body:
@@ -1333,6 +1346,36 @@ async function judgeStress(args: Record<string, string>): Promise<void> {
   print({ sliceType, ...result, bucket });
 }
 
+/**
+ * judge-calibration (0.9.5): measure the judge's TARGET-TASK accuracy on a blind,
+ * pre-registered ground-truth battery and persist the bucket. This is the
+ * calibration 2606.14629 requires BEFORE a verifier may steer promotion: a judge
+ * that is above-threshold on one slice-type can be sub-threshold on another, and
+ * a confident-but-wrong verifier regresses worse than a random one. The agent
+ * layer runs the judge on the blind battery and passes its picks (`--verdicts`)
+ * alongside the ground-truth labels (`--labels`); the bridge owns the arithmetic
+ * (no model call — N6). Writes `blindAccuracyBucket` into the same per-slice-type
+ * profile entry judge-stress fills, merge-preserving its consistency field.
+ */
+function judgeCalibration(args: Record<string, string>): void {
+  const root = args.root;
+  const sliceType = args["slice-type"];
+  const verdicts = readJSONArg<string[]>(args.verdicts);
+  const labels = readJSONArg<string[]>(args.labels);
+  if (!root || !sliceType || !verdicts || !labels || verdicts.length !== labels.length || verdicts.length === 0) {
+    process.stderr.write(
+      "judge-calibration requires --root, --slice-type, --verdicts <[picked]>, --labels <[groundTruth]> (equal, non-empty arrays).\n",
+    );
+    process.exitCode = 1;
+    return;
+  }
+  const correct = verdicts.filter((v, i) => v === labels[i]).length;
+  const accuracy = correct / verdicts.length;
+  const bucket = bucketOf(accuracy);
+  mergeReliabilityEntry(root, { sliceType, blindAccuracyBucket: bucket, n: verdicts.length });
+  print({ sliceType, accuracy, bucket, correct, n: verdicts.length });
+}
+
 /** The pinned bridge command surface — the interface a variant must preserve. */
 const BRIDGE_COMMANDS = [
   "version", "begin", "record-eval", "eval", "gate", "escalate", "record-votes", "select", "finalize",
@@ -1341,7 +1384,7 @@ const BRIDGE_COMMANDS = [
   "seal", "seal-verify", "seal-crosscheck", "seal-amend", "merge-validate", "merge-compat-propose",
   "merge-compat-approve", "merge-compat-retire", "merge-compat-list",
   "inject", "harness-mine", "harness-promote-mutator", "harness-spawn", "harness-fitness", "harness-select",
-  "harness-promote", "harness-status", "judge-stress",
+  "harness-promote", "harness-status", "judge-stress", "judge-calibration",
 ];
 
 export async function runBridge(argv: string[]): Promise<void> {
@@ -1387,6 +1430,7 @@ export async function runBridge(argv: string[]): Promise<void> {
     case "harness-promote": harnessPromote(args); break;
     case "harness-status": harnessStatus(args); break;
     case "judge-stress": await judgeStress(args); break;
+    case "judge-calibration": judgeCalibration(args); break;
     default:
       process.stderr.write(`unknown bridge subcommand: ${sub}\n`);
       process.exitCode = 1;

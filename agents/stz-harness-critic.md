@@ -34,8 +34,9 @@ not on the training traces.
 ## What you must NOT do
 - Do NOT read which genome authored which output before scoring (authorship bias).
 - Do NOT auto-rewrite anything. You emit a verdict; the bridge `harness-promote`
-  five-gate runs the actual promotion (and it also checks hack-clean on the
-  variant's own outputs, seal integrity, and interface parity).
+  six-gate runs the actual promotion (and it also checks hack-clean on the
+  variant's own outputs, seal integrity, interface parity, and — 0.9.5 — that the
+  selection judge is target-task calibrated, else it fails closed).
 
 Return: a per-substrate comparison table, the budget note, and a PROMOTE /
 HOLD verdict with the deciding reason. The decision is earned, not asserted.

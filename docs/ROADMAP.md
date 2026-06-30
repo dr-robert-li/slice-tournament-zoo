@@ -199,6 +199,20 @@ and 22, with a `prepublishOnly` (typecheck + test) guard before any npm publish.
 Direction for upcoming cycles. These are intent, not yet built; each moves into
 *What was built* when it ships. Ordered roughly by dependency, not date.
 
+### Post-merge exogenous grounding (door A) — pre-registered, gated on the 0.9.5 calibration gate
+
+The survey's one open door is an exogenous correctness signal (α>0) fed each round; the only
+genuinely exogenous SDLC signal is **delayed post-merge reality** (PR-acceptance + downstream
+regression across later commits) — not CI/hidden-test pass, which is the sealed suite (door B).
+`experiments/postmerge-grounding/PREREG.md` pre-registers the test on **real SWE repos** via the
+existing swebench adapter, contamination-controlled by **blind per-instance sealed suites**, and
+**gated through** the 0.9.5 `calibrationGate` (the post-merge signal is just another verifier and
+must pass calibration before it may steer). Symmetric-error null; continuity over merge cycles is
+the real test (plateau/decline is a valid, reportable result). **Scope:** a live
+prod/canary/incident **telemetry plane is a v2 item, gated on this probe** returning a non-null,
+non-degrading result — real-repo git history substitutes for it here; a null stops the line (no
+plane is built). It would breach N9 (single-repo, local) and is not built in v1.
+
 ### Additional agentic-coding runtimes
 
 Today STZ drives its specimens/judge/test-author as **Claude Code** in-session
@@ -663,7 +677,7 @@ pays. The per-slice tournament is **untouched** (earned-correct: best-of-N + goo
 selection). 0.9.0 adds a separate, **opt-in, default-off** meta-loop that evolves
 the **harness itself** — a DGM/HarnessX-style population of harness variants,
 selected by GRPO group-relative advantage on **held-out, recall-free** pilot
-fitness, with a five-gate promotion guard.
+fitness, with a six-gate promotion guard (0.9.5 adds calibrated-verifier gating).
 
 #### Grounding (2024–2026 literature)
 
@@ -701,18 +715,21 @@ per slice — the entire redirect.
 half i) · `harness-promote-mutator` (append a verified mutator to the battery) ·
 `harness-spawn` (DGM parent-sampling) · `harness-fitness` (AceGRPO-weighted
 held-out fitness → `ArchiveEntry`) · `harness-select` (GRPO advantage + diversity
-guard) · `harness-promote` (five-gate) · `harness-status` · `judge-stress`
-(consistency CI). Driven by `commands/stz-evolve.md` and `commands/stz-inject.md`;
+guard) · `harness-promote` (six-gate) · `harness-status` · `judge-stress`
+(consistency CI) · `judge-calibration` (0.9.5 — blind target-task accuracy →
+`60-harness/judge-reliability.json`). Driven by `commands/stz-evolve.md` and `commands/stz-inject.md`;
 config via the optional `harness` block in `run-config.json`.
 
-#### The five-gate promotion guard (DGM hack-resistance built in)
+#### The six-gate promotion guard (DGM hack-resistance built in)
 
 A variant becomes the incumbent ONLY if it (1) beats the incumbent on held-out
 fitness AND (2) is **hack-clean on its OWN outputs** (it cannot win by weakening
 its own gate — the DGM self-detector-bypass failure) AND (3) preserved sealing
 integrity (`verifySeal`) AND (4) interface parity (`harness-hash.ts`) AND (5)
-came from a diverse (non-collapsed) generation. Kill-switches **halt and surface**;
-nothing ever auto-rewrites its own guard.
+came from a diverse (non-collapsed) generation AND (6, **0.9.5**) its selection
+**judge is target-task calibrated** (`calibrationGate` — fail-closed; an
+uncalibrated verifier silently regresses, arXiv:2606.14629). Kill-switches
+**halt and surface**; nothing ever auto-rewrites its own guard.
 
 #### Discipline (earned, not asserted)
 
@@ -729,8 +746,9 @@ unprobed contract is required for any generalization claim.
 | `harness-select` σ < `diversityFloor` | Variance collapse — generation is non-discriminating | Do not promote; re-sample with forced gene diversity (RC-GRPO) |
 | two BARREN generations in a row | Converged — nothing beats the incumbent | Halt; incumbent stands (anti-build null — a SUCCESS) |
 | `harness-mine` mutator killed by incumbent suite | Not a blind spot | Reject the candidate skill as a no-op |
-| five-gate `promote:false` with `hack-findings-on-own-outputs` | Variant tried to win by weakening its gate | Reject; the DGM failure mode, caught |
+| six-gate `promote:false` with `hack-findings-on-own-outputs` | Variant tried to win by weakening its gate | Reject; the DGM failure mode, caught |
 | `judge-stress` consistency below threshold for a slice-type | Judge unreliable here | Down-weight the judge; lean on the sealed/truth divergence backstop |
+| six-gate `promote:false` with `judge-rubric-not-calibrated` (0.9.5) | Selection judge not target-task calibrated (or `--slice-type` omitted) | Run `judge-calibration` on a blind battery first; gate is fail-closed by design |
 
 ---
 
@@ -751,3 +769,36 @@ Build log: `docs/JOURNAL.md`. The remaining open questions (a correctness-tracki
 rubric, a non-sealed-derived numeric proxy, frontier-vs-frontier at scale, cross-slice
 amortization on a family with a shared bug class, and SWE-Bench as a deciding instrument)
 are in the paper's Section 8.
+
+## 0.9.5 — calibrated-verifier gating + a Well-Architected authoring gene — ✅ BUILT
+
+The post-Opus-4.8 RSI literature was surveyed against STZ's earned negative
+(`experiments/META-RSI-SURVEY.md`). It did not rescue the negative; it corroborated it and
+handed over a proof of *why*, plus two **earned** moves that satisfy both competency-and-
+compatibility, which 0.9.5 ships:
+
+- **Calibrated-verifier gating (the sixth promotion gate).** [arXiv:2606.14629](https://arxiv.org/abs/2606.14629)
+  (*When Good Verifiers Go Bad*) sharpened the open door: an exogenous verifier each round is
+  **necessary but not sufficient** — it must be **target-task calibrated before it steers**, or
+  it silently regresses the result (above-threshold-on-A can be sub-threshold-on-B;
+  confident-but-wrong regresses worse than random). STZ's own judge-shipped-c4-worse
+  (`experiments/judge-selection/`) is an on-data instance. 0.9.5 adds `judge-calibration`
+  (measures judge target-task accuracy on a blind, pre-registered battery → persisted
+  `60-harness/judge-reliability.json`) and a **fail-closed** sixth gate `rubricCalibrated`
+  in `promotionGate` (`src/harness.ts`, `src/judge-reliability.ts:calibrationGate`). It buys
+  **bounded-safe**, not continuous, improvement — it stops the loop going negative. This
+  *validates and sharpens* the existing guard architecture (bounded depth F14 +
+  judge-reliability gating + variance floor + halt-and-surface F19).
+- **WAF authoring gene `waf-playbook-autogen-v0` (G1).** A `heuristicId` branch in
+  `agents/stz-test-author.md` lets the test author consult the AWS Well-Architected Agentic AI
+  Lens playbooks to sharpen negative/edge cases for behaviour the contract already specifies —
+  **one-time amortized authoring**, the survey's earned WAF result. **Goodhart-guarded:** WAF
+  never adds an unstated requirement and no LLM-judged WAF-conformance score is ever a fitness
+  signal (weights tuple untouched; promotion stays on held-out functional fitness). STZ already
+  maps strongly onto the Agentic AI Lens (`docs/CLAUDE.md` §5); the remaining Lens gaps
+  (AGENTCOST05 per-agent cost-attribution, AGENTSEC07 rogue-agent detection beyond static L3)
+  are conformance items, not loops.
+
+The honest headline (carried from the survey): **no validated *continuous*-competency win
+exists in the window.** 0.9.5 ships only what is earned (degradation-safety + authoring) and
+pre-registers the one speculative direction (door A) as a gated experiment (below).

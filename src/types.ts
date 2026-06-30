@@ -387,6 +387,6 @@ export interface ArchiveEntry {
   advantage: number;
   /** For parent-sampling P ∝ fitness/(1+childCount). */
   childCount: number;
-  /** The five-gate promotion verdict snapshot. */
-  gates: { hackClean: boolean; sealOk: boolean; interfaceParity: boolean; diversityOk: boolean; beatsIncumbent: boolean };
+  /** The six-gate promotion verdict snapshot (0.9.5 adds rubricCalibrated). */
+  gates: { hackClean: boolean; sealOk: boolean; interfaceParity: boolean; diversityOk: boolean; beatsIncumbent: boolean; rubricCalibrated: boolean };
 }

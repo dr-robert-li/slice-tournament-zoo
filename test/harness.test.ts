@@ -18,9 +18,12 @@ import {
   readArchive,
   incumbent,
   bumpChildCount,
+  readReliabilityProfile,
+  mergeReliabilityEntry,
 } from "../src/harness.js";
 import { initialInject, onInjectRound, MAX_INJECT_ROUNDS } from "../src/injector.js";
-import { consistencyScore, bucketOf, trustGate, type JudgeReliabilityProfile } from "../src/judge-reliability.js";
+import { consistencyScore, bucketOf, trustGate, calibrationGate, type JudgeReliabilityProfile } from "../src/judge-reliability.js";
+import { REWARD_WEIGHTS } from "../src/selection.js";
 import { measureCodeHealth, loadBattery, type MutatorSpec } from "../src/eval-runner.js";
 import { suspicionScore } from "../src/hack-detector.js";
 import type { ArchiveEntry } from "../src/types.js";
@@ -119,12 +122,15 @@ describe("harness — archive, parent-sampling, FSM, promotion gate", () => {
     expect(onGeneration(e, { promoted: true, collapsed: false }).next.stage).toBe("exhausted");
   });
 
-  it("promotion gate requires ALL five gates", () => {
-    const ok = { beatsIncumbent: true, hackClean: true, sealOk: true, interfaceParity: true, diversityOk: true };
+  it("promotion gate requires ALL six gates", () => {
+    const ok = { beatsIncumbent: true, hackClean: true, sealOk: true, interfaceParity: true, diversityOk: true, rubricCalibrated: true };
     expect(promotionGate(ok).promote).toBe(true);
     expect(promotionGate({ ...ok, hackClean: false }).promote).toBe(false);
     expect(promotionGate({ ...ok, beatsIncumbent: false }).failed).toContain("does-not-beat-incumbent");
     expect(promotionGate({ ...ok, interfaceParity: false }).failed).toContain("interface-parity-broken");
+    // 0.9.5 calibrated-verifier gate: an uncalibrated judge cannot steer promotion.
+    expect(promotionGate({ ...ok, rubricCalibrated: false }).promote).toBe(false);
+    expect(promotionGate({ ...ok, rubricCalibrated: false }).failed).toContain("judge-rubric-not-calibrated");
   });
 
   it("bumpChildCount increments lineage bookkeeping", () => {
@@ -141,7 +147,7 @@ describe("harness — archive, parent-sampling, FSM, promotion gate", () => {
 });
 
 function gates(): ArchiveEntry["gates"] {
-  return { hackClean: false, sealOk: false, interfaceParity: false, diversityOk: false, beatsIncumbent: false };
+  return { hackClean: false, sealOk: false, interfaceParity: false, diversityOk: false, beatsIncumbent: false, rubricCalibrated: false };
 }
 
 describe("injector — bounded suite-hardening FSM", () => {
@@ -189,6 +195,58 @@ describe("judge-reliability", () => {
     expect(trustGate(profile, "parser").trust).toBe(true);
     expect(trustGate(profile, "flaky").trust).toBe(false);
     expect(trustGate(profile, "unseen").trust).toBe(true); // default trust, flagged
+  });
+
+  it("calibrationGate is FAIL-CLOSED where trustGate default-trusts (0.9.5)", () => {
+    const profile: JudgeReliabilityProfile = {
+      schemaVersion: 1,
+      perSliceType: [
+        { sliceType: "calibrated", consistency: 0.95, blindAccuracyBucket: "high", n: 20 },
+        { sliceType: "no-battery", consistency: 0.95, blindAccuracyBucket: null, n: 20 }, // battery not run
+        { sliceType: "low-acc", consistency: 0.95, blindAccuracyBucket: "low", n: 20 },
+        { sliceType: "inconsistent", consistency: 0.5, blindAccuracyBucket: "high", n: 20 },
+      ],
+    };
+    // calibrated only when bucket non-null AND not "low" AND consistency ≥ threshold
+    expect(calibrationGate(profile, "calibrated").calibrated).toBe(true);
+    expect(calibrationGate(profile, "no-battery").calibrated).toBe(false); // null bucket
+    expect(calibrationGate(profile, "low-acc").calibrated).toBe(false); // low accuracy
+    expect(calibrationGate(profile, "inconsistent").calibrated).toBe(false); // sub-threshold consistency
+    // the divergence from trustGate: an unseen slice-type defaults TRUST but NOT calibrated
+    expect(trustGate(profile, "unseen").trust).toBe(true);
+    expect(calibrationGate(profile, "unseen").calibrated).toBe(false);
+  });
+});
+
+describe("WAF gene Goodhart guard (0.9.5) — WAF can never be a reward weight", () => {
+  // The prose guard ("WAF stays authoring, never a reward") rots; this enforces it.
+  // Selection weights are a fixed 5-tuple; a WAF-conformance key must never appear.
+  const EXPECTED = ["clean", "codeHealth", "coverage", "kill", "pass"];
+  it("defaultGenome and REWARD_WEIGHTS carry exactly the 5 selection weights, no WAF key", () => {
+    expect(Object.keys(defaultGenome().weights).sort()).toEqual(EXPECTED);
+    expect(Object.keys(REWARD_WEIGHTS).sort()).toEqual(EXPECTED);
+    expect(Object.keys(REWARD_WEIGHTS).some((k) => /waf|architect|conform/i.test(k))).toBe(false);
+  });
+});
+
+describe("judge-reliability profile persistence (0.9.5 merge-not-clobber)", () => {
+  it("judge-stress (consistency) and judge-calibration (bucket) merge without clobbering", () => {
+    const root = mkdtempSync(join(tmpdir(), "stz-rel-"));
+    try {
+      // empty profile until anything is written
+      expect(readReliabilityProfile(root).perSliceType.length).toBe(0);
+      // calibration writes the bucket first (consistency defaults to 0)
+      mergeReliabilityEntry(root, { sliceType: "parser", blindAccuracyBucket: "high", n: 12 });
+      // then consistency arrives and must NOT wipe the bucket
+      mergeReliabilityEntry(root, { sliceType: "parser", consistency: 0.95, n: 20 });
+      const entry = readReliabilityProfile(root).perSliceType.find((e) => e.sliceType === "parser")!;
+      expect(entry.consistency).toBeCloseTo(0.95, 9);
+      expect(entry.blindAccuracyBucket).toBe("high"); // preserved across the second write
+      // and the now-complete entry calibrates
+      expect(calibrationGate(readReliabilityProfile(root), "parser").calibrated).toBe(true);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
   });
 });
 

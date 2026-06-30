@@ -6,6 +6,71 @@ and the project aims to follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.9.5]
+
+Calibrated-verifier gating + a Well-Architected authoring gene — both **earned**
+from `experiments/META-RSI-SURVEY.md` (the post-Opus-4.8 RSI survey), and a
+pre-registered post-merge-grounding experiment that is **designed, not shipped**.
+The survey's verdict held: there is no validated *continuous*-competency win, so
+this release ships the two things that *are* earned (a degradation-safety gate and
+one-time authoring) and gates the speculative third behind a probe.
+
+### Added
+
+- **`judge-calibration` bridge command + persisted `60-harness/judge-reliability.json`.**
+  The judge's **target-task accuracy** is measured on a blind, pre-registered
+  ground-truth battery (`--verdicts` vs `--labels`) and persisted as a per-slice-type
+  `blindAccuracyBucket`. `judge-stress` now persists `consistency` into the same
+  profile; the two **merge** (neither clobbers the other), so the promotion gate
+  finally has a complete machine-readable profile to read. Motivated by
+  [arXiv:2606.14629](https://arxiv.org/abs/2606.14629) (*When Good Verifiers Go
+  Bad*): an exogenous verifier is necessary but **not sufficient** — above-threshold
+  on one slice-type can be sub-threshold on another, and a confident-but-wrong
+  verifier silently regresses the result. Calibrate **before** it steers.
+- **Sixth promotion gate `rubricCalibrated` (fail-closed).** `promotionGate` now
+  refuses a variant whose selection judge is not target-task calibrated
+  (failure string `judge-rubric-not-calibrated`). Deliberately stricter than the
+  runtime `trustGate`, which default-*trusts* a missing profile so the live
+  pipeline is never blocked: `calibrationGate` default-*distrusts* (a missing
+  `--slice-type` or an un-run battery reads as uncalibrated). This buys
+  **bounded-safe** improvement — it stops the loop going *negative*; it does **not**
+  promise continuity (above-threshold still hits diminishing returns).
+- **WAF authoring heuristic `waf-playbook-autogen-v0` (gene G1).** A `heuristicId`
+  branch in `agents/stz-test-author.md`: the test author may consult the AWS
+  Well-Architected Agentic AI Lens playbooks to sharpen negative/edge cases for
+  reliability/observability/guardrail behaviour **the contract already specifies** —
+  one-time amortized authoring. **Goodhart guard (load-bearing):** WAF practices
+  never add a requirement the contract is silent on, and **no LLM-judged
+  WAF-conformance score is ever a fitness/reward signal** (the `weights` tuple is
+  untouched; promotion stays on held-out functional fitness only). WAF adherence is
+  an *authoring* gain, never a loop.
+
+### Experiments
+
+- **`experiments/postmerge-grounding/PREREG.md`** — pre-registered, **not shipped**.
+  Tests door A (delayed post-merge reality as the only true exogenous α>0 signal) on
+  **real SWE repos** via the existing swebench adapter, contamination-controlled by
+  blind per-instance sealed suites, **gated through** the new calibration gate.
+  Symmetric-error null; a null/plateau stops the line. A live prod-telemetry plane
+  is a **v2 item gated on this probe** returning a non-null, non-degrading result.
+
+## [0.9.0]
+
+(Recorded retroactively — the manifest version had advanced to 0.9.0 without a
+matching CHANGELOG section; reconciled here.) Bounded **harness-level recursive
+self-improvement** meta-loop (opt-in, default-off): a DGM-style content-addressed
+archive of harness variants (`.stz/60-harness/`, parent-sampling P ∝
+fitness/(1+children)) selected by GRPO group-relative advantage on held-out,
+recall-free pilot fitness, guarded by a variance-collapse floor (`src/diversity.ts`)
+and a **five-gate** promotion check (beats-incumbent · hack-clean-on-own-outputs ·
+seal-integrity · interface-parity `src/harness-hash.ts` · diverse-generation). Flagship
+gene: automated suite-sharpening (`harness-mine` twice-verifies a blind-spot bug
+class, `harness-promote-mutator` bakes it into the battery). Judge-reliability layer
+(`src/judge-reliability.ts`, consistency + per-slice-type trust gating, no naive
+ensembles). The competency claim was tested and is an **earned negative**
+(`docs/PAPER.md`): the mechanism works; a broad continuous-competency lift does not
+follow. Every kill-switch halts and surfaces.
+
 ## [0.7.3]
 
 Release automation. First release published through CI with **provenance** (the
