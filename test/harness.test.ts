@@ -23,6 +23,7 @@ import {
 } from "../src/harness.js";
 import { initialInject, onInjectRound, MAX_INJECT_ROUNDS } from "../src/injector.js";
 import { consistencyScore, bucketOf, trustGate, calibrationGate, type JudgeReliabilityProfile } from "../src/judge-reliability.js";
+import { REWARD_WEIGHTS } from "../src/selection.js";
 import { measureCodeHealth, loadBattery, type MutatorSpec } from "../src/eval-runner.js";
 import { suspicionScore } from "../src/hack-detector.js";
 import type { ArchiveEntry } from "../src/types.js";
@@ -214,6 +215,17 @@ describe("judge-reliability", () => {
     // the divergence from trustGate: an unseen slice-type defaults TRUST but NOT calibrated
     expect(trustGate(profile, "unseen").trust).toBe(true);
     expect(calibrationGate(profile, "unseen").calibrated).toBe(false);
+  });
+});
+
+describe("WAF gene Goodhart guard (0.9.5) — WAF can never be a reward weight", () => {
+  // The prose guard ("WAF stays authoring, never a reward") rots; this enforces it.
+  // Selection weights are a fixed 5-tuple; a WAF-conformance key must never appear.
+  const EXPECTED = ["clean", "codeHealth", "coverage", "kill", "pass"];
+  it("defaultGenome and REWARD_WEIGHTS carry exactly the 5 selection weights, no WAF key", () => {
+    expect(Object.keys(defaultGenome().weights).sort()).toEqual(EXPECTED);
+    expect(Object.keys(REWARD_WEIGHTS).sort()).toEqual(EXPECTED);
+    expect(Object.keys(REWARD_WEIGHTS).some((k) => /waf|architect|conform/i.test(k))).toBe(false);
   });
 });
 
