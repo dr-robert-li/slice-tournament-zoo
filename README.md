@@ -268,7 +268,9 @@ tournament stays exactly as above; a separate, default-off meta-loop evolves the
 harness *genome* (test-author heuristics, specimen strategies, judge rubric,
 selection weights, fan-out, the suite battery) against **held-out, recall-free**
 pilot fitness — a DGM/HarnessX-style archive selected by GRPO advantage with a
-five-gate promotion guard.
+six-gate promotion guard (0.9.5 adds calibrated-verifier gating: a selection
+judge must pass a blind target-task accuracy battery before it may steer a
+promotion, fail-closed).
 
 ```text
 /stz:inject slice-01     # adversarially harden the sealed suite (find blind spots)
@@ -284,8 +286,10 @@ loop (ruled out budget-matched and recall-free; see `docs/ROADMAP.md` and
 `experiments/swebench-pilot/PILOT-RESULTS-{BLIND,JUDGE}.md`). Bridge primitives:
 `inject`, `harness-mine`, `harness-promote-mutator`, `harness-spawn`,
 `harness-fitness`, `harness-select`, `harness-promote`, `harness-status`,
-`judge-stress`. Every kill-switch halts and surfaces; nothing auto-rewrites its
-own guard.
+`judge-stress`, `judge-calibration`. A 0.9.5 authoring gene
+(`waf-playbook-autogen-v0`) lets the test author bake AWS Well-Architected
+playbook edge-cases for contracted behaviour (one-time, never a reward). Every
+kill-switch halts and surfaces; nothing auto-rewrites its own guard.
 
 ## Example commands and workflows
 
