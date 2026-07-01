@@ -1,0 +1,5 @@
+{"seq":0,"type":"artifact_accepted","artifactId":"pred.filter-nonmutation.v1","artifactKind":"predicate","reasons":["composite +5.00%"],"evidenceRuns":["synthetic"]}
+{"seq":1,"type":"artifact_quarantined","artifactId":"pred.no-dep.v1","artifactKind":"predicate","reasons":["contract-bearing: requires human 7th-gate acceptance"],"evidenceRuns":["synthetic"]}
+{"seq":2,"type":"artifact_quarantined","artifactId":"test.sharpened-suite.v1","artifactKind":"test","reasons":["execution-test-only win — test-sharpening guard (docs/PAPER.md)"],"evidenceRuns":["synthetic"]}
+{"seq":3,"type":"artifact_rejected","artifactId":"contract_delta.bad.v1","artifactKind":"contract_delta","reasons":["severe regression on held-out set"],"evidenceRuns":["synthetic"]}
+{"seq":4,"type":"artifact_rejected","artifactId":"pred.interface-broken.v1","artifactKind":"predicate","reasons":["six-gate failed: interfaceParity"],"evidenceRuns":["synthetic"]}

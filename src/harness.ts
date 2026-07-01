@@ -44,6 +44,8 @@ export function defaultGenome(): HarnessGenome {
     weights: { pass: 0.45, coverage: 0.2, kill: 0.2, codeHealth: 0.1, clean: 0.05 },
     fanout: 4,
     votesPerPair: 8,
+    // G7 (0.9.6): default edge→predicate crystallizer. A free string; agents route it.
+    crystallizationHeuristicId: "edge-to-predicate-v0",
   };
 }
 

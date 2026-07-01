@@ -1,0 +1,47 @@
+{
+  "substrate": "promotion-ledger-decision-matrix",
+  "decisions": [
+    {
+      "artifactId": "pred.filter-nonmutation.v1",
+      "kind": "predicate",
+      "decision": "promote",
+      "reasons": [
+        "composite +5.00%"
+      ]
+    },
+    {
+      "artifactId": "pred.no-dep.v1",
+      "kind": "predicate",
+      "decision": "quarantine",
+      "reasons": [
+        "contract-bearing: requires human 7th-gate acceptance"
+      ]
+    },
+    {
+      "artifactId": "test.sharpened-suite.v1",
+      "kind": "test",
+      "decision": "quarantine",
+      "reasons": [
+        "execution-test-only win — test-sharpening guard (docs/PAPER.md)"
+      ]
+    },
+    {
+      "artifactId": "contract_delta.bad.v1",
+      "kind": "contract_delta",
+      "decision": "reject",
+      "reasons": [
+        "severe regression on held-out set"
+      ]
+    },
+    {
+      "artifactId": "pred.interface-broken.v1",
+      "kind": "predicate",
+      "decision": "reject",
+      "reasons": [
+        "six-gate failed: interfaceParity"
+      ]
+    }
+  ],
+  "earned": true,
+  "verdict": "EARNED — a contract-bearing artifact PROMOTES; a test-only win QUARANTINES (proven test-sharpening guard fires); the 7th human gate and six-gate guard both decline correctly."
+}

@@ -1,0 +1,45 @@
+{
+  "requirement": {
+    "schemaVersion": 1,
+    "id": "req.pad.no-gratuitous-dep.v1",
+    "kind": "requirement",
+    "state": "accepted",
+    "title": "padLeft without gratuitous dependencies",
+    "statement": "padLeft(s, n, fill) left-pads correctly AND the change introduces no new runtime dependency (the stdlib suffices).",
+    "rationale": "A behaviourally-correct patch that pulls in a dependency for a stdlib-trivial job is a real, common architectural defect (supply-chain surface, bloat) that no functional test can catch — the canonical example of a signal class orthogonal to functional testing.",
+    "owner": "dr-robert-li",
+    "acceptance": { "predicates": ["pred.pad.no-new-dependency.v1", "pred.pad.canonical-behaviour.v1"], "tests": [] },
+    "risk": { "severity": "high", "surfaces": ["dependencies", "architecture"] },
+    "provenance": { "proposedByRun": "earn-phase1-prereg", "acceptedBy": "dr-robert-li", "acceptedAt": "2026-07-01" }
+  },
+  "predicates": [
+    {
+      "schemaVersion": 1,
+      "id": "pred.pad.no-new-dependency.v1",
+      "kind": "predicate",
+      "state": "accepted",
+      "requirement": "req.pad.no-gratuitous-dep.v1",
+      "type": "compatibility-check",
+      "scope": { "symbols": ["padLeft", "package.json:dependencies"] },
+      "checks": [
+        { "checkId": "no-new-dep", "kind": "diff-constraint", "expect": "false", "description": "candidate must not add a runtime dependency vs baseline (structural, not behavioural)" }
+      ],
+      "severity": "high",
+      "provenance": { "proposedByRun": "earn-phase1-prereg", "acceptedBy": "dr-robert-li", "acceptedAt": "2026-07-01" }
+    },
+    {
+      "schemaVersion": 1,
+      "id": "pred.pad.canonical-behaviour.v1",
+      "kind": "predicate",
+      "state": "accepted",
+      "requirement": "req.pad.no-gratuitous-dep.v1",
+      "type": "postcondition",
+      "scope": { "symbols": ["padLeft"] },
+      "checks": [
+        { "checkId": "canonical", "kind": "output-assertion", "input": "SENTINEL_BEHAVIOUR", "expect": "true", "description": "sanity: the candidate is behaviourally correct (guards against a vacuous all-fail contract)" }
+      ],
+      "severity": "low",
+      "provenance": { "proposedByRun": "earn-phase1-prereg", "acceptedBy": "dr-robert-li", "acceptedAt": "2026-07-01" }
+    }
+  ]
+}

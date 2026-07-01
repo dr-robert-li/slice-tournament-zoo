@@ -278,6 +278,38 @@ cron, ipv4, and hexcolor is evidence about that family rather than a law about a
   authored blind to the oracle would let a real benchmark decide the build, at the cost of
   the train-on-test risk that has to be controlled.
 
+### 8.1 The 0.9.6 contract plane — a different signal class, earned then wired
+
+Every negative in §6 concerns signals *derived from the sealed suite* — iterate-to-green,
+judge-beyond-suite, numeric-gene reweighting. All are functions of what a functional
+suite can see. 0.9.6 introduces a signal that is not: **typed contract predicates**,
+including architectural/`diff-constraint` classes ("no new dependency", "only files
+under X change") that no functional test can express *by construction*, because they are
+properties of the change, not behaviours of the program. This is not a re-derivation of
+the earned negatives; it changes the selection *object*, not the weight (the numeric-gene
+negative already ruled out reweighting).
+
+The claim is deliberately narrow and honestly bounded:
+- **Earned (mechanism, on substrates):** an accepted predicate separates a naive impl
+  from a good-faith suite (Phase 1), and *changes tournament selection* against STZ's own
+  multi-objective reward — verified that `codeHealth` is literally blind to `package.json`
+  so the win is not redundant with the shipped reward (Phase 3). Human acceptance is the
+  sole path to trusted state (the α>0 exogenous signal); an agent role is rejected as
+  approver in code.
+- **NOT shown:** any field-scale outcome on a real held-out issue stream. Every earn rides
+  two hand-picked toy axes (dependency, file-scope), not a distribution. Two candidate
+  positives were *rejected* mid-build as manufactured — a rigged separation substrate
+  (ipv4 octet-range, which a good-faith suite catches) and an amortization-fallacy cost
+  claim (retrieval "6× cheaper", circular at n=1). The symmetric-error rule cuts both
+  ways: refusing a staged positive and preserving a real one are the same discipline.
+
+The plane is wired into `select()` behind a **default-off flag**; flag-off is
+byte-identical to 0.9.5 (integration-tested), so the capability is dormant until a human
+turns it on with an accepted contract — the boundedness is the point. Phase-by-phase
+build/eval/verdicts (including deferred and mechanism-only) are in
+`experiments/0.9.6-progression/`. The open cell of §8 remains open: this earns the
+*mechanism* of the missing signal class, not the field win that would close it.
+
 ## 9. Reproducibility
 
 Each substrate under `experiments/` ships a `PREREG.md` committed before specimens, a

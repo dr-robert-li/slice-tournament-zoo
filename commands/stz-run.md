@@ -193,8 +193,22 @@ on prose-only acceptance (F2).
    `{a,b,winner}` and `$STZ bridge record-votes --root . --slice $1 --votes
    votes.json`.
 
+7b. **Contract verify (0.9.6, only when `contract.enabled` in run-config).** If a
+    contract slice is bound, spawn ONE `stz-contract-verifier` subagent to score
+    each surviving specimen's diff against the bound slice's accepted predicates,
+    and write a per-specimen results map to `40-slices/$1/tournament/contract-scores.json`
+    (shape: `{ "<specimen>": PredicateResult[] }`). Skip this step entirely when
+    the flag is off — the tournament then runs exactly as 0.9.5. (The bound slice
+    itself is authored earlier by `stz-contract-architect` before `/stz:slice`,
+    proposed-only, and crosses to accepted solely via `$STZ bridge contract-accept`
+    — the human 7th gate.)
+
 8. **Select.** `$STZ bridge select --root . --slice $1`. The bridge runs the
    two-stage selection + GRPO and returns `{winner, ranking, advantages}`.
+   **0.9.6:** when step 7b produced `contract-scores.json`, add
+   `--contract-scores 40-slices/$1/tournament/contract-scores.json` — specimens
+   that hard-fail a high-severity contract predicate are eliminated at the gate
+   (contract = definition of winner). Omit the flag ⇒ 0.9.5 selection, unchanged.
 
 8b. **Winner approval gate (human-in-the-loop).** Before merging, show the user
     the winner, the ranking, the GRPO advantages, and any disqualified specimens

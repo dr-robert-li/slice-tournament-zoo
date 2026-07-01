@@ -1,0 +1,25 @@
+{
+  "substrate": "pad-no-new-dependency (selection-change)",
+  "candidates": [
+    {
+      "candidateId": "naive",
+      "testPassRate": 1,
+      "hardFail": true,
+      "hardFailReasons": [
+        "pred.pad.no-new-dependency.v1"
+      ],
+      "contractScore": 0.5
+    },
+    {
+      "candidateId": "correct",
+      "testPassRate": 1,
+      "hardFail": false,
+      "hardFailReasons": [],
+      "contractScore": 1
+    }
+  ],
+  "testsOnlyWinner": "naive",
+  "contractAwareWinner": "correct",
+  "changed": true,
+  "verdict": "EARNED — tests-only picked 'naive' (passes the suite) but it hard-failed a high-severity predicate; the contract changed the winner to 'correct'. An accepted predicate caught a passing-but-non-conforming candidate (functionally correct, but violates an architectural predicate) and moved selection."
+}

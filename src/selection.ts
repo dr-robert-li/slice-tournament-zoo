@@ -21,8 +21,20 @@ import type {
 } from "./types.js";
 import { groupRelativeAdvantage } from "./grpo.js";
 
-/** Stage 1: eliminate specimens that fail the gate or trip a hack pattern. */
-export function evalGate(results: EvalResult[]): {
+/**
+ * 0.9.6 Contract Plane hook. When a contract slice is bound (and the feature flag
+ * is on), a specimen that hard-fails a high-severity contract predicate is
+ * eliminated at the gate — the contract becomes part of the *definition of
+ * winner*, before ranking. Absent ⇒ identical to 0.9.5 (zero regression).
+ */
+export type ContractGate = (specimen: SpecimenId) => { hardFail: boolean; reasons: string[] } | null;
+
+/** Stage 1: eliminate specimens that fail the gate, trip a hack pattern, or (0.9.6)
+ *  hard-fail a bound contract predicate. `contractGate` optional — omitted ⇒ 0.9.5. */
+export function evalGate(
+  results: EvalResult[],
+  contractGate?: ContractGate,
+): {
   passers: SpecimenId[];
   eliminated: { specimen: SpecimenId; reason: string }[];
 } {
@@ -40,7 +52,12 @@ export function evalGate(results: EvalResult[]): {
         reason: `gate-fail: testPassRate=${r.testPassRate.toFixed(2)}`,
       });
     } else {
-      passers.push(r.specimen);
+      const cg = contractGate?.(r.specimen);
+      if (cg?.hardFail) {
+        eliminated.push({ specimen: r.specimen, reason: `contract-fail: ${cg.reasons.join(", ")}` });
+      } else {
+        passers.push(r.specimen);
+      }
     }
   }
   return { passers, eliminated };
@@ -100,12 +117,14 @@ export function evalReward(r: EvalResult): number {
   return Math.max(0, Math.min(1, reward));
 }
 
-/** Full two-stage selection producing a Judgment (F7 + F8). */
+/** Full two-stage selection producing a Judgment (F7 + F8). `contractGate`
+ *  optional (0.9.6) — omitted ⇒ behaves exactly as 0.9.5. */
 export function select(
   results: EvalResult[],
   votes: PairwiseVote[],
+  contractGate?: ContractGate,
 ): { judgment: Judgment; eliminated: { specimen: SpecimenId; reason: string }[] } {
-  const { passers, eliminated } = evalGate(results);
+  const { passers, eliminated } = evalGate(results, contractGate);
   const rewardByName = new Map(results.map((r) => [r.specimen, evalReward(r)]));
   const rewardOf = (s: SpecimenId) => rewardByName.get(s) ?? 0;
 
