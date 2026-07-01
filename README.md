@@ -403,6 +403,32 @@ Note: the standalone mock demo (`stz run`, no Claude Code) runs all eight phases
 inside a single slice for a self-contained, no-network smoke test. The two-level
 split above is the real in-session flow.
 
+## Contract Plane (0.9.6, optional, default-off)
+
+0.9.6 adds a **Contract Plane** — a typed, human-gated correctness object the
+arena competes against, so tests stop being the *only* definition of winner. A
+`requirement` decomposes into machine-checkable `predicate`s (cheap kinds only:
+diff-constraint, output-assertion, JSON/file invariant — no runtime
+instrumentation). Agents **propose** predicates; a human **alone accepts** them
+(the 7th gate) — the one exogenous signal that makes the self-improvement bounded.
+
+When enabled (`RunConfig.contract.enabled`, off by default), a specimen that
+hard-fails a high-severity accepted predicate is eliminated in `select()` — even
+if it passes the sealed suite and STZ's multi-objective reward. Flag off ⇒ the
+tournament is **byte-identical to 0.9.5** (proven by an integration test).
+
+```bash
+stz bridge separation-gate --root . --contract preds.json --impl naive.mjs --suite suite.mjs   # Phase-1 go/no-go
+stz bridge contract-accept  --artifact req.json --approver "your-name" --at 2026-07-02          # human 7th gate
+```
+
+Commands: `/stz:contract` (draft → verify → separation-gate → accept),
+`/stz:eval` (Phase-0 baseline). The capability was built **earned-first**: every
+piece was validated on a substrate before being wired in — see
+[`experiments/0.9.6-progression/`](experiments/0.9.6-progression/) for the
+phase-by-phase build/eval/results (honest yes/no per phase, including deferred
+and mechanism-only verdicts).
+
 ## The `.stz/` audit tree
 
 | Tier | Purpose |

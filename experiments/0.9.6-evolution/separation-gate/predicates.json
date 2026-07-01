@@ -1,0 +1,81 @@
+{
+  "requirement": {
+    "schemaVersion": 1,
+    "id": "req.ipv4.strict-validation.v1",
+    "kind": "requirement",
+    "state": "accepted",
+    "title": "Strict IPv4 validation",
+    "statement": "isIPv4(s) accepts a string iff it is a canonical dotted-decimal IPv4 address: four octets, each an integer 0..255, no leading zeros.",
+    "rationale": "Downstream ACL and routing logic trusts the validator; an out-of-range or leading-zero octet is a security-relevant defect a shape-only regex misses.",
+    "owner": "dr-robert-li",
+    "acceptance": {
+      "predicates": [
+        "pred.ipv4.octet-range.v1",
+        "pred.ipv4.reject-256.v1",
+        "pred.ipv4.no-leading-zero.v1",
+        "pred.ipv4.accept-canonical.v1"
+      ],
+      "tests": []
+    },
+    "risk": { "severity": "high", "surfaces": ["validation", "security"] },
+    "provenance": { "proposedByRun": "separation-gate-prereg", "acceptedBy": "dr-robert-li", "acceptedAt": "2026-07-01" }
+  },
+  "predicates": [
+    {
+      "schemaVersion": 1,
+      "id": "pred.ipv4.octet-range.v1",
+      "kind": "predicate",
+      "state": "accepted",
+      "requirement": "req.ipv4.strict-validation.v1",
+      "type": "boundary-condition",
+      "scope": { "symbols": ["isIPv4"] },
+      "checks": [
+        { "checkId": "octet-999", "kind": "output-assertion", "input": "999.1.1.1", "expect": "false", "description": "octet 999 > 255 must be rejected" }
+      ],
+      "severity": "high",
+      "provenance": { "proposedByRun": "separation-gate-prereg", "acceptedBy": "dr-robert-li", "acceptedAt": "2026-07-01" }
+    },
+    {
+      "schemaVersion": 1,
+      "id": "pred.ipv4.reject-256.v1",
+      "kind": "predicate",
+      "state": "accepted",
+      "requirement": "req.ipv4.strict-validation.v1",
+      "type": "boundary-condition",
+      "scope": { "symbols": ["isIPv4"] },
+      "checks": [
+        { "checkId": "all-256", "kind": "output-assertion", "input": "256.256.256.256", "expect": "false", "description": "256 is one past the max octet and must be rejected" }
+      ],
+      "severity": "high",
+      "provenance": { "proposedByRun": "separation-gate-prereg", "acceptedBy": "dr-robert-li", "acceptedAt": "2026-07-01" }
+    },
+    {
+      "schemaVersion": 1,
+      "id": "pred.ipv4.no-leading-zero.v1",
+      "kind": "predicate",
+      "state": "accepted",
+      "requirement": "req.ipv4.strict-validation.v1",
+      "type": "boundary-condition",
+      "scope": { "symbols": ["isIPv4"] },
+      "checks": [
+        { "checkId": "leading-zero", "kind": "output-assertion", "input": "01.1.1.1", "expect": "false", "description": "leading-zero octet is non-canonical and must be rejected" }
+      ],
+      "severity": "medium",
+      "provenance": { "proposedByRun": "separation-gate-prereg", "acceptedBy": "dr-robert-li", "acceptedAt": "2026-07-01" }
+    },
+    {
+      "schemaVersion": 1,
+      "id": "pred.ipv4.accept-canonical.v1",
+      "kind": "predicate",
+      "state": "accepted",
+      "requirement": "req.ipv4.strict-validation.v1",
+      "type": "postcondition",
+      "scope": { "symbols": ["isIPv4"] },
+      "checks": [
+        { "checkId": "canonical", "kind": "output-assertion", "input": "192.168.0.1", "expect": "true", "description": "a canonical address must be accepted (guards against a vacuous all-reject impl)" }
+      ],
+      "severity": "low",
+      "provenance": { "proposedByRun": "separation-gate-prereg", "acceptedBy": "dr-robert-li", "acceptedAt": "2026-07-01" }
+    }
+  ]
+}

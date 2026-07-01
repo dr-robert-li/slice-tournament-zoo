@@ -69,6 +69,22 @@ export interface SliceManifest {
   judge: { votesPerPair: number };
   /** ~200-token summary for progressive disclosure (N2). */
   summary: string;
+  /**
+   * 0.9.6 Contract Plane: the accepted contract slice id this run targets. When
+   * set (and `RunConfig.contract.enabled`), specimens are gated on the slice's
+   * predicates in `select()`. Optional ⇒ absent leaves 0.9.5 behaviour intact.
+   */
+  contractSliceId?: string;
+}
+
+/**
+ * 0.9.6 Contract Plane feature flag (RunConfig.contract). Default OFF: absent or
+ * `enabled:false` ⇒ the tournament runs exactly as 0.9.5, no contract gating.
+ */
+export interface ContractRunConfig {
+  enabled: boolean;
+  /** Accepted contract slice id to bind, if any. */
+  sliceId?: string;
 }
 
 /** Result of running one specimen through the eval-gate (F7 stage 1). */
@@ -324,6 +340,12 @@ export interface RunConfig {
    * against held-out pilot fitness. See `HarnessConfig`.
    */
   harness?: HarnessConfig;
+  /**
+   * 0.9.6 Contract Plane. Optional + default-off: absent ⇒ STZ runs exactly as
+   * 0.9.5 (no contract gating in selection). When `enabled`, a bound accepted
+   * contract slice gates specimens in `select()` via their predicate results.
+   */
+  contract?: ContractRunConfig;
 }
 
 // ── 0.9.0 Harness-level recursive self-improvement (meta-loop) ───────────────
@@ -366,6 +388,15 @@ export interface HarnessGenome {
   /** G6: fan-out + votes per pair (bounded ints). */
   fanout: number;
   votesPerPair: number;
+  /**
+   * G7 (0.9.6): contract/spec-crystallization heuristic id — how the
+   * edge-explorer crystallizes a discovered edge into a typed contract predicate.
+   * Optional + free string (mirrors G1 `heuristicId`); absent ⇒ the default
+   * crystallizer, so every existing genome literal is unaffected. This is a
+   * harness-altitude gene (HarnessX) whose signal is NOT derived from the sealed
+   * suite — the one axis STZ's numeric-gene negative did not close.
+   */
+  crystallizationHeuristicId?: string;
 }
 
 /**

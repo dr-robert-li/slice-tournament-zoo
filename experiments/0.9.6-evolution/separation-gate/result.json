@@ -1,0 +1,70 @@
+{
+  "substrate": "ipv4-strict-validation",
+  "sealedSuitePassed": true,
+  "sealedSuitePassRate": 1,
+  "predicateResults": [
+    {
+      "predicateId": "pred.ipv4.octet-range.v1",
+      "severity": "high",
+      "pass": false,
+      "checks": [
+        {
+          "checkId": "octet-999",
+          "pass": false,
+          "expected": "false",
+          "actual": "true"
+        }
+      ]
+    },
+    {
+      "predicateId": "pred.ipv4.reject-256.v1",
+      "severity": "high",
+      "pass": false,
+      "checks": [
+        {
+          "checkId": "all-256",
+          "pass": false,
+          "expected": "false",
+          "actual": "true"
+        }
+      ]
+    },
+    {
+      "predicateId": "pred.ipv4.no-leading-zero.v1",
+      "severity": "medium",
+      "pass": false,
+      "checks": [
+        {
+          "checkId": "leading-zero",
+          "pass": false,
+          "expected": "false",
+          "actual": "true"
+        }
+      ]
+    },
+    {
+      "predicateId": "pred.ipv4.accept-canonical.v1",
+      "severity": "low",
+      "pass": true,
+      "checks": [
+        {
+          "checkId": "canonical",
+          "pass": true,
+          "expected": "true",
+          "actual": "true"
+        }
+      ]
+    }
+  ],
+  "separated": true,
+  "failingPredicates": [
+    "pred.ipv4.octet-range.v1",
+    "pred.ipv4.reject-256.v1",
+    "pred.ipv4.no-leading-zero.v1"
+  ],
+  "highSeverityFailures": [
+    "pred.ipv4.octet-range.v1",
+    "pred.ipv4.reject-256.v1"
+  ],
+  "verdict": "SEPARATED-against-this-suite — mechanism existence proof: the predicate type-system expresses a condition this suite misses. NOT proof a good-faith suite misses it (this suite is deliberately weak; see separation-gate.md). Real outcome-separation is Phase 3's gate."
+}

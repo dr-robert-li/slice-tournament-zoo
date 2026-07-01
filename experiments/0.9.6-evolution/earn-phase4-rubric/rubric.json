@@ -1,0 +1,12 @@
+{
+  "rubric_id": "rubric.pad.architecture.v1",
+  "authored_before_patch": true,
+  "authored_by": "in-session Agent subagent (subscription-billed), blind to candidates",
+  "criteria": [
+    { "id": "c1", "title": "No gratuitous runtime dependency", "weight": 0.3, "kind": "architecture", "anchoredSymbols": ["package.json:dependencies", "padLeft"] },
+    { "id": "c2", "title": "Native/stdlib padding, not reinvented or imported", "weight": 0.2, "kind": "architecture", "anchoredSymbols": ["padLeft", "String.prototype.padStart"] },
+    { "id": "c3", "title": "Interface & contract compatibility preserved", "weight": 0.2, "kind": "compatibility", "anchoredSymbols": ["padLeft", "pad.mjs"] },
+    { "id": "c4", "title": "Locality & minimality of the change", "weight": 0.15, "kind": "maintainability", "anchoredSymbols": ["padLeft", "pad.mjs"] },
+    { "id": "c5", "title": "Convention & naming alignment", "weight": 0.15, "kind": "style", "anchoredSymbols": ["padLeft"] }
+  ]
+}

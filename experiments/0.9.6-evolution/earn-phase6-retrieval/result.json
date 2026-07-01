@@ -1,0 +1,25 @@
+{
+  "substrate": "retrieval-utility A/B (live, in-session Agents, subscription)",
+  "task": "implement makeArtifactId(module,name,version) for this repo's arbitrary id-convention",
+  "retrieved_predicate": "pred.repo.id-convention.v1 — ids MUST be <module>.<name>.v<version>, entirely lowercase, dot-separated",
+  "control_no_retrieval": {
+    "tool_calls": 6, "duration_ms": 52708,
+    "impl": "`${module}.${name}.v${version}`",
+    "discovered_format_via_grep": true,
+    "missed_clause": "entirely lowercase",
+    "output_on_Uppercase_input": "Parser.Tokenize.v1",
+    "conforms": false
+  },
+  "retrieval_arm": {
+    "tool_calls": 1, "duration_ms": 15514, "usedRetrieved": true,
+    "impl": "`${module}.${name}.v${version}`.toLowerCase()",
+    "output_on_Uppercase_input": "parser.tokenize.v1",
+    "conforms": true
+  },
+  "utility": {
+    "cost_delta_NOT_CLAIMED": "1 vs 6 tool calls observed, but circular at n=1: the retrieved predicate is itself the crystallized product of a prior discovery + human-acceptance. Net savings only if reuses*saving > discovery+acceptance. Amortization pending; NOT an earn.",
+    "correctness_delta": "retrieval carried the explicit 'lowercase' invariant; discovery-by-example got the format but dropped the clause. On-thesis (explicit predicate makes implicit invariant explicit), NOT 'agents reason better with retrieval'."
+  },
+  "earned": true,
+  "verdict": "UTILITY EARNED NARROWLY (live, subscription) — single on-thesis axis: a retrieved predicate makes an implicit invariant explicit where discovery-by-example dropped it. Cost/amortization NOT claimed. n=1, one hand-picked axis; not a distribution."
+}

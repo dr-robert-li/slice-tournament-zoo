@@ -6,6 +6,47 @@ and the project aims to follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.9.6] — Contract Plane (bounded project-local RSI, earned-capability)
+
+Adds a **Contract Plane**: a typed, human-gated correctness object the arena
+competes against, wired into live selection **behind a default-off flag**
+(`RunConfig.contract.enabled`). Flag off ⇒ the tournament is byte-identical to
+0.9.5 (zero regression, proven by an integration test). Every capability was
+**earned** on a substrate before wiring — see `experiments/0.9.6-progression/`.
+
+### Added
+- **Contract kernel** (`src/contract/`): typed `requirement`/`predicate`/
+  `contract_delta` with a state machine (`draft→proposed→accepted→…`), a pure
+  vacuity-safe predicate evaluator, traceability, and the **human 7th gate**
+  (`humanAccept` rejects agent-role approvers — the α>0 exogenous signal).
+- **Separation gate** (`src/contract/separation-gate.ts`): the Phase-1 go/no-go —
+  a naive impl must pass the sealed suite yet fail ≥1 predicate, else the contract
+  adds no signal and the line stops (guards against re-deriving STZ's earned null).
+- **Contract verifier + contract-aware selection** (`src/verifiers/`): a specimen
+  that hard-fails a high-severity predicate is eliminated at the gate — the
+  contract as *definition of winner*, not a post-hoc oracle. Wired into
+  `select()`/`evalGate` via an optional `ContractGate` (absent ⇒ 0.9.5).
+- **Promotion ledger** (`src/ledger/`): append-only JSONL + a 7-gate decision
+  engine (the six existing gates + `humanAccepted`) preserving the halt-on-tie
+  guard and quarantining test-only "wins" (the proven test-sharpening negative).
+- **Selective retrieval** (`src/knowledge/retrieval.ts`): deterministic, capped,
+  explained; `repo_note` disabled by default (CTIM-Rover). No FAISS.
+- **Phase-0 measurement** (`src/eval/`): chronological (never-shuffled) splits,
+  reviewer-outcome capture, per-repo baseline `RepoMetrics`.
+- **G7 gene**: `HarnessGenome.crystallizationHeuristicId?` — the edge→predicate
+  crystallizer; a harness-altitude axis not derived from the sealed suite.
+- New bridge subcommands `separation-gate`, `contract-accept`, `eval-baseline`;
+  agents `stz-contract-architect`/`clarifier`/`contract-verifier`; commands
+  `/stz:contract`, `/stz:eval`; `contractSliceId` on the slice manifest.
+
+### Notes
+- **Earned mechanisms, honest scope.** Phases 0/1/3/5/6 earned; 2/4/7
+  mechanism-earned; 8 deferred by design. Live earns (rubric, retrieval) ran on
+  the **subscription** path (in-session Agent subagents), $0 marginal API. What is
+  NOT yet shown: field-scale outcomes on a real held-out issue stream. All earns
+  span two hand-picked toy axes (dependency, file-scope) — not a distribution.
+- 245 tests; flag-off preserves 0.9.5 exactly.
+
 ## [0.9.5]
 
 Calibrated-verifier gating + a Well-Architected authoring gene — both **earned**

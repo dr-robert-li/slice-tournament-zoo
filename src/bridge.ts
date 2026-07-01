@@ -84,6 +84,14 @@ import {
 import { initialInject, onInjectRound, summarizeSurvivors } from "./injector.js";
 import { consistencyScore, bucketOf, calibrationGate } from "./judge-reliability.js";
 import type { ArchiveEntry, HarnessGenome } from "./types.js";
+// ── 0.9.6 Contract Plane + Phase-0 eval (PHASED-PLAN) ────────────────────────
+import { execFileSync } from "node:child_process";
+import type { ContractArtifact, Predicate } from "./contract/contract-types.js";
+import { evaluatePredicates, type Observations, type PredicateResult } from "./contract/predicate-eval.js";
+import { separationGate } from "./contract/separation-gate.js";
+import { contractGateFromResults } from "./verifiers/contract-verifier.js";
+import { humanAccept } from "./contract/contract-engine.js";
+import { baselineReport, type BaselineCondition, type IssueRecord } from "./eval/baseline-report.js";
 import {
   loadCompat,
   saveCompat,
@@ -419,7 +427,14 @@ async function selectCmd(args: Record<string, string>): Promise<void> {
   const { root, slice } = args as { root: string; slice: string };
   const evals = loadEvals(root, slice);
   const votes = existsSync(votesPath(root, slice)) ? readJSON<PairwiseVote[]>(votesPath(root, slice)) : [];
-  const { judgment } = select(evals, votes);
+  // 0.9.6 Contract Plane (flag-gated): only when the /stz:run command passes a
+  // per-specimen contract-scores file (i.e. RunConfig.contract.enabled + a bound
+  // slice) do specimens get contract-gated. Absent ⇒ exactly 0.9.5 selection.
+  const contractScores = args["contract-scores"]
+    ? readJSON<Record<string, PredicateResult[]>>(args["contract-scores"])
+    : undefined;
+  const contractGate = contractScores ? contractGateFromResults(contractScores) : undefined;
+  const { judgment } = select(evals, votes, contractGate);
   writeFileSync(judgmentPath(root, slice), JSON.stringify(judgment, null, 2) + "\n", "utf8");
   await writeDoc(root, join(sliceRel(slice), "tournament.md"), {
     frontmatter: {
@@ -1377,6 +1392,81 @@ function judgeCalibration(args: Record<string, string>): void {
 }
 
 /** The pinned bridge command surface — the interface a variant must preserve. */
+// ── 0.9.6 Contract Plane subcommands (PHASED-PLAN Phases 0–1) ────────────────
+
+/**
+ * separation-gate: the Phase-1 go/no-go (PHASED-PLAN §1). Executes a
+ * naive-but-plausible impl against a functional sealed suite and against the
+ * accepted contract predicates, then decides whether the contract carries a
+ * signal the suite does not. Uses the canonical, unit-tested TS core
+ * (evaluatePredicates + separationGate). Writes result under
+ * `.stz/contract/separation/` and exits non-zero when NOT separated (so a CI
+ * gate / the operator sees the null immediately).
+ *
+ *   stz bridge separation-gate --root D --contract preds.json --impl impl.mjs --suite suite.mjs
+ */
+function separationGateCmd(args: Record<string, string>): void {
+  const root = args.root!;
+  const contract = readJSON<{ predicates: Predicate[] }>(args.contract!);
+  const impl = args.impl!;
+  const suite = args.suite!;
+
+  // Sealed suite over common cases (naive impl expected to pass at 1.000).
+  const suiteOut = JSON.parse(
+    execFileSync("node", [suite, impl], { encoding: "utf8" }).trim(),
+  ) as { passRate: number };
+  const sealedSuitePassed = suiteOut.passRate >= 1;
+
+  // Produce observations by executing the impl on each predicate check input.
+  const observed: Observations = {};
+  for (const p of contract.predicates) {
+    for (const c of p.checks) {
+      observed[c.checkId] = execFileSync("node", [impl, c.input ?? ""], { encoding: "utf8" }).trim();
+    }
+  }
+  const predicateResults = evaluatePredicates(contract.predicates, observed);
+  const verdict = separationGate({ sealedSuitePassed, predicateResults });
+
+  const out = stzPath(root, join("contract", "separation", "result.json"));
+  mkdirSync(join(out, ".."), { recursive: true });
+  const payload = { sealedSuitePassed, sealedSuitePassRate: suiteOut.passRate, predicateResults, ...verdict };
+  writeFileSync(out, JSON.stringify(payload, null, 2) + "\n", "utf8");
+  print(payload);
+  if (!verdict.separated) process.exitCode = 1; // freeze at Phase 0 — surface the null
+}
+
+/**
+ * contract-accept: the human 7th gate (PHASED-PLAN Phase 1). The ONLY path a
+ * contract artifact crosses into trusted state. `--approver` MUST be a human
+ * identity, never an agent role — enforced by humanAccept (throws otherwise).
+ *
+ *   stz bridge contract-accept --artifact a.json --approver "dr-robert-li" --at 2026-07-01
+ */
+function contractAcceptCmd(args: Record<string, string>): void {
+  const path = args.artifact!;
+  const artifact = readJSON<ContractArtifact>(path);
+  const accepted = humanAccept(artifact, args.approver ?? "", args.at ?? ""); // throws on agent/empty approver
+  writeFileSync(path, JSON.stringify(accepted, null, 2) + "\n", "utf8");
+  print({ id: accepted.id, state: accepted.state, acceptedBy: accepted.provenance.acceptedBy });
+}
+
+/**
+ * eval-baseline: Phase-0 measurement. Computes per-repo RepoMetrics for each
+ * baseline condition from recorded issue outcomes. Per-repo, never global.
+ *
+ *   stz bridge eval-baseline --root D --repo project-x --records records.json
+ */
+function evalBaselineCmd(args: Record<string, string>): void {
+  const root = args.root!;
+  const repo = args.repo!;
+  const byCondition = readJSON<Record<BaselineCondition, IssueRecord[]>>(args.records!);
+  const report = baselineReport(repo, byCondition);
+  const out = stzPath(root, join("90-audit", "baseline-report.json"));
+  mkdirSync(join(out, ".."), { recursive: true });
+  writeFileSync(out, JSON.stringify(report, null, 2) + "\n", "utf8");
+  print(report);
+}
+
 const BRIDGE_COMMANDS = [
   "version", "begin", "record-eval", "eval", "gate", "escalate", "record-votes", "select", "finalize",
   "project-init", "project-phase", "project-write-intent", "project-record-area", "project-set-config",
@@ -1385,6 +1475,8 @@ const BRIDGE_COMMANDS = [
   "merge-compat-approve", "merge-compat-retire", "merge-compat-list",
   "inject", "harness-mine", "harness-promote-mutator", "harness-spawn", "harness-fitness", "harness-select",
   "harness-promote", "harness-status", "judge-stress", "judge-calibration",
+  // 0.9.6 Contract Plane + Phase-0 eval
+  "separation-gate", "contract-accept", "eval-baseline",
 ];
 
 export async function runBridge(argv: string[]): Promise<void> {
@@ -1431,6 +1523,10 @@ export async function runBridge(argv: string[]): Promise<void> {
     case "harness-status": harnessStatus(args); break;
     case "judge-stress": await judgeStress(args); break;
     case "judge-calibration": judgeCalibration(args); break;
+    // ── 0.9.6 Contract Plane + Phase-0 eval ────────────────────────────────
+    case "separation-gate": separationGateCmd(args); break;
+    case "contract-accept": contractAcceptCmd(args); break;
+    case "eval-baseline": evalBaselineCmd(args); break;
     default:
       process.stderr.write(`unknown bridge subcommand: ${sub}\n`);
       process.exitCode = 1;

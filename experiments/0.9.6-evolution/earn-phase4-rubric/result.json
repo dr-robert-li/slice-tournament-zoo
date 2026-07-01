@@ -1,0 +1,13 @@
+{
+  "substrate": "pad-rubric-rerank (live, in-session Agent, subscription)",
+  "author": "rubric-author agent, blind to patches, authored_before_patch=true",
+  "judge": "rubric-judge agent, separate from author, byte-identical pad.mjs across candidates",
+  "rubricWinner": "alpha (clean)",
+  "rubricLoser": "beta (dep-adder)",
+  "weightedTotals": { "alpha": 0.97, "beta": 0.6475 },
+  "decisiveCriteria": ["c1 no-gratuitous-dependency (weight 0.3)"],
+  "tiesUnderTestsAndCodeHealth": true,
+  "earned_mechanism": true,
+  "human_agreement_pending": true,
+  "verdict": "MECHANISM EARNED (live, subscription) — a live LLM rubric authored before patches, judged by a separate live LLM, reranked two candidates that STZ's tests + codeHealth tie, toward the architecture-conforming one. Human-agreement (7th gate) pending. Same conformance axis as Phase 1/3 — richer scorer, not a new signal."
+}

@@ -1,0 +1,9 @@
+{
+  "judged_by": "in-session Agent subagent (subscription-billed), separate from author, blind to intended winner",
+  "candidates_note": "pad.mjs byte-identical across both; only package.json:dependencies differs",
+  "alpha_clean": { "weighted_total": 0.97, "c1_no_dep": 1.0 },
+  "beta_depadder": { "weighted_total": 0.6475, "c1_no_dep": 0.0 },
+  "winner": "alpha",
+  "decisive_criteria": ["c1"],
+  "delta": 0.3225
+}
